@@ -159,20 +159,36 @@ with tab2:
         disp_df = df_l[(df_l['date'].dt.date >= start_q) & (df_l['date'].dt.date <= end_q)]
         
         if not disp_df.empty:
-            st.markdown(f'<div class="insta-card"><div class="insta-label">{start_q.strftime("%m/%d")} 〜 {end_q.strftime("%m/%d")}</div><div style="display: flex; justify-content: space-around; margin-top: 10px;"><div><div class="insta-val">{len(disp_df)}</div><div class="insta-label">Sessions</div></div><div><div class="insta-val">{disp_df["gym_name"].nunique()}</div><div class="insta-label">Gyms</div></div></div></div>', unsafe_allow_html=True)
+            # 日付部分のフォントサイズを 1.8rem、太さを 800 に調整しました
+            st.markdown(f'''
+                <div class="insta-card">
+                    <div style="font-size: 1.8rem; font-weight: 800; margin-bottom: 5px;">
+                        {start_q.strftime("%m/%d")} 〜 {end_q.strftime("%m/%d")}
+                    </div>
+                    <div style="display: flex; justify-content: space-around; margin-top: 10px;">
+                        <div>
+                            <div class="insta-val">{len(disp_df)}</div>
+                            <div class="insta-label">Sessions</div>
+                        </div>
+                        <div>
+                            <div class="insta-val">{disp_df["gym_name"].nunique()}</div>
+                            <div class="insta-label">Gyms</div>
+                        </div>
+                    </div>
+                </div>
+            ''', unsafe_allow_html=True)
             
             counts = disp_df['gym_name'].value_counts().reset_index()
             counts.columns = ['gym_name', 'count']
             counts = counts.sort_values('count', ascending=True)
             
-            # --- 棒グラフの改善 ---
             fig = px.bar(counts, x='count', y='gym_name', orientation='h', 
                          text='count', color='count', color_continuous_scale='Sunsetdark')
             
             fig.update_traces(
                 texttemplate='  <b>%{text}回</b>', 
-                textposition='outside', # 常に棒の外側に表示
-                cliponaxis=False,       # 文字がグラフ枠で消されないようにする
+                textposition='outside',
+                cliponaxis=False,
                 marker_line_width=0,
                 width=0.6
             )
@@ -182,7 +198,6 @@ with tab2:
                 coloraxis_showscale=False,
                 xaxis_visible=False,
                 yaxis_title=None,
-                # 余白を大幅に調整（l=左ジム名用、r=右回数表示用）
                 margin=dict(t=10, b=10, l=140, r=80), 
                 height=max(150, 45 * len(counts)),
                 paper_bgcolor='rgba(0,0,0,0)',
