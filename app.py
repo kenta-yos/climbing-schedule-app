@@ -22,6 +22,33 @@ st.markdown("""
     .insta-val { font-size: 2.2rem; font-weight: 800; }
     .insta-label { font-size: 0.8rem; opacity: 0.9; }
 
+    /* ランキングカード（グラフの代わり） */
+    .rank-card {
+        background-color: #FFF;
+        border: 1px solid #EEE;
+        border-radius: 10px;
+        padding: 10px 15px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .rank-num {
+        background: #F0F0F0;
+        color: #666;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+        margin-right: 10px;
+    }
+    .rank-gym { font-weight: 700; color: #333; flex-grow: 1; font-size: 0.9rem; }
+    .rank-count { color: #DD2476; font-weight: 800; font-size: 1rem; }
+
     /* 絶対に崩れないリスト構造 (Grid) */
     .item-box {
         display: grid !important;
@@ -93,9 +120,7 @@ if 'last_log' not in st.session_state: st.session_state.last_log = None
 
 tab1, tab2, tab3 = st.tabs(["セットスケジュール", "ログ", "ジム"])
 
-# ==========================================
-# Tab 1: セットスケジュール
-# ==========================================
+# --- Tab 1 & Tab 3 は以前のまま ---
 with tab1:
     with st.expander("＋ スケジュールを登録"):
         with st.form("add_form", clear_on_submit=True):
@@ -113,28 +138,19 @@ with tab1:
                     st.session_state.date_count = 1; st.rerun()
         if st.button("＋ 日程を増やす"):
             st.session_state.date_count += 1; st.rerun()
-
     if not schedule_df.empty:
         s_df = schedule_df.copy(); s_df['start_date'] = pd.to_datetime(s_df['start_date']); s_df['end_date'] = pd.to_datetime(s_df['end_date'])
         s_df['month_year'] = s_df['start_date'].dt.strftime('%Y年%m月')
         months = sorted(s_df['month_year'].unique().tolist(), reverse=True)
         cur_m = datetime.now().strftime('%Y年%m月')
         sel_m = st.selectbox("表示月", options=months, index=months.index(cur_m) if cur_m in months else 0)
-        
         for _, row in s_df[s_df['month_year'] == sel_m].sort_values('start_date').iterrows():
             is_past = row['end_date'].date() < date.today()
             d_s, d_e = row['start_date'].strftime('%m/%d'), row['end_date'].strftime('%m/%d')
-            d_disp = d_s if d_s == d_e else f"{d_s}-{d_e}"
-            st.markdown(f"""
-                <a href="{row['post_url']}" target="_blank" class="item-box {'past-opacity' if is_past else ''}">
-                    <div class="item-accent"></div>
-                    <span class="item-date">{d_disp}</span>
-                    <span class="item-gym">{row['gym_name']}</span>
-                </a>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<a href="{row["post_url"]}" target="_blank" class="item-box {"past-opacity" if is_past else ""}"><div class="item-accent"></div><span class="item-date">{d_s if d_s==d_e else f"{d_s}-{d_e}"}</span><span class="item-gym">{row["gym_name"]}</span></a>', unsafe_allow_html=True)
 
 # ==========================================
-# Tab 2: ログ
+# Tab 2: ログ（ランキングカード版）
 # ==========================================
 with tab2:
     with st.expander("＋ 登攀を記録"):
@@ -145,8 +161,7 @@ with tab2:
             if st.form_submit_button("保存"):
                 if l_gym != "(選択)":
                     conn.update(worksheet="climbing_logs", data=pd.concat([log_df, pd.DataFrame([{"date": l_date.isoformat(), "gym_name": l_gym}])], ignore_index=True))
-                    st.session_state.last_log = f"{l_date.strftime('%m/%d')} @ {l_gym}"
-                    st.rerun()
+                    st.session_state.last_log = f"{l_date.strftime('%m/%d')} @ {l_gym}"; st.rerun()
 
     if not log_df.empty:
         today = date.today()
@@ -154,63 +169,37 @@ with tab2:
         c1, c2 = st.columns(2)
         with c1: start_q = st.date_input("開始", value=first_day)
         with c2: end_q = st.date_input("終了", value=last_day)
-        
         df_l = log_df.copy(); df_l['date'] = pd.to_datetime(df_l['date'])
         disp_df = df_l[(df_l['date'].dt.date >= start_q) & (df_l['date'].dt.date <= end_q)]
         
         if not disp_df.empty:
             st.markdown(f'<div class="insta-card"><div class="insta-label">{start_q.strftime("%m/%d")} 〜 {end_q.strftime("%m/%d")}</div><div style="display: flex; justify-content: space-around; margin-top: 10px;"><div><div class="insta-val">{len(disp_df)}</div><div class="insta-label">Sessions</div></div><div><div class="insta-val">{disp_df["gym_name"].nunique()}</div><div class="insta-label">Gyms</div></div></div></div>', unsafe_allow_html=True)
             
+            # グラフの代わりにランキングカードを表示
             counts = disp_df['gym_name'].value_counts().reset_index()
             counts.columns = ['gym_name', 'count']
-            counts = counts.sort_values('count', ascending=True)
             
-            # 円グラフから横棒グラフに変更
-            fig = px.bar(counts, x='count', y='gym_name', orientation='h', 
-                         text='count', color='count', color_continuous_scale='Sunsetdark')
-            
-            fig.update_traces(
-                texttemplate='  <b>%{text}回</b>', 
-                textposition='outside',
-                marker_line_width=0,
-                width=0.6  # 棒の太さを調整
-            )
-            
-            fig.update_layout(
-                showlegend=False,
-                coloraxis_showscale=False,
-                xaxis_visible=False, # X軸（下の目盛り）は隠してスッキリ
-                yaxis_title=None,
-                margin=dict(t=10, b=10, l=10, r=100), # 右側余白をたっぷり100px確保
-                height=max(150, 40 * len(counts)), # ジム数に応じて高さを自動調整
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(size=14, color="#333"),
-                bargap=0.3
-            )
-
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
-            for _, row in disp_df.sort_values('date', ascending=False).iterrows():
+            st.write("🏆 **Gym Ranking**")
+            for i, (_, row) in enumerate(counts.iterrows()):
                 st.markdown(f"""
-                    <div class="item-box">
-                        <div class="item-accent"></div>
-                        <span class="item-date">{row['date'].strftime('%m/%d')}</span>
-                        <span class="item-gym">{row['gym_name']}</span>
+                    <div class="rank-card">
+                        <div class="rank-num">{i+1}</div>
+                        <div class="rank-gym">{row['gym_name']}</div>
+                        <div class="rank-count">{row['count']} <span style="font-size:0.7rem; font-weight:normal;">回</span></div>
                     </div>
                 """, unsafe_allow_html=True)
 
-# ==========================================
-# Tab 3: ジム
-# ==========================================
+            st.write("---")
+            for _, row in disp_df.sort_values('date', ascending=False).iterrows():
+                st.markdown(f'<div class="item-box"><div class="item-accent"></div><span class="item-date">{row["date"].strftime("%m/%d")}</span><span class="item-gym">{row["gym_name"]}</span></div>', unsafe_allow_html=True)
+
 with tab3:
     with st.expander("＋ 新しいジムを登録"):
         with st.form("gym_add"):
             n = st.text_input("ジム名"); u = st.text_input("Instagram URL")
             if st.form_submit_button("登録"):
                 if n and u:
-                    conn.update(worksheet="gym_master", data=pd.concat([master_df, pd.DataFrame([{"gym_name": n, "profile_url": u}])], ignore_index=True))
-                    st.rerun()
+                    conn.update(worksheet="gym_master", data=pd.concat([master_df, pd.DataFrame([{"gym_name": n, "profile_url": u}])], ignore_index=True)); st.rerun()
     last_v = {}
     if not log_df.empty:
         df_v = log_df.copy(); df_v['date'] = pd.to_datetime(df_v['date'])
