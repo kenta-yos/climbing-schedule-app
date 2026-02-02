@@ -32,7 +32,7 @@ def load_data():
 
 master_df, schedule_df = load_data()
 
-# 状態管理の初期化
+# どのジムの編集画面を開いているかを追跡
 if 'expanded_gym' not in st.session_state:
     st.session_state.expanded_gym = None
 
@@ -42,10 +42,11 @@ sorted_gyms = sorted(master_df['gym_name'].tolist(), key=lambda x: gym_usage.get
 tab1, tab2 = st.tabs(["🗓 スケジュール", "🔍 よく行くジム"])
 
 # ==========================================
-# Tab 1: スケジュール（省略なしの統合版）
+# Tab 1: スケジュール（ロジックは維持）
 # ==========================================
 with tab1:
     st.title("🧗‍♂️ セットスケジュール")
+    # --- 新規登録 ---
     with st.expander("＋ 新規登録"):
         if not sorted_gyms:
             st.warning("先に「よく行くジム」を登録してください")
@@ -72,6 +73,7 @@ with tab1:
                     st.session_state.date_count += 1
                     st.rerun()
 
+    # --- リスト表示 ---
     if not schedule_df.empty:
         s_df = schedule_df.copy()
         s_df['start_date'] = pd.to_datetime(s_df['start_date'])
@@ -106,7 +108,7 @@ with tab1:
                             conn.update(worksheet="schedules", data=schedule_df.drop(idx)); st.rerun()
 
 # ==========================================
-# Tab 2: よく行くジム（ここを劇的改善）
+# Tab 2: よく行くジム（謎のボタンを排除）
 # ==========================================
 with tab2:
     st.title("🔍 よく行くジム")
@@ -123,7 +125,11 @@ with tab2:
             row_idx = master_df[master_df['gym_name'] == gym_name].index[0]
             row = master_df.loc[row_idx]
             
-            # このジムの編集画面が開かれているかどうかを判定
+            # 削除チェックボックスの状態を監視し、チェックがあれば開きっぱなしにする
+            conf_key = f"cdel_{idx}"
+            if st.session_state.get(conf_key):
+                st.session_state.expanded_gym = gym_name
+            
             is_expanded = (st.session_state.expanded_gym == gym_name)
             
             with st.container(border=True):
@@ -131,13 +137,7 @@ with tab2:
                 with c1: st.markdown(f"### {row['gym_name']}")
                 with c2: st.link_button("Instagram", row['profile_url'], use_container_width=True)
                 
-                # 状態を維持するためのexpander
                 with st.expander("✎ ジム情報を編集 / 削除", expanded=is_expanded):
-                    # 開いたことを記録する（何か入力やクリックがあった時にここが維持される）
-                    if st.button("この画面の編集状態をロック", key=f"lock_{idx}"):
-                        st.session_state.expanded_gym = gym_name
-                        st.rerun()
-                    
                     edit_n = st.text_input("ジム名", value=row['gym_name'], key=f"gn_{idx}")
                     edit_u = st.text_input("プロフURL", value=row['profile_url'], key=f"gu_{idx}")
                     
@@ -146,17 +146,16 @@ with tab2:
                         schedule_df.loc[schedule_df['gym_name'] == row['gym_name'], 'gym_name'] = edit_n
                         conn.update(worksheet="gym_master", data=master_df)
                         conn.update(worksheet="schedules", data=schedule_df)
-                        st.session_state.expanded_gym = None # 完了したら閉じる
+                        st.session_state.expanded_gym = None
                         st.rerun()
 
                     st.write("---")
                     rel_count = len(schedule_df[schedule_df['gym_name'] == gym_name])
                     st.markdown(f"<div class='delete-confirm'>⚠️ スケジュール {rel_count} 件も削除されます</div>", unsafe_allow_html=True)
                     
-                    # チェックボックス。押すとリロードされるが、expanded=is_expanded により閉じない
-                    conf = st.checkbox("削除を承認する", key=f"cdel_{idx}", value=False)
+                    # チェックを入れると自動的に st.session_state[conf_key] が True になり、リロード後も expanded=True が維持される
+                    conf = st.checkbox("削除を承認する", key=conf_key)
                     if conf:
-                        st.session_state.expanded_gym = gym_name # チェック時も状態維持
                         if st.button(f"🗑 {row['gym_name']} を完全に削除", key=f"greal_{idx}"):
                             new_m = master_df.drop(row_idx)
                             new_s = schedule_df[schedule_df['gym_name'] != gym_name]
