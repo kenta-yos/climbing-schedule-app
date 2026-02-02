@@ -159,13 +159,11 @@ with tab2:
         disp_df = df_l[(df_l['date'].dt.date >= start_q) & (df_l['date'].dt.date <= end_q)]
         
         if not disp_df.empty:
-            # インスタ風サマリーカード
             st.markdown(f'<div class="insta-card"><div class="insta-label">{start_q.strftime("%m/%d")} 〜 {end_q.strftime("%m/%d")}</div><div style="display: flex; justify-content: space-around; margin-top: 10px;"><div><div class="insta-val">{len(disp_df)}</div><div class="insta-label">Sessions</div></div><div><div class="insta-val">{disp_df["gym_name"].nunique()}</div><div class="insta-label">Gyms</div></div></div></div>', unsafe_allow_html=True)
             
             counts = disp_df['gym_name'].value_counts().reset_index()
             counts.columns = ['gym_name', 'count']
             
-            # --- グラフ描画 ---
             fig = px.pie(counts, values='count', names='gym_name', hole=0.5, 
                          color_discrete_sequence=px.colors.qualitative.Pastel)
             
@@ -178,16 +176,17 @@ with tab2:
             
             fig.update_layout(
                 showlegend=False,
-                margin=dict(t=30, b=30, l=60, r=60),
+                # 左右の余白（l, r）を広げ、グラフを中央に寄せ文字スペースを確保
+                margin=dict(t=50, b=50, l=80, r=80), 
                 height=450,
                 paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(size=12, color="#444")
+                font=dict(size=12, color="#444"),
+                # 文字サイズがバラバラにならないよう、かつ最小サイズを保証
+                uniformtext=dict(minsize=10, mode='hide')
             )
 
-            # configでアイコンを非表示
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-            # 履歴一覧
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
                 st.markdown(f"""
                     <div class="item-box">
