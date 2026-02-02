@@ -35,7 +35,7 @@ st.markdown("""
         color: #B22222 !important;
         font-weight: 700 !important;
         font-size: 0.9rem !important;
-        width: 90px !important; /* 日付幅を固定 */
+        width: 90px !important;
         flex-shrink: 0 !important;
         white-space: nowrap !important;
     }
@@ -108,8 +108,13 @@ with tab1:
         s_df = schedule_df.copy()
         s_df['start_date'] = pd.to_datetime(s_df['start_date']); s_df['end_date'] = pd.to_datetime(s_df['end_date'])
         s_df['month_year'] = s_df['start_date'].dt.strftime('%Y年%m月')
+        
+        # 表示月のリスト作成とデフォルト設定（当月を優先）
         months = sorted(s_df['month_year'].unique().tolist(), reverse=True)
-        sel_m = st.selectbox("表示月", options=months, index=0)
+        this_month_str = datetime.now().strftime('%Y年%m月')
+        default_month_idx = months.index(this_month_str) if this_month_str in months else 0
+        
+        sel_m = st.selectbox("表示月", options=months, index=default_month_idx)
         
         m_df = s_df[s_df['month_year'] == sel_m].sort_values('start_date')
         for _, row in m_df.iterrows():
@@ -139,6 +144,7 @@ with tab2:
                     st.toast("おつかれさま！💪"); st.session_state.last_log = f"{l_date.strftime('%m/%d')} @ {l_gym}"; st.rerun()
 
     if not log_df.empty:
+        # デフォルト期間を当月の1日〜末日に設定
         today = date.today()
         first_day = today.replace(day=1)
         last_day = today.replace(day=calendar.monthrange(today.year, today.month)[1])
