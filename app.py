@@ -6,73 +6,85 @@ import plotly.express as px
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 究極のレッドタイムライン CSS ---
+# --- 徹底レイアウト固定 CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     .main .block-container { font-family: 'Noto Sans JP', sans-serif; background-color: #FFFFFF; }
 
-    /* タイムラインコンテナ */
+    /* タイムライン全体のコンテナ（左端に寄せる） */
     .timeline-wrapper {
-        position: relative;
-        padding-left: 0px;
-        margin: 20px 0;
+        position: relative !important;
+        margin-top: 20px !important;
+        padding-left: 0px !important;
     }
 
-    /* 赤い垂直線 */
+    /* 赤い垂直線：位置を5pxで完全固定 */
     .timeline-line {
-        position: absolute;
-        left: 5px; /* ドットの中心に合わせる */
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background-color: #B22222; /* 日付と同じ赤色 */
-        z-index: 1;
+        position: absolute !important;
+        left: 5px !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 2px !important;
+        background-color: #B22222 !important;
+        z-index: 1 !important;
     }
 
+    /* 各アイテム：高さを一定にしてズレを防ぐ */
     .timeline-item {
-        position: relative;
-        display: flex;
-        align-items: center;
-        padding: 15px 0 15px 30px;
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        padding: 10px 0 10px 25px !important; /* 線を避ける */
         text-decoration: none !important;
-        z-index: 2;
+        z-index: 2 !important;
+        min-height: 45px !important;
     }
 
-    /* 赤いドット */
+    /* 赤いドット：線の中心（5px）に合わせる */
     .timeline-dot {
-        position: absolute;
-        left: 0px; 
-        width: 12px;
-        height: 12px;
-        background-color: #B22222;
-        border-radius: 50%;
-        border: 2px solid #FFFFFF;
+        position: absolute !important;
+        left: 5px !important;
+        top: 50% !important;
+        width: 12px !important;
+        height: 12px !important;
+        background-color: #B22222 !important;
+        border-radius: 50% !important;
+        border: 2px solid #FFFFFF !important;
+        transform: translate(-50%, -50%) !important; /* 完全に中心へ */
+        box-shadow: 0 0 0 1px #B22222 !important;
     }
 
+    /* 日付テキスト：幅を固定 */
     .time-date {
-        color: #B22222;
-        font-weight: 700;
-        font-size: 0.9rem;
-        width: 90px;
-        flex-shrink: 0;
+        color: #B22222 !important;
+        font-weight: 700 !important;
+        font-size: 0.9rem !important;
+        width: 90px !important;
+        flex-shrink: 0 !important;
     }
 
+    /* ジム名 */
     .time-gym {
-        color: #1A1A1A;
-        font-weight: 500;
-        font-size: 1rem;
+        color: #1A1A1A !important;
+        font-weight: 500 !important;
+        font-size: 1rem !important;
     }
 
     /* ジムカード（タブ3用） */
     .gym-card {
-        display: block; padding: 14px 18px; margin-bottom: 8px;
-        background-color: #F8F9FA; border-radius: 8px;
-        text-decoration: none !important; color: #1A1A1A !important;
-        font-weight: 500; border: 1px solid #F1F3F5;
+        display: block !important;
+        padding: 14px 18px !important;
+        margin-bottom: 8px !important;
+        background-color: #F8F9FA !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        color: #1A1A1A !important;
+        font-weight: 500 !important;
+        border: 1px solid #F1F3F5 !important;
     }
 
-    .past-item { opacity: 0.4; filter: grayscale(1); }
+    .past-item { opacity: 0.4 !important; filter: grayscale(1) !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -96,15 +108,23 @@ with tab1:
         with st.form("add_form", clear_on_submit=True):
             sel_gym = st.selectbox("ジム", options=["(選択)"] + sorted_gyms)
             p_url = st.text_input("Instagram URL")
-            for i in range(st.session_state.get('date_count', 1)):
+            # セッション状態から日程数を取得（デフォルト1）
+            d_count = st.session_state.get('date_count', 1)
+            for i in range(d_count):
+                st.write(f"日程 {i+1}")
                 c1, c2 = st.columns(2)
                 with c1: st.date_input(f"開始 {i+1}", key=f"s_date_{i}")
                 with c2: st.date_input(f"終了 {i+1}", key=f"e_date_{i}")
+            
             if st.form_submit_button("保存"):
                 if sel_gym != "(選択)" and p_url:
-                    new_rows = [{"gym_name": sel_gym, "start_date": st.session_state[f"s_date_{i}"].isoformat(), "end_date": st.session_state[f"e_date_{i}"].isoformat(), "post_url": p_url} for i in range(st.session_state.get('date_count', 1))]
+                    new_rows = [{"gym_name": sel_gym, "start_date": st.session_state[f"s_date_{i}"].isoformat(), "end_date": st.session_state[f"e_date_{i}"].isoformat(), "post_url": p_url} for i in range(d_count)]
                     conn.update(worksheet="schedules", data=pd.concat([schedule_df, pd.DataFrame(new_rows)], ignore_index=True))
                     st.session_state.date_count = 1; st.rerun()
+
+        if st.button("＋ 日程枠を追加"):
+            st.session_state.date_count = st.session_state.get('date_count', 1) + 1
+            st.rerun()
 
     if not schedule_df.empty:
         s_df = schedule_df.copy()
@@ -118,6 +138,7 @@ with tab1:
         m_df = s_df[s_df['month_year'] == sel_m].copy()
         m_df['is_past'] = m_df['end_date'].dt.date < datetime.now().date()
         
+        # タイムライン描画
         st.markdown('<div class="timeline-wrapper"><div class="timeline-line"></div>', unsafe_allow_html=True)
         for _, row in m_df.sort_values(['is_past', 'start_date']).iterrows():
             d_display = row['start_date'].strftime('%m/%d') if row['start_date'] == row['end_date'] else f"{row['start_date'].strftime('%m/%d')}-{row['end_date'].strftime('%m/%d')}"
@@ -125,7 +146,7 @@ with tab1:
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# Tab 2: ログ（完全復活）
+# Tab 2: ログ
 # ==========================================
 with tab2:
     with st.expander("＋ 登攀を記録"):
@@ -140,7 +161,7 @@ with tab2:
         df_l = log_df.copy()
         df_l['date'] = pd.to_datetime(df_l['date'])
         df_l['month_year'] = df_l['date'].dt.strftime('%Y年%m月')
-        mode = st.radio("期間", ["今月", "全期間"], horizontal=True)
+        mode = st.radio("表示期間", ["今月", "全期間"], horizontal=True)
         disp_df = df_l[df_l['month_year'] == datetime.now().strftime('%Y年%m月')] if mode == "今月" else df_l
         
         if not disp_df.empty:
@@ -154,6 +175,7 @@ with tab2:
             fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=250)
             st.plotly_chart(fig, use_container_width=True)
 
+            # ログも同じタイムラインUI
             st.markdown('<div class="timeline-wrapper"><div class="timeline-line"></div>', unsafe_allow_html=True)
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
                 st.markdown(f'<div class="timeline-item" style="pointer-events:none;"><div class="timeline-dot"></div><span class="time-date">{row["date"].strftime("%m/%d")}</span><span class="time-gym">{row["gym_name"]}</span></div>', unsafe_allow_html=True)
