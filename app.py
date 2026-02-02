@@ -16,7 +16,7 @@ st.markdown("""
     /* インスタ風サマリーカード */
     .insta-card {
         background: linear-gradient(135deg, #FF512F 0%, #DD2476 100%);
-        color: white; padding: 20px; border-radius: 15px; text-align: center;
+        color: white; padding: 12px 15px; border-radius: 15px; text-align: center;
         margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
     .insta-val { font-size: 2.2rem; font-weight: 800; }
@@ -159,19 +159,19 @@ with tab2:
         disp_df = df_l[(df_l['date'].dt.date >= start_q) & (df_l['date'].dt.date <= end_q)]
         
         if not disp_df.empty:
-            # 日付部分のフォントサイズを 1.8rem、太さを 800 に調整しました
+            # パディングを減らし、日付フォントを1.5remに微調整してコンパクト化
             st.markdown(f'''
                 <div class="insta-card">
-                    <div style="font-size: 1.8rem; font-weight: 800; margin-bottom: 5px;">
+                    <div style="font-size: 1.5rem; font-weight: 800; margin-bottom: 2px;">
                         {start_q.strftime("%m/%d")} 〜 {end_q.strftime("%m/%d")}
                     </div>
-                    <div style="display: flex; justify-content: space-around; margin-top: 10px;">
+                    <div style="display: flex; justify-content: space-around; margin-top: 5px;">
                         <div>
-                            <div class="insta-val">{len(disp_df)}</div>
+                            <div class="insta-val" style="font-size: 1.8rem;">{len(disp_df)}</div>
                             <div class="insta-label">Sessions</div>
                         </div>
                         <div>
-                            <div class="insta-val">{disp_df["gym_name"].nunique()}</div>
+                            <div class="insta-val" style="font-size: 1.8rem;">{disp_df["gym_name"].nunique()}</div>
                             <div class="insta-label">Gyms</div>
                         </div>
                     </div>
