@@ -5,7 +5,7 @@ from datetime import datetime
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- CSS（バグ修正と調整） ---
+# --- CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
@@ -20,7 +20,6 @@ st.markdown("""
     
     .past-event { opacity: 0.35; filter: grayscale(1); }
     
-    /* ジム名のスタイル（###を廃止してCSSで制御） */
     .gym-name { font-size: 1.0rem; font-weight: 600; margin: 0; color: #333; display: inline-block; }
     .date-text { font-size: 0.75rem; font-weight: 500; color: #888; margin-bottom: 2px; }
     .status-badge { font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; background: #f0f0f0; color: #999; margin-left: 5px; vertical-align: middle; }
@@ -36,8 +35,8 @@ def load_data():
     return m, s
 master_df, schedule_df = load_data()
 
-gym_usage = schedule_df['gym_name'].value_counts() if not schedule_df.empty else pd.Series()
-sorted_gyms = sorted(master_df['gym_name'].tolist(), key=lambda x: gym_usage.get(x, 0), reverse=True) if not master_df.empty else []
+# --- ジム一覧を五十音・アルファベット順にソート ---
+sorted_gyms = sorted(master_df['gym_name'].tolist()) if not master_df.empty else []
 
 tab1, tab2 = st.tabs(["🗓 セットスケジュール", "🔍 よく行くジム"])
 
@@ -50,6 +49,7 @@ with tab1:
         else:
             if 'date_count' not in st.session_state: st.session_state.date_count = 1
             with st.form("add_form", clear_on_submit=True):
+                # プルダウンも五十音順で使いやすく
                 sel_gym = st.selectbox("ジム", options=["(選択)"] + sorted_gyms)
                 p_url = st.text_input("Instagram URL")
                 dates = []
@@ -86,12 +86,10 @@ with tab1:
             for _, row in month_df.iterrows():
                 past_tag = "past-event" if row['is_past'] else ""
                 with st.container(border=True):
-                    # 日付表示
                     st.markdown(f"<div class='{past_tag}'><div class='date-text'>{row['start_date'].strftime('%m/%d')} — {row['end_date'].strftime('%m/%d')}</div></div>", unsafe_allow_html=True)
                     
                     c_info, c_link = st.columns([1.8, 1])
                     with c_info:
-                        # ジム名とバッジ
                         badge = "<span class='status-badge'>終了</span>" if row['is_past'] else ""
                         st.markdown(f"<div class='{past_tag}'><span class='gym-name'>{row['gym_name']}</span>{badge}</div>", unsafe_allow_html=True)
                     with c_link:
@@ -109,6 +107,7 @@ with tab2:
                     conn.update(worksheet="gym_master", data=pd.concat([master_df, pd.DataFrame([{"gym_name": n, "profile_url": u}])], ignore_index=True)); st.rerun()
 
     if not master_df.empty:
+        # ここも五十音順でリストアップ
         for gym_name in sorted_gyms:
             row = master_df[master_df['gym_name'] == gym_name].iloc[0]
             with st.container(border=True):
