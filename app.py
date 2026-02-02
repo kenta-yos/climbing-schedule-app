@@ -1,5 +1,5 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
+from st_gsheets_connection import GSheetsConnection
 
 st.set_page_config(page_title="ボルダリングセット情報", layout="wide")
 
