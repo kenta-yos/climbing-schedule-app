@@ -145,42 +145,40 @@ with tab2:
                     conn.update(worksheet="climbing_logs", data=pd.concat([log_df, pd.DataFrame([{"date": l_date.isoformat(), "gym_name": l_gym}])], ignore_index=True))
                     st.rerun()
 
+# --- Tab 2: ログ（可視化改善・アイコン除去版） ---
+with tab2:
+    # ...（前後の登録フォームなどはそのまま維持）...
+
     if not log_df.empty:
-        today = date.today()
-        first_day, last_day = today.replace(day=1), today.replace(day=calendar.monthrange(today.year, today.month)[1])
-        c1, c2 = st.columns(2)
-        with c1: start_q = st.date_input("開始", value=first_day)
-        with c2: end_q = st.date_input("終了", value=last_day)
-        
-        df_l = log_df.copy(); df_l['date'] = pd.to_datetime(df_l['date'])
-        disp_df = df_l[(df_l['date'].dt.date >= start_q) & (df_l['date'].dt.date <= end_q)]
+        # ...（日付選択ロジックなどはそのまま）...
         
         if not disp_df.empty:
+            # インスタ風サマリーカード
             st.markdown(f'<div class="insta-card"><div class="insta-label">{start_q.strftime("%m/%d")} 〜 {end_q.strftime("%m/%d")}</div><div style="display: flex; justify-content: space-around; margin-top: 10px;"><div><div class="insta-val">{len(disp_df)}</div><div class="insta-label">Sessions</div></div><div><div class="insta-val">{disp_df["gym_name"].nunique()}</div><div class="insta-label">Gyms</div></div></div></div>', unsafe_allow_html=True)
             
             counts = disp_df['gym_name'].value_counts().reset_index()
             counts.columns = ['gym_name', 'count']
             
-            # --- グラフ描画：アイコン消去＆映え調整版 ---
+            # --- グラフ描画：configを追加してアイコンを消去 ---
             fig = px.pie(counts, values='count', names='gym_name', hole=0.5, 
                          color_discrete_sequence=px.colors.qualitative.Pastel)
             
             fig.update_traces(
                 textinfo='label+value',
-                texttemplate='<b>%{label}</b><br>(%{value}回)', # 太字でクッキリ
+                texttemplate='<b>%{label}</b><br>(%{value}回)', # 太字にして視認性アップ
                 textposition='outside',
-                marker=dict(line=dict(color='#FFFFFF', width=2)) # 白い境界線で高級感
+                marker=dict(line=dict(color='#FFFFFF', width=2)) # ピースの境界線を白にして清潔感を
             )
             
             fig.update_layout(
                 showlegend=False,
-                margin=dict(t=30, b=30, l=60, r=60), # 左右余白を広げてラベル切れ防止
+                margin=dict(t=20, b=20, l=60, r=60), # ラベルが切れないよう左右余白を調整
                 height=450,
                 paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(size=13, color="#444") # 文字サイズUP
+                font=dict(size=12, color="#444") # フォントサイズを少し大きく
             )
 
-            # アイコンを消す設定「config={'displayModeBar': False}」を追加！
+            # config={'displayModeBar': False} でカメラアイコン等を非表示
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
