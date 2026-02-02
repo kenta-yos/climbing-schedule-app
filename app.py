@@ -5,67 +5,57 @@ from datetime import datetime
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 1行凝縮CSS ---
+# --- カスタムCSS（カードUI復活） ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-    html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; background-color: #FFFFFF; }
+    html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; background-color: #F8F9FA; }
     
-    /* リストアイテムの境界 */
+    /* カードのスタイル */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        border: none !important; border-bottom: 1px solid #EEE !important;
-        border-radius: 0px !important; padding: 6px 0px !important;
-        margin-bottom: 0px !important; background-color: transparent !important;
+        border: none !important; border-radius: 12px !important; padding: 1rem !important;
+        background-color: white !important; box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+        margin-bottom: 1rem !important;
     }
     
-    /* テキストスタイル */
-    .past-event { opacity: 0.3; filter: grayscale(1); }
-    h3 { font-size: 0.9rem !important; font-weight: 500 !important; margin: 0 !important; display: inline-block; }
-    .date-text { font-size: 0.7rem; color: #999; margin: 0; line-height: 1; }
-    
-    /* ボタンの横並びをタイトにする */
-    div[data-testid="column"] { width: fit-content !important; min-width: 0px !important; flex: none !important; }
-    div[data-testid="stHorizontalBlock"] { gap: 0.5rem !important; align-items: center; justify-content: space-between; }
-    
-    /* アイコンボタンの装飾排除 */
-    .stButton button {
-        border: none !important; background: transparent !important; 
-        padding: 0px 4px !important; font-size: 1.1rem !important;
-    }
-    div[data-testid="stLinkButton"] a {
-        background-color: transparent !important; border: none !important;
-        padding: 0px 4px !important; font-size: 1.1rem !important; color: inherit !important;
-    }
-    
-    /* 編集エリア */
-    .edit-box { background: #F5F5F5; border-radius: 6px; padding: 10px; margin: 5px 0; border: 1px solid #DDD; }
+    .past-event { opacity: 0.4; filter: grayscale(1); }
+    h1 { font-size: 1.6rem !important; font-weight: 700 !important; margin-bottom: 1.5rem !important; }
+    h3 { font-size: 1.1rem !important; font-weight: 600 !important; margin: 0 !important; }
+    .date-text { font-size: 0.95rem; font-weight: 700; color: #555; margin-bottom: 0.5rem; }
+    .status-badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; background: #eee; color: #666; margin-left: 8px; }
     </style>
     """, unsafe_allow_html=True)
 
+# --- データ接続 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 def load_data():
-    return conn.read(worksheet="gym_master", ttl=0), conn.read(worksheet="schedules", ttl=0)
+    m = conn.read(worksheet="gym_master", ttl=0)
+    s = conn.read(worksheet="schedules", ttl=0)
+    return m, s
 master_df, schedule_df = load_data()
 
+# 状態管理
 if 'edit_id' not in st.session_state: st.session_state.edit_id = None
 if 'del_id' not in st.session_state: st.session_state.del_id = None
 
 gym_usage = schedule_df['gym_name'].value_counts() if not schedule_df.empty else pd.Series()
 sorted_gyms = sorted(master_df['gym_name'].tolist(), key=lambda x: gym_usage.get(x, 0), reverse=True) if not master_df.empty else []
 
-tab1, tab2 = st.tabs(["🗓 List", "🔍 Gym"])
+# タブ名を日本語に戻す
+tab1, tab2 = st.tabs(["🗓 セットスケジュール", "🔍 よく行くジム"])
 
 # ==========================================
-# Tab 1: Schedule
+# Tab 1: セットスケジュール
 # ==========================================
 with tab1:
+    st.title("🗓 セットスケジュール")
     with st.expander("＋ 新規登録"):
-        if not sorted_gyms: st.warning("Gymを登録してください")
+        if not sorted_gyms: st.warning("先にジムを登録してください")
         else:
             if 'date_count' not in st.session_state: st.session_state.date_count = 1
             with st.form("add_form", clear_on_submit=True):
-                sel_gym = st.selectbox("ジム", options=["(選択)"] + sorted_gyms)
-                p_url = st.text_input("Instagram URL")
+                sel_gym = st.selectbox("ジムを選択", options=["(選択してください)"] + sorted_gyms)
+                p_url = st.text_input("Instagram 投稿URL")
                 dates = []
                 for i in range(st.session_state.date_count):
                     c1, c2 = st.columns(2)
@@ -73,7 +63,7 @@ with tab1:
                     with c2: e_val = st.date_input(f"終了 {i+1}", key=f"e_in_{i}")
                     dates.append((s_val, e_val))
                 if st.form_submit_button("保存"):
-                    if sel_gym != "(選択)" and p_url:
+                    if sel_gym != "(選択してください)" and p_url:
                         new = [{"gym_name": sel_gym, "start_date": s.isoformat(), "end_date": e.isoformat(), "post_url": p_url} for s, e in dates]
                         conn.update(worksheet="schedules", data=pd.concat([schedule_df, pd.DataFrame(new)], ignore_index=True))
                         st.session_state.date_count = 1; st.rerun()
@@ -84,57 +74,60 @@ with tab1:
         s_df = schedule_df.copy()
         s_df['start_date'] = pd.to_datetime(s_df['start_date'])
         s_df['end_date'] = pd.to_datetime(s_df['end_date'])
-        cur_m = datetime.now().strftime('%Y年%m月')
+        today = pd.to_datetime(datetime.now().date())
         s_df['month_year'] = s_df['start_date'].dt.strftime('%Y年%m月')
+        cur_m = datetime.now().strftime('%Y年%m月')
         all_m = sorted(s_df['month_year'].unique().tolist())
         if cur_m not in all_m: all_m.append(cur_m); all_m.sort()
-        sel_m = st.selectbox("月", options=all_m, index=all_m.index(cur_m), label_visibility="collapsed")
+        sel_m = st.selectbox("表示月を選択", options=all_m, index=all_m.index(cur_m))
         
         month_df = s_df[s_df['month_year'] == sel_m].copy()
         if not month_df.empty:
-            month_df['is_past'] = month_df['end_date'] < pd.to_datetime(datetime.now().date())
+            month_df['is_past'] = month_df['end_date'] < today
             month_df = month_df.sort_values(by=['is_past', 'start_date'], ascending=[True, True])
             
             for idx, row in month_df.iterrows():
+                past_tag = "past-event" if row['is_past'] else ""
                 with st.container(border=True):
-                    # 【1行目】メイン情報とアイコンを横に並べる
-                    c_info, c_icons = st.columns([1, 1]) # 1:1で分けるが、CSSで右寄せにする
-                    
+                    st.markdown(f"<div class='{past_tag}'><div class='date-text'>🗓 {row['start_date'].strftime('%m/%d')} — {row['end_date'].strftime('%m/%d')}</div></div>", unsafe_allow_html=True)
+                    c_info, c_link = st.columns([2, 1])
                     with c_info:
-                        past_tag = "past-event" if row['is_past'] else ""
-                        st.markdown(f"<div class='{past_tag}'><p class='date-text'>{row['start_date'].strftime('%m/%d')}-{row['end_date'].strftime('%m/%d')}</p><h3>{row['gym_name']}</h3></div>", unsafe_allow_html=True)
+                        label = f"### {row['gym_name']}" + (" <span class='status-badge'>終了済</span>" if row['is_past'] else "")
+                        st.markdown(label, unsafe_allow_html=True)
+                    with c_link:
+                        st.link_button("Instagram", row['post_url'], use_container_width=True)
                     
-                    with c_icons:
-                        # アイコン3つをさらに細かく並べる
-                        ic1, ic2, ic3 = st.columns(3)
-                        with ic1: st.link_button("📸", row['post_url'])
-                        with ic2: 
-                            if st.button("✎", key=f"ed_s_{idx}"): st.session_state.edit_id = f"s_{idx}"; st.rerun()
-                        with ic3:
-                            if st.button("🗑", key=f"dl_s_{idx}"): st.session_state.del_id = f"s_{idx}"; st.rerun()
+                    # 編集・削除
+                    c_ed, c_dl = st.columns(2)
+                    with c_ed:
+                        if st.button("✎ 編集", key=f"ed_s_{idx}", use_container_width=True):
+                            st.session_state.edit_id = f"s_{idx}"; st.rerun()
+                    with c_dl:
+                        if st.button("🗑 削除", key=f"dl_s_{idx}", use_container_width=True):
+                            st.session_state.del_id = f"s_{idx}"; st.rerun()
 
-                    # 【2行目：必要時のみ】編集・削除フォーム
                     if st.session_state.edit_id == f"s_{idx}":
-                        st.markdown("<div class='edit-box'>", unsafe_allow_html=True)
-                        es = st.date_input("開始", value=row['start_date'], key=f"u_s_{idx}")
-                        ee = st.date_input("終了", value=row['end_date'], key=f"u_e_{idx}")
-                        eu = st.text_input("URL", value=row['post_url'], key=f"u_u_{idx}")
-                        if st.button("OK", key=f"cf_s_{idx}"):
-                            schedule_df.loc[idx, ['start_date', 'end_date', 'post_url']] = [es.isoformat(), ee.isoformat(), eu]
-                            conn.update(worksheet="schedules", data=schedule_df); st.session_state.edit_id = None; st.rerun()
-                        st.markdown("</div>", unsafe_allow_html=True)
+                        with st.form(f"f_ed_s_{idx}"):
+                            es = st.date_input("開始", value=row['start_date'])
+                            ee = st.date_input("終了", value=row['end_date'])
+                            eu = st.text_input("URL", value=row['post_url'])
+                            if st.form_submit_button("更新を確定"):
+                                schedule_df.loc[idx, ['start_date', 'end_date', 'post_url']] = [es.isoformat(), ee.isoformat(), eu]
+                                conn.update(worksheet="schedules", data=schedule_df); st.session_state.edit_id = None; st.rerun()
 
                     if st.session_state.del_id == f"s_{idx}":
-                        if st.button("🚨 削除確定", key=f"rl_dl_s_{idx}"):
+                        st.error("削除しますか？")
+                        if st.button("はい、削除します", key=f"rl_dl_s_{idx}"):
                             conn.update(worksheet="schedules", data=schedule_df.drop(idx)); st.session_state.del_id = None; st.rerun()
 
 # ==========================================
-# Tab 2: Gym
+# Tab 2: よく行くジム
 # ==========================================
 with tab2:
-    with st.expander("＋ ジム登録"):
+    st.title("🔍 よく行くジム")
+    with st.expander("＋ 新規ジム登録"):
         with st.form("m_form", clear_on_submit=True):
-            n = st.text_input("名称"); u = st.text_input("URL")
+            n = st.text_input("ジム名"); u = st.text_input("Instagram URL")
             if st.form_submit_button("登録"):
                 if n and u:
                     conn.update(worksheet="gym_master", data=pd.concat([master_df, pd.DataFrame([{"gym_name": n, "profile_url": u}])], ignore_index=True)); st.rerun()
@@ -144,29 +137,30 @@ with tab2:
             row_idx = master_df[master_df['gym_name'] == gym_name].index[0]
             row = master_df.loc[row_idx]
             with st.container(border=True):
-                c_info, c_icons = st.columns([1, 1])
-                with c_info: st.markdown(f"<h3>{row['gym_name']}</h3>", unsafe_allow_html=True)
-                with c_icons:
-                    ic1, ic2, ic3 = st.columns(3)
-                    with ic1: st.link_button("📸", row['profile_url'])
-                    with ic2:
-                        if st.button("✎", key=f"ed_g_{row_idx}"): st.session_state.edit_id = f"g_{row_idx}"; st.rerun()
-                    with ic3:
-                        if st.button("🗑", key=f"dl_g_{row_idx}"): st.session_state.del_id = f"g_{row_idx}"; st.rerun()
+                c_txt, c_btn = st.columns([2, 1])
+                with c_txt: st.markdown(f"### {row['gym_name']}")
+                with c_btn: st.link_button("Instagram", row['profile_url'], use_container_width=True)
+                
+                c_ed, c_dl = st.columns(2)
+                with c_ed:
+                    if st.button("✎ 編集", key=f"ed_g_{row_idx}", use_container_width=True):
+                        st.session_state.edit_id = f"g_{row_idx}"; st.rerun()
+                with c_dl:
+                    if st.button("🗑 削除", key=f"dl_g_{row_idx}", use_container_width=True):
+                        st.session_state.del_id = f"g_{row_idx}"; st.rerun()
 
                 if st.session_state.edit_id == f"g_{row_idx}":
-                    st.markdown("<div class='edit-box'>", unsafe_allow_html=True)
-                    gn = st.text_input("名称", value=row['gym_name'], key=f"u_gn_{row_idx}")
-                    gu = st.text_input("URL", value=row['profile_url'], key=f"u_gu_{row_idx}")
-                    if st.button("保存", key=f"cf_g_{row_idx}"):
-                        master_df.loc[row_idx, ['gym_name', 'profile_url']] = [gn, gu]
-                        schedule_df.loc[schedule_df['gym_name'] == row['gym_name'], 'gym_name'] = gn
-                        conn.update(worksheet="gym_master", data=master_df)
-                        conn.update(worksheet="schedules", data=schedule_df); st.session_state.edit_id = None; st.rerun()
-                    st.markdown("</div>", unsafe_allow_html=True)
+                    with st.form(f"f_ed_g_{row_idx}"):
+                        gn = st.text_input("ジム名", value=row['gym_name'])
+                        gu = st.text_input("プロフURL", value=row['profile_url'])
+                        if st.form_submit_button("保存"):
+                            master_df.loc[row_idx, ['gym_name', 'profile_url']] = [gn, gu]
+                            schedule_df.loc[schedule_df['gym_name'] == row['gym_name'], 'gym_name'] = gn
+                            conn.update(worksheet="gym_master", data=master_df)
+                            conn.update(worksheet="schedules", data=schedule_df); st.session_state.edit_id = None; st.rerun()
 
                 if st.session_state.del_id == f"g_{row_idx}":
-                    if st.button("🚨 全削除", key=f"rl_dl_g_{row_idx}"):
+                    st.error(f"{row['gym_name']} と全スケジュールを削除しますか？")
+                    if st.button("完全に削除する", key=f"rl_dl_g_{row_idx}"):
                         conn.update(worksheet="gym_master", data=master_df.drop(row_idx))
-                        conn.update(worksheet="schedules", data=schedule_df[schedule_df['gym_name'] != row['gym_name']])
-                        st.session_state.del_id = None; st.rerun()
+                        conn.update(worksheet="schedules", data=schedule_df[schedule_df['gym_name'] != row['gym_name']]); st.session_state.del_id = None; st.rerun()
