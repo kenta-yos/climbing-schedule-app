@@ -50,7 +50,7 @@ st.markdown("""
     }
     .past-opacity { opacity: 0.4 !important; }
 
-    /* ジムカードのレイアウト */
+    /* ジムカードのレイアウト（西暦表示対応） */
     .gym-row {
         display: flex !important;
         justify-content: space-between !important;
@@ -62,8 +62,18 @@ st.markdown("""
         border: 1px solid #E9ECEF !important;
         text-decoration: none !important;
     }
-    .gym-name { color: #1A1A1A !important; font-weight: 700 !important; }
-    .gym-meta { color: #666 !important; font-size: 0.8rem !important; }
+    .gym-name { 
+        color: #1A1A1A !important; 
+        font-weight: 700 !important; 
+        flex-grow: 1 !important;
+        margin-right: 10px !important;
+    }
+    .gym-meta { 
+        color: #666 !important; 
+        font-size: 0.8rem !important; 
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -109,7 +119,6 @@ with tab1:
         s_df['start_date'] = pd.to_datetime(s_df['start_date']); s_df['end_date'] = pd.to_datetime(s_df['end_date'])
         s_df['month_year'] = s_df['start_date'].dt.strftime('%Y年%m月')
         
-        # 表示月のリスト作成とデフォルト設定（当月を優先）
         months = sorted(s_df['month_year'].unique().tolist(), reverse=True)
         this_month_str = datetime.now().strftime('%Y年%m月')
         default_month_idx = months.index(this_month_str) if this_month_str in months else 0
@@ -144,7 +153,6 @@ with tab2:
                     st.toast("おつかれさま！💪"); st.session_state.last_log = f"{l_date.strftime('%m/%d')} @ {l_gym}"; st.rerun()
 
     if not log_df.empty:
-        # デフォルト期間を当月の1日〜末日に設定
         today = date.today()
         first_day = today.replace(day=1)
         last_day = today.replace(day=calendar.monthrange(today.year, today.month)[1])
@@ -193,7 +201,8 @@ with tab3:
     last_visits = {}
     if not log_df.empty:
         df_v = log_df.copy(); df_v['date'] = pd.to_datetime(df_v['date'])
-        last_visits = df_v.groupby('gym_name')['date'].max().dt.strftime('%m/%d').to_dict()
+        # 西暦を含む形式に変更
+        last_visits = df_v.groupby('gym_name')['date'].max().dt.strftime('%Y/%m/%d').to_dict()
 
     st.write("")
     for gym in sorted_gyms:
