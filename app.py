@@ -7,7 +7,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 鉄壁のレイアウトCSS（以前の好評なスタイルを復元） ---
+# --- 鉄壁のレイアウトCSS（好評だったスタイルを厳守） ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
@@ -22,7 +22,7 @@ st.markdown("""
     .insta-val { font-size: 2.2rem; font-weight: 800; }
     .insta-label { font-size: 0.8rem; opacity: 0.9; }
 
-    /* 【復元】絶対に崩れない横一直線リスト構造 */
+    /* 絶対に崩れない横一直線リスト構造 */
     .item-box {
         display: table !important;
         width: 100% !important;
@@ -60,7 +60,7 @@ st.markdown("""
     }
     .past-opacity { opacity: 0.35 !important; }
 
-    /* 【復元】ジム一覧のシンプル行 */
+    /* ジム一覧のシンプル行 */
     .gym-row {
         display: flex !important;
         justify-content: space-between !important;
@@ -94,7 +94,7 @@ if 'date_count' not in st.session_state: st.session_state.date_count = 1
 
 tab1, tab2, tab3 = st.tabs(["セットスケジュール", "ログ", "ジム"])
 
-# --- Tab 1: セットスケジュール（以前のUIに復元） ---
+# --- Tab 1: セットスケジュール（UI復元） ---
 with tab1:
     with st.expander("＋ スケジュールを登録"):
         with st.form("add_form", clear_on_submit=True):
@@ -126,7 +126,7 @@ with tab1:
             d_disp = d_s if d_s == d_e else f"{d_s}-{d_e}"
             st.markdown(f'<a href="{row["post_url"]}" target="_blank" class="item-box {"past-opacity" if is_past else ""}"><div class="item-accent"></div><span class="item-date">{d_disp}</span><span class="item-gym">{row["gym_name"]}</span></a>', unsafe_allow_html=True)
 
-# --- Tab 2: ログ（見切れ解消版） ---
+# --- Tab 2: ログ（見切れ解消＆文法修正版） ---
 with tab2:
     with st.expander("＋ 登攀を記録"):
         with st.form("log_form", clear_on_submit=True):
@@ -140,7 +140,10 @@ with tab2:
         today = date.today()
         first_day, last_day = today.replace(day=1), today.replace(day=calendar.monthrange(today.year, today.month)[1])
         c1, c2 = st.columns(2)
-        with c1: start_q = st.date_input("開始", value=first_day); with c2: end_q = st.date_input("終了", value=last_day)
+        with c1:
+            start_q = st.date_input("開始", value=first_day)
+        with c2:
+            end_q = st.date_input("終了", value=last_day)
         
         df_l = log_df.copy(); df_l['date'] = pd.to_datetime(df_l['date'])
         disp_df = df_l[(df_l['date'].dt.date >= start_q) & (df_l['date'].dt.date <= end_q)]
@@ -156,7 +159,7 @@ with tab2:
             
             fig.update_layout(
                 showlegend=False, coloraxis_showscale=False, xaxis_visible=False, yaxis_title=None,
-                margin=dict(t=10, b=10, l=10, r=100), # 右余白を100pxに広げて「回数」の見切れを阻止
+                margin=dict(t=10, b=10, l=10, r=100), # 右側に100pxの余白を確保
                 height=max(150, 40 * len(counts)), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                 font=dict(size=14, color="#333")
             )
@@ -165,7 +168,7 @@ with tab2:
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
                 st.markdown(f'<div class="item-box"><div class="item-accent"></div><span class="item-date">{row["date"].strftime("%m/%d")}</span><span class="item-gym">{row["gym_name"]}</span></div>', unsafe_allow_html=True)
 
-# --- Tab 3: ジム（以前のUIに復元） ---
+# --- Tab 3: ジム（UI復元） ---
 with tab3:
     with st.expander("＋ 新しいジムを登録"):
         with st.form("gym_add"):
