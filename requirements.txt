@@ -1,4 +1,3 @@
 streamlit
 st-gsheets-connection
-streamlit-calendar
-pandas
+plotly
