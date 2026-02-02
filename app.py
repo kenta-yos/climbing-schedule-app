@@ -6,54 +6,51 @@ import plotly.express as px
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- タイムライン・精密レイアウトCSS ---
+# --- 究極の洗練UI CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     .main .block-container { font-family: 'Noto Sans JP', sans-serif; background-color: #FFFFFF; }
 
-    /* タイムライン全体のコンテナ */
+    /* --- タイムライン（セットスケジュール用） --- */
     .timeline-wrapper {
         position: relative;
-        padding-left: 40px; /* 線と点のスペース */
-        margin: 20px 0;
+        padding-left: 0px; /* 左端をコンテナに合わせる */
+        margin: 25px 0;
     }
 
-    /* 垂直な線：wrapperの左端に固定 */
+    /* 縦線：コンテナの左端から少し右(5px)に配置 */
     .timeline-line {
         position: absolute;
-        left: 20px;
+        left: 5px;
         top: 0;
         bottom: 0;
         width: 1px;
-        background-color: #E0E0E0;
+        background-color: #EEEEEE;
         z-index: 1;
     }
 
-    /* 各アイテム */
     .timeline-item {
         position: relative;
         display: flex;
         align-items: center;
-        padding: 15px 0;
+        padding: 12px 0 12px 25px; /* 線を避けて右側にテキストを配置 */
         text-decoration: none !important;
-        border: none !important;
         z-index: 2;
     }
 
-    /* 精密に配置されたドット */
+    /* ドット：線の真上に配置 */
     .timeline-dot {
         position: absolute;
-        left: -24.5px; /* 線の位置(20px)に合わせて調整 */
-        width: 10px;
-        height: 10px;
-        background-color: #B22222;
+        left: 0px; 
+        width: 11px;
+        height: 11px;
+        background-color: #B22222; /* 落ち着いた赤 */
         border-radius: 50%;
         border: 2px solid #FFFFFF;
-        box-shadow: 0 0 0 1px #E0E0E0;
+        box-shadow: 0 0 0 1px #EEEEEE;
     }
 
-    /* 日付：落ち着いた赤 */
     .time-date {
         color: #B22222;
         font-weight: 700;
@@ -62,26 +59,29 @@ st.markdown("""
         flex-shrink: 0;
     }
 
-    /* ジム名：黒、1行固定 */
     .time-gym {
         color: #1A1A1A;
         font-weight: 500;
-        font-size: 1.05rem;
-        flex-grow: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 1rem;
     }
 
-    /* 過去の予定：薄くする */
+    /* --- ジム一覧（シンプルカード） --- */
+    .gym-card {
+        display: block;
+        padding: 14px 18px;
+        margin-bottom: 8px;
+        background-color: #F8F9FA;
+        border-radius: 8px;
+        text-decoration: none !important;
+        color: #1A1A1A !important;
+        font-weight: 500;
+        border: 1px solid #F1F3F5;
+        transition: background 0.2s;
+    }
+    .gym-card:hover { background-color: #E9ECEF; }
+
+    /* 共通設定 */
     .past-item { opacity: 0.4; }
-    .past-item .timeline-dot { background-color: #999; }
-
-    /* モバイル対応：文字が重ならないように */
-    @media (max-width: 480px) {
-        .time-date { width: 75px; font-size: 0.85rem; }
-        .time-gym { font-size: 0.95rem; }
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -98,7 +98,7 @@ sorted_gyms = sorted(master_df['gym_name'].tolist()) if not master_df.empty else
 tab1, tab2, tab3 = st.tabs(["セットスケジュール", "ログ", "ジム"])
 
 # ==========================================
-# Tab 1: セットスケジュール
+# Tab 1: セットスケジュール（洗練タイムライン）
 # ==========================================
 with tab1:
     with st.expander("＋ スケジュールを登録"):
@@ -128,11 +128,9 @@ with tab1:
         m_df = s_df[s_df['month_year'] == sel_m].copy()
         m_df['is_past'] = m_df['end_date'].dt.date < datetime.now().date()
         
-        # タイムライン描画
         st.markdown('<div class="timeline-wrapper"><div class="timeline-line"></div>', unsafe_allow_html=True)
         for _, row in m_df.sort_values(['is_past', 'start_date']).iterrows():
-            d_s = row['start_date'].strftime('%m/%d')
-            d_e = row['end_date'].strftime('%m/%d')
+            d_s, d_e = row['start_date'].strftime('%m/%d'), row['end_date'].strftime('%m/%d')
             d_display = d_s if d_s == d_e else f"{d_s}-{d_e}"
             past_cls = "past-item" if row['is_past'] else ""
             
@@ -146,20 +144,17 @@ with tab1:
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# Tab 2: ログ / Tab 3: ジム（同様のUIを適用）
+# Tab 3: ジム（元通りのシンプルカード）
 # ==========================================
-with tab2:
-    # ... (ログ入力フォームは維持)
-    if not log_df.empty:
-        # ... (統計グラフなどは維持)
-        st.markdown('<div class="timeline-wrapper"><div class="timeline-line"></div>', unsafe_allow_html=True)
-        # 履歴をタイムライン表示
-        st.markdown('</div>', unsafe_allow_html=True)
-
 with tab3:
-    # ... (ジム登録フォームは維持)
-    st.markdown('<div class="timeline-wrapper"><div class="timeline-line"></div>', unsafe_allow_html=True)
+    with st.expander("＋ 新しいジムを登録"):
+        with st.form("gym_add"):
+            n = st.text_input("ジム名"); u = st.text_input("Instagram URL")
+            if st.form_submit_button("登録"):
+                if n and u:
+                    conn.update(worksheet="gym_master", data=pd.concat([master_df, pd.DataFrame([{"gym_name": n, "profile_url": u}])], ignore_index=True)); st.rerun()
+
+    st.write("") # スペース
     for gym in sorted_gyms:
         url = master_df[master_df['gym_name'] == gym]['profile_url'].iloc[0]
-        st.markdown(f'<a href="{url}" target="_blank" class="timeline-item"><div class="timeline-dot" style="background:#CCC;"></div><span class="time-gym" style="margin-left:90px;">{gym}</span></a>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f'<a href="{url}" target="_blank" class="gym-card">{gym}</a>', unsafe_allow_html=True)
