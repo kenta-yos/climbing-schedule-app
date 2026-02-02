@@ -6,13 +6,13 @@ import plotly.express as px
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 崩れを許さない堅牢なCSS ---
+# --- 堅牢なCSSレイアウト ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     .main .block-container { font-family: 'Noto Sans JP', sans-serif; }
 
-    /* タイムラインアイテムのコンテナ */
+    /* タイムラインアイテムのコンテナ（絶対に崩れないFlex構造） */
     .timeline-item-container {
         display: flex !important;
         align-items: center !important;
@@ -22,7 +22,7 @@ st.markdown("""
         width: 100% !important;
     }
 
-    /* 左側の赤いアクセントバー（縦棒） */
+    /* 左側の赤いアクセントバー */
     .timeline-bar {
         width: 3px !important;
         height: 1.4rem !important;
@@ -32,17 +32,16 @@ st.markdown("""
         border-radius: 2px !important;
     }
 
-    /* 日付テキスト：幅を固定してズレを防止 */
+    /* 日付テキスト */
     .timeline-date {
         color: #B22222 !important;
         font-weight: 700 !important;
         font-size: 0.95rem !important;
-        width: 100px !important; /* 日付範囲にも対応できる幅 */
+        width: 100px !important;
         flex-shrink: 0 !important;
-        letter-spacing: -0.02em;
     }
 
-    /* ジム名：残りのスペースを埋める */
+    /* ジム名 */
     .timeline-gym {
         color: #1A1A1A !important;
         font-weight: 700 !important;
@@ -53,10 +52,8 @@ st.markdown("""
         flex-grow: 1 !important;
     }
 
-    /* 過去アイテムの減光 */
     .past-item { opacity: 0.4 !important; }
     
-    /* ジムカード（タブ3） */
     .gym-card {
         display: block !important;
         padding: 16px !important;
@@ -81,6 +78,7 @@ def load_all_data():
 master_df, schedule_df, log_df = load_all_data()
 sorted_gyms = sorted(master_df['gym_name'].tolist()) if not master_df.empty else []
 
+# セッション状態の初期化
 if 'date_count' not in st.session_state: st.session_state.date_count = 1
 if 'last_log' not in st.session_state: st.session_state.last_log = None
 
@@ -121,25 +119,18 @@ with tab1:
         s_df['end_date'] = pd.to_datetime(s_df['end_date'])
         s_df['month_year'] = s_df['start_date'].dt.strftime('%Y年%m月')
         
-        all_m = sorted(s_df['month_year'].unique().tolist())
+        all_m_s = sorted(s_df['month_year'].unique().tolist(), reverse=True)
         cur_m = datetime.now().strftime('%Y年%m月')
-        sel_m = st.selectbox("表示月", options=all_m, index=all_m.index(cur_m) if cur_m in all_m else 0)
+        sel_m_s = st.selectbox("表示月 (スケジュール)", options=all_m_s, index=all_m_s.index(cur_m) if cur_m in all_m_s else 0)
         
-        m_df = s_df[s_df['month_year'] == sel_m].copy()
-        m_df['is_past'] = m_df['end_date'].dt.date < datetime.now().date()
+        m_df_s = s_df[s_df['month_year'] == sel_m_s].copy()
+        m_df_s['is_past'] = m_df_s['end_date'].dt.date < datetime.now().date()
         
-        for _, row in m_df.sort_values(['is_past', 'start_date']).iterrows():
+        for _, row in m_df_s.sort_values(['is_past', 'start_date']).iterrows():
             d_s, d_e = row['start_date'].strftime('%m/%d'), row['end_date'].strftime('%m/%d')
             d_display = d_s if d_s == d_e else f"{d_s}-{d_e}"
             past_class = "past-item" if row['is_past'] else ""
-            
-            st.markdown(f"""
-                <a href="{row['post_url']}" target="_blank" class="timeline-item-container {past_class}">
-                    <div class="timeline-bar"></div>
-                    <span class="timeline-date">{d_display}</span>
-                    <span class="timeline-gym">{row['gym_name']}</span>
-                </a>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<a href="{row["post_url"]}" target="_blank" class="timeline-item-container {past_class}"><div class="timeline-bar"></div><span class="timeline-date">{d_display}</span><span class="timeline-gym">{row["gym_name"]}</span></a>', unsafe_allow_html=True)
 
 # ==========================================
 # Tab 2: ログ
@@ -161,8 +152,15 @@ with tab2:
         df_l = log_df.copy()
         df_l['date'] = pd.to_datetime(df_l['date'])
         df_l['month_year'] = df_l['date'].dt.strftime('%Y年%m月')
-        mode = st.radio("表示期間", ["今月", "全期間"], horizontal=True)
-        disp_df = df_l[df_l['month_year'] == datetime.now().strftime('%Y年%m月')] if mode == "今月" else df_l
+        
+        # ログ用の年月フィルタ
+        log_months = sorted(df_l['month_year'].unique().tolist(), reverse=True)
+        options_l = ["全期間"] + log_months
+        cur_m_l = datetime.now().strftime('%Y年%m月')
+        default_idx = options_l.index(cur_m_l) if cur_m_l in options_l else 0
+        
+        sel_period = st.selectbox("表示期間 (ログ)", options=options_l, index=default_idx)
+        disp_df = df_l if sel_period == "全期間" else df_l[df_l['month_year'] == sel_period]
         
         if not disp_df.empty:
             c1, c2 = st.columns(2)
@@ -176,13 +174,7 @@ with tab2:
             st.plotly_chart(fig, use_container_width=True)
 
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
-                st.markdown(f"""
-                    <div class="timeline-item-container">
-                        <div class="timeline-bar"></div>
-                        <span class="timeline-date">{row['date'].strftime('%m/%d')}</span>
-                        <span class="timeline-gym">{row['gym_name']}</span>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f'<div class="timeline-item-container"><div class="timeline-bar"></div><span class="timeline-date">{row["date"].strftime("%m/%d")}</span><span class="timeline-gym">{row["gym_name"]}</span></div>', unsafe_allow_html=True)
 
 # ==========================================
 # Tab 3: ジム
