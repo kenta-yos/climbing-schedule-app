@@ -161,10 +161,27 @@ with tab2:
             counts = disp_df['gym_name'].value_counts().reset_index()
             counts.columns = ['gym_name', 'count']
             
-            fig = px.pie(counts, values='count', names='gym_name', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig.update_traces(textinfo='label+value', texttemplate='%{label}<br>(%{value}回)', textposition='outside')
-            fig.update_layout(showlegend=False, margin=dict(t=50, b=50, l=50, r=50), height=450, paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig, use_container_width=True)
+            # --- グラフ描画：アイコン消去＆映え調整版 ---
+            fig = px.pie(counts, values='count', names='gym_name', hole=0.5, 
+                         color_discrete_sequence=px.colors.qualitative.Pastel)
+            
+            fig.update_traces(
+                textinfo='label+value',
+                texttemplate='<b>%{label}</b><br>(%{value}回)', # 太字でクッキリ
+                textposition='outside',
+                marker=dict(line=dict(color='#FFFFFF', width=2)) # 白い境界線で高級感
+            )
+            
+            fig.update_layout(
+                showlegend=False,
+                margin=dict(t=30, b=30, l=60, r=60), # 左右余白を広げてラベル切れ防止
+                height=450,
+                paper_bgcolor='rgba(0,0,0,0)',
+                font=dict(size=13, color="#444") # 文字サイズUP
+            )
+
+            # アイコンを消す設定「config={'displayModeBar': False}」を追加！
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
                 st.markdown(f"""
