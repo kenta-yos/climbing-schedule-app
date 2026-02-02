@@ -6,57 +6,27 @@ import plotly.express as px
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 堅牢なCSS：標準レイアウトを活かす ---
+# --- デザインCSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     .main .block-container { font-family: 'Noto Sans JP', sans-serif; }
 
-    /* スケジュールとログのリストアイテム */
     .list-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 0;
-        border-bottom: 1px solid #F0F0F0;
-        text-decoration: none !important;
+        display: flex; align-items: center; padding: 12px 0;
+        border-bottom: 1px solid #F0F0F0; text-decoration: none !important;
     }
-
-    /* 左端の赤いアクセント線（点の代わり） */
     .list-accent {
-        width: 3px;
-        height: 1.2rem;
-        background-color: #B22222;
-        margin-right: 15px;
-        border-radius: 2px;
+        width: 3px; height: 1.2rem; background-color: #B22222;
+        margin-right: 15px; border-radius: 2px;
     }
-
-    .list-date {
-        color: #B22222;
-        font-weight: 700;
-        font-size: 0.9rem;
-        width: 95px;
-        flex-shrink: 0;
-    }
-
-    .list-gym {
-        color: #1A1A1A;
-        font-weight: 700;
-        font-size: 1rem;
-    }
-
-    /* ジム一覧のカード（タブ3） */
+    .list-date { color: #B22222; font-weight: 700; font-size: 0.9rem; width: 95px; flex-shrink: 0; }
+    .list-gym { color: #1A1A1A; font-weight: 700; font-size: 1rem; }
     .gym-card {
-        display: block;
-        padding: 16px;
-        margin-bottom: 8px;
-        background-color: #F8F9FA;
-        border-radius: 8px;
-        color: #1A1A1A !important;
-        text-decoration: none !important;
-        font-weight: 500;
-        border: 1px solid #E9ECEF;
+        display: block; padding: 16px; margin-bottom: 8px; background-color: #F8F9FA;
+        border-radius: 8px; color: #1A1A1A !important; text-decoration: none !important;
+        font-weight: 500; border: 1px solid #E9ECEF;
     }
-    
     .past-item { opacity: 0.4; }
     </style>
     """, unsafe_allow_html=True)
@@ -71,34 +41,71 @@ def load_all_data():
 master_df, schedule_df, log_df = load_all_data()
 sorted_gyms = sorted(master_df['gym_name'].tolist()) if not master_df.empty else []
 
+# セッション状態の初期化
+if 'date_count' not in st.session_state:
+    st.session_state.date_count = 1
+
 tab1, tab2, tab3 = st.tabs(["セットスケジュール", "ログ", "ジム"])
 
 # ==========================================
 # Tab 1: セットスケジュール
 # ==========================================
 with tab1:
-    with st.expander("＋ スケジュールを登録"):
+    with st.expander("＋ スケジュールを登録", expanded=st.session_state.date_count > 1):
+        # フォームの外でボタンを配置するとリロードが走るため、
+        # 入力状態を維持しつつ枠を増やすための工夫
         with st.form("add_form", clear_on_submit=True):
             sel_gym = st.selectbox("ジム", options=["(選択)"] + sorted_gyms)
             p_url = st.text_input("Instagram URL")
-            d_count = st.session_state.get('date_count', 1)
-            for i in range(d_count):
+            
+            # 複数日程の入力欄
+            dates_data = []
+            for i in range(st.session_state.date_count):
+                st.markdown(f"**日程 {i+1}**")
                 c1, c2 = st.columns(2)
-                with c1: st.date_input(f"開始 {i+1}", key=f"s_date_{i}")
-                with c2: st.date_input(f"終了 {i+1}", key=f"e_date_{i}")
-            if st.form_submit_button("保存"):
+                with c1: 
+                    s_d = st.date_input(f"開始日", key=f"s_date_{i}")
+                with c2: 
+                    e_d = st.date_input(f"終了日", value=s_d, key=f"e_date_{i}")
+            
+            submit = st.form_submit_button("保存する")
+            
+            if submit:
                 if sel_gym != "(選択)" and p_url:
-                    new_rows = [{"gym_name": sel_gym, "start_date": st.session_state[f"s_date_{i}"].isoformat(), "end_date": st.session_state[f"e_date_{i}"].isoformat(), "post_url": p_url} for i in range(d_count)]
-                    conn.update(worksheet="schedules", data=pd.concat([schedule_df, pd.DataFrame(new_rows)], ignore_index=True))
-                    st.session_state.date_count = 1; st.rerun()
+                    new_entries = []
+                    for i in range(st.session_state.date_count):
+                        new_entries.append({
+                            "gym_name": sel_gym,
+                            "start_date": st.session_state[f"s_date_{i}"].isoformat(),
+                            "end_date": st.session_state[f"e_date_{i}"].isoformat(),
+                            "post_url": p_url
+                        })
+                    # データ更新
+                    updated_df = pd.concat([schedule_df, pd.DataFrame(new_entries)], ignore_index=True)
+                    conn.update(worksheet="schedules", data=updated_df)
+                    
+                    # 完了通知
+                    st.toast("できたよ！🎉 登録完了しました。")
+                    st.session_state.date_count = 1 # カウントをリセット
+                    st.rerun()
+                else:
+                    st.error("ジム名とURLを入力してください")
 
+        # 「日程を増やす」ボタン（フォームの外に置くことで、入力をリセットせずに済みます）
+        if st.button("＋ 日程を増やす"):
+            st.session_state.date_count += 1
+            st.rerun()
+
+    # 表示セクション
     if not schedule_df.empty:
         s_df = schedule_df.copy()
         s_df['start_date'] = pd.to_datetime(s_df['start_date'])
         s_df['end_date'] = pd.to_datetime(s_df['end_date'])
         s_df['month_year'] = s_df['start_date'].dt.strftime('%Y年%m月')
+        
         all_m = sorted(s_df['month_year'].unique().tolist())
-        sel_m = st.selectbox("表示月", options=all_m, index=all_m.index(datetime.now().strftime('%Y年%m月')) if datetime.now().strftime('%Y年%m月') in all_m else 0)
+        cur_m = datetime.now().strftime('%Y年%m月')
+        sel_m = st.selectbox("表示月", options=all_m, index=all_m.index(cur_m) if cur_m in all_m else 0)
         
         m_df = s_df[s_df['month_year'] == sel_m].copy()
         m_df['is_past'] = m_df['end_date'].dt.date < datetime.now().date()
@@ -117,12 +124,15 @@ with tab1:
 # Tab 2: ログ
 # ==========================================
 with tab2:
-    with st.expander("＋ 記録を追加"):
+    with st.expander("＋ 登攀を記録"):
         with st.form("log_form", clear_on_submit=True):
             l_date = st.date_input("日付", value=datetime.now().date())
             l_gym = st.selectbox("ジムを選択", options=sorted_gyms)
             if st.form_submit_button("記録を保存"):
-                conn.update(worksheet="climbing_logs", data=pd.concat([log_df, pd.DataFrame([{"date": l_date.isoformat(), "gym_name": l_gym}])], ignore_index=True)); st.rerun()
+                new_log = pd.DataFrame([{"date": l_date.isoformat(), "gym_name": l_gym}])
+                conn.update(worksheet="climbing_logs", data=pd.concat([log_df, new_log], ignore_index=True))
+                st.toast("ナイス登攀！🎉 記録しました。")
+                st.rerun()
 
     if not log_df.empty:
         df_l = log_df.copy()
@@ -132,10 +142,15 @@ with tab2:
         disp_df = df_l[df_l['month_year'] == datetime.now().strftime('%Y年%m月')] if mode == "今月" else df_l
         
         if not disp_df.empty:
-            c1, c2 = st.columns(2); c1.metric("登攀回数", f"{len(disp_df)}回"); c2.metric("ジム数", f"{disp_df['gym_name'].nunique()}")
-            counts = disp_df['gym_name'].value_counts().reset_index(); counts.columns = ['ジム', '回']
+            c1, c2 = st.columns(2)
+            c1.metric("登攀回数", f"{len(disp_df)}回")
+            c2.metric("ジム数", f"{disp_df['gym_name'].nunique()}")
+            
+            counts = disp_df['gym_name'].value_counts().reset_index()
+            counts.columns = ['ジム', '回']
             fig = px.pie(counts, values='回', names='ジム', hole=0.6, color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=250); st.plotly_chart(fig, use_container_width=True)
+            fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=250)
+            st.plotly_chart(fig, use_container_width=True)
 
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
                 st.markdown(f"""
@@ -152,10 +167,14 @@ with tab2:
 with tab3:
     with st.expander("＋ 新しいジムを登録"):
         with st.form("gym_add"):
-            n = st.text_input("ジム名"); u = st.text_input("Instagram URL")
+            n = st.text_input("ジム名")
+            u = st.text_input("Instagram URL")
             if st.form_submit_button("登録"):
                 if n and u:
-                    conn.update(worksheet="gym_master", data=pd.concat([master_df, pd.DataFrame([{"gym_name": n, "profile_url": u}])], ignore_index=True)); st.rerun()
+                    new_gym = pd.DataFrame([{"gym_name": n, "profile_url": u}])
+                    conn.update(worksheet="gym_master", data=pd.concat([master_df, new_gym], ignore_index=True))
+                    st.toast(f"✅ {n} を登録したよ！")
+                    st.rerun()
     st.write("")
     for gym in sorted_gyms:
         url = master_df[master_df['gym_name'] == gym]['profile_url'].iloc[0]
