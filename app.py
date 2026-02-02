@@ -7,7 +7,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 究極の崩れ防止CSS（改訂版） ---
+# --- 究極の崩れ防止CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
@@ -22,10 +22,10 @@ st.markdown("""
     .insta-val { font-size: 2.2rem; font-weight: 800; }
     .insta-label { font-size: 0.8rem; opacity: 0.9; }
 
-    /* 【重要】絶対に崩れないリスト構造 */
+    /* 絶対に崩れないリスト構造 (Grid) */
     .item-box {
         display: grid !important;
-        grid-template-columns: 4px 100px 1fr !important; /* 幅を完全に固定配分 */
+        grid-template-columns: 4px 100px 1fr !important;
         align-items: center !important;
         gap: 12px !important;
         padding: 14px 0 !important;
@@ -43,16 +43,16 @@ st.markdown("""
         color: #B22222 !important;
         font-weight: 700 !important;
         font-size: 0.85rem !important;
-        white-space: nowrap !important; /* 絶対に改行させない */
+        white-space: nowrap !important;
     }
     .item-gym {
         color: #1A1A1A !important;
         font-weight: 700 !important;
         font-size: 0.95rem !important;
-        white-space: nowrap !important; /* 絶対に改行させない */
-        overflow: hidden !important; /* 溢れたら隠す */
-        text-overflow: ellipsis !important; /* 溢れたら「...」にする */
-        min-width: 0 !important; /* grid内での省略を有効化 */
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        min-width: 0 !important;
     }
     .past-opacity { opacity: 0.35 !important; }
 
@@ -73,7 +73,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- データ取得（API保護） ---
+# --- データ取得 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 def load_all_data():
     m = conn.read(worksheet="gym_master", ttl=10)
@@ -89,6 +89,7 @@ except:
 
 sorted_gyms = sorted(master_df['gym_name'].tolist()) if not master_df.empty else []
 if 'date_count' not in st.session_state: st.session_state.date_count = 1
+if 'last_log' not in st.session_state: st.session_state.last_log = None
 
 tab1, tab2, tab3 = st.tabs(["セットスケジュール", "ログ", "ジム"])
 
@@ -137,20 +138,25 @@ with tab1:
 # ==========================================
 with tab2:
     with st.expander("＋ 登攀を記録"):
+        if st.session_state.last_log: st.success(f"前回保存：{st.session_state.last_log}")
         with st.form("log_form", clear_on_submit=True):
             l_date = st.date_input("日付", value=date.today())
             l_gym = st.selectbox("ジムを選択", options=["(選択)"] + sorted_gyms)
             if st.form_submit_button("保存"):
                 if l_gym != "(選択)":
                     conn.update(worksheet="climbing_logs", data=pd.concat([log_df, pd.DataFrame([{"date": l_date.isoformat(), "gym_name": l_gym}])], ignore_index=True))
+                    st.session_state.last_log = f"{l_date.strftime('%m/%d')} @ {l_gym}"
                     st.rerun()
 
-# --- Tab 2: ログ（可視化改善・アイコン除去版） ---
-with tab2:
-    # ...（前後の登録フォームなどはそのまま維持）...
-
     if not log_df.empty:
-        # ...（日付選択ロジックなどはそのまま）...
+        today = date.today()
+        first_day, last_day = today.replace(day=1), today.replace(day=calendar.monthrange(today.year, today.month)[1])
+        c1, c2 = st.columns(2)
+        with c1: start_q = st.date_input("開始", value=first_day)
+        with c2: end_q = st.date_input("終了", value=last_day)
+        
+        df_l = log_df.copy(); df_l['date'] = pd.to_datetime(df_l['date'])
+        disp_df = df_l[(df_l['date'].dt.date >= start_q) & (df_l['date'].dt.date <= end_q)]
         
         if not disp_df.empty:
             # インスタ風サマリーカード
@@ -159,28 +165,29 @@ with tab2:
             counts = disp_df['gym_name'].value_counts().reset_index()
             counts.columns = ['gym_name', 'count']
             
-            # --- グラフ描画：configを追加してアイコンを消去 ---
+            # --- グラフ描画 ---
             fig = px.pie(counts, values='count', names='gym_name', hole=0.5, 
                          color_discrete_sequence=px.colors.qualitative.Pastel)
             
             fig.update_traces(
                 textinfo='label+value',
-                texttemplate='<b>%{label}</b><br>(%{value}回)', # 太字にして視認性アップ
+                texttemplate='<b>%{label}</b><br>(%{value}回)',
                 textposition='outside',
-                marker=dict(line=dict(color='#FFFFFF', width=2)) # ピースの境界線を白にして清潔感を
+                marker=dict(line=dict(color='#FFFFFF', width=2))
             )
             
             fig.update_layout(
                 showlegend=False,
-                margin=dict(t=20, b=20, l=60, r=60), # ラベルが切れないよう左右余白を調整
+                margin=dict(t=30, b=30, l=60, r=60),
                 height=450,
                 paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(size=12, color="#444") # フォントサイズを少し大きく
+                font=dict(size=12, color="#444")
             )
 
-            # config={'displayModeBar': False} でカメラアイコン等を非表示
+            # configでアイコンを非表示
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
+            # 履歴一覧
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
                 st.markdown(f"""
                     <div class="item-box">
