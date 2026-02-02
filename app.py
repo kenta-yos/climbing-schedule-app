@@ -5,48 +5,48 @@ from datetime import datetime
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 魔法のCSS：カード全体をリンク化 ---
+# --- CSS設定 ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; background-color: #F0F2F5; }
     
-    /* カード全体の装飾 */
+    /* カード全体のデザイン */
     .link-card {
         background-color: white;
         border-radius: 12px;
-        padding: 1rem;
-        margin-bottom: 0.8rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        padding: 12px 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         text-decoration: none !important;
         display: block;
-        transition: transform 0.2s, background-color 0.2s;
-        border-left: 5px solid #2E7D32; /* 左端にアクセントカラー */
+        border-left: 6px solid #2E7D32;
+        transition: transform 0.1s;
     }
-    .link-card:active { transform: scale(0.98); background-color: #F8F9FA; }
+    .link-card:active { transform: scale(0.97); background-color: #F8F9FA; }
     
-    /* 日程エリアの強調 */
+    /* 日程バッジ */
     .date-badge {
         display: inline-block;
         background-color: #E8F5E9;
         color: #2E7D32;
         padding: 2px 10px;
         border-radius: 6px;
-        font-size: 1.1rem;
+        font-size: 1.0rem;
         font-weight: 700;
-        margin-bottom: 8px;
-        font-family: 'Courier New', Courier, monospace;
+        margin-bottom: 6px;
     }
     
     /* ジム名 */
     .gym-title {
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         font-weight: 700;
         color: #1C1E21;
         margin: 0;
+        line-height: 1.4;
     }
     
-    /* 終了バッジ */
+    /* 過去分 */
     .past-card { border-left-color: #9E9E9E; opacity: 0.6; filter: grayscale(1); }
     .status-tag {
         font-size: 0.7rem;
@@ -55,6 +55,7 @@ st.markdown("""
         padding: 2px 8px;
         border-radius: 4px;
         float: right;
+        margin-top: 4px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -101,7 +102,6 @@ with tab1:
                 if st.button("＋ 日程枠を増やす"):
                     st.session_state.date_count += 1; st.rerun()
 
-    # --- リスト表示（カードリンク実装） ---
     if not schedule_df.empty:
         s_df = schedule_df.copy()
         s_df['start_date'] = pd.to_datetime(s_df['start_date'])
@@ -116,19 +116,19 @@ with tab1:
             month_df['is_past'] = month_df['end_date'] < today
             month_df = month_df.sort_values(by=['is_past', 'start_date'], ascending=[True, True])
             
+            # 修正ポイント： st.container() を使わず、直接 HTML 文字列を結合して出力
             for _, row in month_df.iterrows():
                 past_class = "past-card" if row['is_past'] else ""
                 tag = "<span class='status-tag'>終了済</span>" if row['is_past'] else ""
                 
-                # HTMLを直接書き込んで、全体をリンクにする
-                card_html = f"""
+                html_content = f"""
                 <a href="{row['post_url']}" target="_blank" class="link-card {past_class}">
                     <div class="date-badge">🗓 {row['start_date'].strftime('%m/%d')} — {row['end_date'].strftime('%m/%d')}</div>
                     {tag}
                     <div class="gym-title">{row['gym_name']}</div>
                 </a>
                 """
-                st.markdown(card_html, unsafe_allow_html=True)
+                st.markdown(html_content, unsafe_allow_html=True)
 
 # ==========================================
 # Tab 2: よく行くジム
@@ -144,7 +144,6 @@ with tab2:
     if not master_df.empty:
         for gym_name in sorted_gyms:
             row = master_df[master_df['gym_name'] == gym_name].iloc[0]
-            # こちらもカード全体をプロフィールへのリンクに
             st.markdown(f"""
                 <a href="{row['profile_url']}" target="_blank" class="link-card">
                     <div class="gym-title">🔍 {row['gym_name']}</div>
