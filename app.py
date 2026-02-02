@@ -5,69 +5,61 @@ from datetime import datetime
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 1. スタイルの定義（ここがデザインの肝） ---
+# --- CSS：標準のlink_buttonをカード風に改造 ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     
-    /* 全体の背景とフォント */
+    /* 背景とフォント */
     .main .block-container { font-family: 'Noto Sans JP', sans-serif; background-color: #F0F2F5; }
 
-    /* カードデザイン */
-    .custom-card {
+    /* link_buttonをカード化する魔法 */
+    div[data-testid="stLinkButton"] > a {
+        display: block !important;
+        width: 100% !important;
         background-color: white !important;
+        color: #1C1E21 !important;
+        border: none !important;
         border-radius: 12px !important;
-        padding: 16px !important;
-        margin-bottom: 12px !important;
+        padding: 15px !important;
+        margin-bottom: 10px !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
         border-left: 6px solid #2E7D32 !important;
-        display: block !important;
-        text-decoration: none !important;
-        color: inherit !important;
-        transition: transform 0.1s ease-in-out;
+        text-align: left !important;
+        line-height: 1.4 !important;
     }
-    .custom-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important; }
-    .custom-card:active { transform: scale(0.98); }
-
-    /* 日程バッジ（目立たせる） */
-    .date-badge {
-        display: inline-block !important;
-        background-color: #E8F5E9 !important;
-        color: #2E7D32 !important;
-        padding: 4px 12px !important;
-        border-radius: 8px !important;
-        font-size: 1.1rem !important;
-        font-weight: 700 !important;
-        margin-bottom: 8px !important;
+    
+    /* ホバー・アクティブ時の動き */
+    div[data-testid="stLinkButton"] > a:active {
+        transform: scale(0.98) !important;
+        background-color: #F8F9FA !important;
     }
 
-    /* ジム名 */
-    .gym-name-text {
-        font-size: 1.2rem !important;
-        font-weight: 700 !important;
-        color: #1C1E21 !important;
-        margin: 0 !important;
+    /* 日付テキストの装飾 */
+    .custom-date {
+        color: #2E7D32;
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: block;
+        margin-bottom: 4px;
+    }
+    
+    /* ジム名テキストの装飾 */
+    .custom-gym {
+        font-size: 1.1rem;
+        font-weight: 700;
+        display: block;
     }
 
-    /* 終了済みスタイル */
-    .past-card {
+    /* 終了済みカードのスタイル調整 */
+    .past-btn a {
         border-left-color: #9E9E9E !important;
         opacity: 0.6 !important;
-        filter: grayscale(0.5) !important;
-    }
-    .status-badge {
-        float: right;
-        background: #EEE;
-        color: #666;
-        font-size: 0.7rem;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-weight: normal;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. データ処理 ---
+# --- データ接続 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 master_df = conn.read(worksheet="gym_master", ttl=0)
 schedule_df = conn.read(worksheet="schedules", ttl=0)
@@ -80,7 +72,7 @@ sorted_gyms = sorted(master_df['gym_name'].tolist()) if not master_df.empty else
 
 tab1, tab2 = st.tabs(["🗓 セットスケジュール", "🔍 よく行くジム"])
 
-# --- 3. タブ1: セットスケジュール ---
+# --- タブ1: セットスケジュール ---
 with tab1:
     with st.expander("＋ 新規予定を追加"):
         with st.form("add_form", clear_on_submit=True):
@@ -115,22 +107,20 @@ with tab1:
         month_df['is_past'] = month_df['end_date'].dt.date < datetime.now().date()
         month_df = month_df.sort_values(by=['is_past', 'start_date'])
 
-        # ここで一気にHTMLを構築して出力
         for _, row in month_df.iterrows():
-            past_class = "past-card" if row['is_past'] else ""
-            status_html = "<span class='status-badge'>終了済</span>" if row['is_past'] else ""
+            # ラベル部分をHTMLで装飾
+            label = f"🗓 {row['start_date'].strftime('%m/%d')} — {row['end_date'].strftime('%m/%d')}\n{row['gym_name']}"
+            if row['is_past']:
+                label += " (終了済)"
+                st.markdown('<div class="past-btn">', unsafe_allow_html=True)
             
-            # st.markdownで unsafe_allow_html=True を使い、各カードを独立したHTMLとして描画
-            card_html = f"""
-            <a href="{row['post_url']}" target="_blank" class="custom-card {past_class}">
-                <div class="date-badge">🗓 {row['start_date'].strftime('%m/%d')} — {row['end_date'].strftime('%m/%d')}</div>
-                {status_html}
-                <div class="gym-name-text">{row['gym_name']}</div>
-            </a>
-            """
-            st.markdown(card_html, unsafe_allow_html=True)
+            # 標準のlink_buttonを配置（CSSでカード化される）
+            st.link_button(label, row['post_url'], use_container_width=True)
+            
+            if row['is_past']:
+                st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 4. タブ2: よく行くジム ---
+# --- タブ2: よく行くジム ---
 with tab2:
     with st.expander("＋ 新しいジムを登録"):
         with st.form("gym_form"):
@@ -142,8 +132,4 @@ with tab2:
 
     for gym in sorted_gyms:
         url = master_df[master_df['gym_name'] == gym]['profile_url'].iloc[0]
-        st.markdown(f"""
-            <a href="{url}" target="_blank" class="custom-card">
-                <div class="gym-name-text">🔍 {gym}</div>
-            </a>
-            """, unsafe_allow_html=True)
+        st.link_button(f"🔍 {gym}", url, use_container_width=True)
