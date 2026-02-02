@@ -163,26 +163,30 @@ with tab2:
             
             counts = disp_df['gym_name'].value_counts().reset_index()
             counts.columns = ['gym_name', 'count']
+            counts = counts.sort_values('count', ascending=True)
             
-            fig = px.pie(counts, values='count', names='gym_name', hole=0.5, 
-                         color_discrete_sequence=px.colors.qualitative.Pastel)
+            # 円グラフから横棒グラフに変更
+            fig = px.bar(counts, x='count', y='gym_name', orientation='h', 
+                         text='count', color='count', color_continuous_scale='Sunsetdark')
             
             fig.update_traces(
-                textinfo='label+value',
-                texttemplate='<b>%{label}</b><br>(%{value}回)',
+                texttemplate='  <b>%{text}回</b>', 
                 textposition='outside',
-                marker=dict(line=dict(color='#FFFFFF', width=2))
+                marker_line_width=0,
+                width=0.6  # 棒の太さを調整
             )
             
             fig.update_layout(
                 showlegend=False,
-                # 左右の余白（l, r）を広げ、グラフを中央に寄せ文字スペースを確保
-                margin=dict(t=50, b=50, l=80, r=80), 
-                height=450,
+                coloraxis_showscale=False,
+                xaxis_visible=False, # X軸（下の目盛り）は隠してスッキリ
+                yaxis_title=None,
+                margin=dict(t=10, b=10, l=10, r=100), # 右側余白をたっぷり100px確保
+                height=max(150, 40 * len(counts)), # ジム数に応じて高さを自動調整
                 paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(size=12, color="#444"),
-                # 文字サイズがバラバラにならないよう、かつ最小サイズを保証
-                uniformtext=dict(minsize=10, mode='hide')
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(size=14, color="#333"),
+                bargap=0.3
             )
 
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
