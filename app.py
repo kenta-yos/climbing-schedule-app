@@ -6,7 +6,7 @@ from datetime import datetime
 # ページ設定
 st.set_page_config(page_title="セットスケジュール", layout="centered")
 
-# --- カスタムCSS（日本語バランス & グレーアウト設定） ---
+# --- カスタムCSS（デザイン微調整） ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
@@ -22,19 +22,10 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
         margin-bottom: 1rem !important;
     }
-    /* 過去の予定（グレーアウト）用のスタイル */
-    .past-event {
-        opacity: 0.5;
-        filter: grayscale(1);
-    }
+    .past-event { opacity: 0.5; filter: grayscale(1); }
     h1 { font-size: 1.6rem !important; font-weight: 700 !important; }
     h3 { font-size: 1.15rem !important; font-weight: 600 !important; margin: 0 !important; }
-    .date-text {
-        font-size: 0.95rem; /* 日付を少し大きく調整 */
-        font-weight: 700;
-        color: #555;
-        margin-bottom: 0.5rem;
-    }
+    .date-text { font-size: 0.95rem; font-weight: 700; color: #555; margin-bottom: 0.5rem; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -61,53 +52,52 @@ with st.expander("＋ 登録", expanded=False):
                 st.rerun()
 
 # --- タイムライン表示 ---
-if df.empty:
-    st.info("予定がありません。")
+# 今月の日付文字列
+current_month_str = datetime.now().strftime('%Y年%m月')
+
+if df is None or df.empty:
+    st.info("予定が登録されていません。上の「＋ 登録」から最初の予定を追加してください。")
 else:
-    # データ型変換
+    # データ型変換とクリーンアップ
     df['date'] = pd.to_datetime(df['date'])
     df['end_date'] = pd.to_datetime(df['end_date'])
     today = pd.to_datetime(datetime.now().date())
-
-    # --- 月別タブの作成 ---
-    # 登録されているデータの「月」をユニークに取得（今月を含む）
     df['month_year'] = df['date'].dt.strftime('%Y年%m月')
-    all_months = sorted(df['month_year'].unique())
-    current_month_str = datetime.now().strftime('%Y年%m月')
-    
+
+    # 月別リストの作成（エラー回避用：最低でも今月は入れる）
+    all_months = sorted(df['month_year'].unique().tolist())
     if current_month_str not in all_months:
         all_months.append(current_month_str)
         all_months.sort()
 
-    # 月選択のタブ
-    selected_month = st.select_slider("表示月を選択", options=all_months, value=current_month_str)
+    # --- 月選択 UI ---
+    # 選択肢が2つ以上ある時だけスライダーを表示、1つの時は固定
+    if len(all_months) > 1:
+        selected_month = st.select_slider("表示月を選択", options=all_months, value=current_month_str)
+    else:
+        selected_month = all_months[0]
+        st.markdown(f"#### 📅 {selected_month}")
 
-    # 選択された月のデータを抽出
+    # フィルタリング
     month_df = df[df['month_year'] == selected_month].copy()
     
     if month_df.empty:
-        st.write(f"### {selected_month} の予定はありません")
+        st.write(f"この月の予定はまだありません。")
     else:
-        # 過去かどうかのフラグを作成（終了日が昨日以前なら過去）
+        # 過去フラグとソート
         month_df['is_past'] = month_df['end_date'] < today
-        
-        # 昇順ソート（過去フラグを第1キーにすることで、過去分[True=1]が下に来る）
         month_df = month_df.sort_values(by=['is_past', 'date'], ascending=[True, True])
 
         for _, row in month_df.iterrows():
             period = f"{row['date'].strftime('%m/%d')} — {row['end_date'].strftime('%m/%d')}"
-            
-            # 過去の場合は全体をグレーアウトさせるHTMLを仕込む
             wrapper_start = "<div class='past-event'>" if row['is_past'] else "<div>"
-            wrapper_end = "</div>"
             
             with st.container(border=True):
                 st.markdown(f"{wrapper_start}<div class='date-text'>🗓 {period}</div>", unsafe_allow_html=True)
-                
                 col_info, col_link = st.columns([2, 1])
                 with col_info:
                     st.markdown(f"### {row['gym_name']}")
                 with col_link:
                     if row['url']:
                         st.link_button("詳細確認", row['url'], use_container_width=True)
-                st.markdown(wrapper_end, unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
