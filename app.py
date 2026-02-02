@@ -5,53 +5,35 @@ from datetime import datetime
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- CSS：標準のlink_buttonをカード風に改造 ---
+# --- CSS：左寄せ・装飾排除のミニマルデザイン ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     
-    /* 背景とフォント */
     .main .block-container { font-family: 'Noto Sans JP', sans-serif; background-color: #F0F2F5; }
 
-    /* link_buttonをカード化する魔法 */
+    /* link_buttonをスマートな左寄せカード化 */
     div[data-testid="stLinkButton"] > a {
         display: block !important;
         width: 100% !important;
         background-color: white !important;
         color: #1C1E21 !important;
         border: none !important;
-        border-radius: 12px !important;
-        padding: 15px !important;
+        border-radius: 10px !important;
+        padding: 14px 18px !important;
         margin-bottom: 10px !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-        border-left: 6px solid #2E7D32 !important;
-        text-align: left !important;
-        line-height: 1.4 !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+        border-left: 5px solid #2E7D32 !important;
+        text-align: left !important; /* 左寄せ */
+        line-height: 1.5 !important;
     }
     
-    /* ホバー・アクティブ時の動き */
     div[data-testid="stLinkButton"] > a:active {
         transform: scale(0.98) !important;
         background-color: #F8F9FA !important;
     }
 
-    /* 日付テキストの装飾 */
-    .custom-date {
-        color: #2E7D32;
-        font-weight: 700;
-        font-size: 0.9rem;
-        display: block;
-        margin-bottom: 4px;
-    }
-    
-    /* ジム名テキストの装飾 */
-    .custom-gym {
-        font-size: 1.1rem;
-        font-weight: 700;
-        display: block;
-    }
-
-    /* 終了済みカードのスタイル調整 */
+    /* 終了済みカード（グレー） */
     .past-btn a {
         border-left-color: #9E9E9E !important;
         opacity: 0.6 !important;
@@ -70,7 +52,7 @@ for i in range(5):
 
 sorted_gyms = sorted(master_df['gym_name'].tolist()) if not master_df.empty else []
 
-tab1, tab2 = st.tabs(["🗓 セットスケジュール", "🔍 よく行くジム"])
+tab1, tab2 = st.tabs(["セットスケジュール", "よく行くジム"])
 
 # --- タブ1: セットスケジュール ---
 with tab1:
@@ -79,6 +61,7 @@ with tab1:
             sel_gym = st.selectbox("ジム", options=["(選択)"] + sorted_gyms)
             p_url = st.text_input("Instagram URL")
             for i in range(st.session_state.date_count):
+                st.write(f"日程 {i+1}")
                 c1, c2 = st.columns(2)
                 with c1: st.date_input(f"開始 {i+1}", key=f"s_date_{i}")
                 with c2: st.date_input(f"終了 {i+1}", value=st.session_state[f"s_date_{i}"], key=f"e_date_{i}")
@@ -87,8 +70,7 @@ with tab1:
                     new_rows = [{"gym_name": sel_gym, "start_date": st.session_state[f"s_date_{i}"].isoformat(), 
                                  "end_date": st.session_state[f"e_date_{i}"].isoformat(), "post_url": p_url} for i in range(st.session_state.date_count)]
                     conn.update(worksheet="schedules", data=pd.concat([schedule_df, pd.DataFrame(new_rows)], ignore_index=True))
-                    st.session_state.date_count = 1
-                    st.rerun()
+                    st.session_state.date_count = 1; st.rerun()
         if st.session_state.date_count < 5:
             if st.button("＋ 日程枠を増やす"):
                 st.session_state.date_count += 1; st.rerun()
@@ -101,20 +83,24 @@ with tab1:
         
         cur_m = datetime.now().strftime('%Y年%m月')
         all_months = sorted(s_df['month_year'].unique().tolist())
-        sel_m = st.selectbox("月", options=all_months, index=all_months.index(cur_m) if cur_m in all_months else 0)
+        sel_m = st.selectbox("表示月", options=all_months, index=all_months.index(cur_m) if cur_m in all_months else 0, label_visibility="collapsed")
 
         month_df = s_df[s_df['month_year'] == sel_m].copy()
         month_df['is_past'] = month_df['end_date'].dt.date < datetime.now().date()
         month_df = month_df.sort_values(by=['is_past', 'start_date'])
 
         for _, row in month_df.iterrows():
-            # ラベル部分をHTMLで装飾
-            label = f"🗓 {row['start_date'].strftime('%m/%d')} — {row['end_date'].strftime('%m/%d')}\n{row['gym_name']}"
+            # 日付ロジック：開始と終了が同じなら1つだけ表示
+            s_str = row['start_date'].strftime('%m/%d')
+            e_str = row['end_date'].strftime('%m/%d')
+            date_display = s_str if s_str == e_str else f"{s_str} — {e_str}"
+            
+            # ラベル構築（絵文字なし・左寄せ想定）
+            label = f"{date_display}\n{row['gym_name']}"
             if row['is_past']:
                 label += " (終了済)"
                 st.markdown('<div class="past-btn">', unsafe_allow_html=True)
             
-            # 標準のlink_buttonを配置（CSSでカード化される）
             st.link_button(label, row['post_url'], use_container_width=True)
             
             if row['is_past']:
@@ -132,4 +118,5 @@ with tab2:
 
     for gym in sorted_gyms:
         url = master_df[master_df['gym_name'] == gym]['profile_url'].iloc[0]
-        st.link_button(f"🔍 {gym}", url, use_container_width=True)
+        # 絵文字なし・左寄せ
+        st.link_button(gym, url, use_container_width=True)
