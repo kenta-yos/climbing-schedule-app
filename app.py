@@ -5,34 +5,30 @@ from datetime import datetime
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 究極のコンパクトCSS ---
+# --- CSS（バグ修正と調整） ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     html, body, [class*="css"] { font-family: 'Noto Sans JP', sans-serif; background-color: #F8F9FA; }
     
-    /* カードをさらにスリムに */
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border: none !important; border-radius: 8px !important; 
-        padding: 0.6rem 0.8rem !important; /* パディングを大幅カット */
+        padding: 0.6rem 0.8rem !important;
         background-color: white !important; box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
-        margin-bottom: 0.5rem !important; /* カード間の隙間を短縮 */
+        margin-bottom: 0.5rem !important;
     }
     
     .past-event { opacity: 0.35; filter: grayscale(1); }
     
-    /* テキストサイズの最適化 */
-    h3 { font-size: 1.0rem !important; font-weight: 600 !important; margin: 0 !important; line-height: 1.2; }
-    .date-text { font-size: 0.8rem; font-weight: 500; color: #888; margin-bottom: 2px; }
-    .status-badge { font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; background: #f0f0f0; color: #999; margin-left: 5px; }
+    /* ジム名のスタイル（###を廃止してCSSで制御） */
+    .gym-name { font-size: 1.0rem; font-weight: 600; margin: 0; color: #333; display: inline-block; }
+    .date-text { font-size: 0.75rem; font-weight: 500; color: #888; margin-bottom: 2px; }
+    .status-badge { font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; background: #f0f0f0; color: #999; margin-left: 5px; vertical-align: middle; }
     
-    /* ボタンをスリムに */
-    .stButton button { padding: 0.2rem 0.5rem; font-size: 0.8rem; height: auto; }
     div[data-testid="stLinkButton"] a { padding: 4px 10px !important; font-size: 0.8rem !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- データ接続 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 def load_data():
     m = conn.read(worksheet="gym_master", ttl=0)
@@ -49,7 +45,6 @@ tab1, tab2 = st.tabs(["🗓 セットスケジュール", "🔍 よく行くジ�
 # Tab 1: セットスケジュール
 # ==========================================
 with tab1:
-    # 冒頭の st.title を削除して即座にコンテンツを開始
     with st.expander("＋ 新規予定を追加"):
         if not sorted_gyms: st.warning("先にジムを登録してください")
         else:
@@ -81,7 +76,7 @@ with tab1:
         all_m = sorted(s_df['month_year'].unique().tolist())
         cur_m = datetime.now().strftime('%Y年%m月')
         if cur_m not in all_m: all_m.append(cur_m); all_m.sort()
-        sel_m = st.selectbox("表示月", options=all_m, index=all_m.index(cur_m), label_visibility="collapsed")
+        sel_m = st.selectbox("月", options=all_m, index=all_m.index(cur_m), label_visibility="collapsed")
         
         month_df = s_df[s_df['month_year'] == sel_m].copy()
         if not month_df.empty:
@@ -91,11 +86,14 @@ with tab1:
             for _, row in month_df.iterrows():
                 past_tag = "past-event" if row['is_past'] else ""
                 with st.container(border=True):
+                    # 日付表示
                     st.markdown(f"<div class='{past_tag}'><div class='date-text'>{row['start_date'].strftime('%m/%d')} — {row['end_date'].strftime('%m/%d')}</div></div>", unsafe_allow_html=True)
+                    
                     c_info, c_link = st.columns([1.8, 1])
                     with c_info:
-                        label = f"### {row['gym_name']}" + (" <span class='status-badge'>終了</span>" if row['is_past'] else "")
-                        st.markdown(f"<div class='{past_tag}'>{label}</div>", unsafe_allow_html=True)
+                        # ジム名とバッジ
+                        badge = "<span class='status-badge'>終了</span>" if row['is_past'] else ""
+                        st.markdown(f"<div class='{past_tag}'><span class='gym-name'>{row['gym_name']}</span>{badge}</div>", unsafe_allow_html=True)
                     with c_link:
                         st.link_button("Instagram", row['post_url'], use_container_width=True)
 
@@ -115,5 +113,7 @@ with tab2:
             row = master_df[master_df['gym_name'] == gym_name].iloc[0]
             with st.container(border=True):
                 c_txt, c_btn = st.columns([1.8, 1])
-                with c_txt: st.markdown(f"### {row['gym_name']}")
-                with c_btn: st.link_button("Instagram", row['profile_url'], use_container_width=True)
+                with c_txt:
+                    st.markdown(f"<span class='gym-name'>{row['gym_name']}</span>", unsafe_allow_html=True)
+                with c_btn:
+                    st.link_button("Instagram", row['profile_url'], use_container_width=True)
