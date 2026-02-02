@@ -6,64 +6,26 @@ import plotly.express as px
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 独自CSS：中央寄せの完全排除と新デザイン ---
+# --- CSS：左寄せ・モダンデザイン ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-    
     .main .block-container { font-family: 'Noto Sans JP', sans-serif; background-color: #FFFFFF; }
 
-    /* HTMLカスタムカードのデザイン */
+    /* HTMLカスタムカード（左寄せ・1行） */
     .custom-link-card {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        padding: 16px;
-        margin-bottom: 10px;
-        background-color: #F8F9FA; /* 淡いグレー */
-        border: 1px solid #E9ECEF;
-        border-radius: 8px;
-        text-decoration: none !important;
-        color: #212529 !important;
+        display: flex; align-items: center; width: 100%; padding: 14px 18px;
+        margin-bottom: 8px; background-color: #F8F9FA; border: 1px solid #E9ECEF;
+        border-radius: 8px; text-decoration: none !important; color: #212529 !important;
         transition: all 0.2s ease;
     }
-    
-    .custom-link-card:hover {
-        background-color: #E9ECEF;
-        border-color: #DEE2E6;
-        transform: translateY(-1px);
-    }
+    .custom-link-card:hover { background-color: #E9ECEF; transform: translateY(-1px); }
+    .card-date { font-weight: 700; font-size: 0.85rem; color: #6C757D; margin-right: 15px; white-space: nowrap; }
+    .card-gym { font-weight: 500; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .past-card { opacity: 0.5; background-color: #F1F3F5; }
 
-    .custom-link-card:active {
-        transform: scale(0.98);
-    }
-
-    /* 日付部分 */
-    .card-date {
-        font-weight: 700;
-        font-size: 0.9rem;
-        color: #495057;
-        margin-right: 15px;
-        white-space: nowrap;
-    }
-
-    /* ジム名部分 */
-    .card-gym {
-        font-weight: 500;
-        font-size: 1rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* 終了済み（少し透過） */
-    .past-card {
-        opacity: 0.5;
-        background-color: #F1F3F5;
-    }
-    
-    /* タブ周りの調整 */
-    .stTabs [data-baseweb="tab-list"] { justify-content: flex-start !important; }
+    /* 入力フォーム内の左寄せ調整 */
+    .stSelectbox, .stTextInput, .stDateInput { text-align: left !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -75,27 +37,52 @@ def load_all_data():
             conn.read(worksheet="climbing_logs", ttl=0))
 
 master_df, schedule_df, log_df = load_all_data()
+
+# セッション状態の管理
+if 'date_count' not in st.session_state: st.session_state.date_count = 1
 sorted_gyms = sorted(master_df['gym_name'].tolist()) if not master_df.empty else []
 
-tab1, tab2, tab3 = st.tabs(["セット予定", "登攀ログ", "ジム名鑑"])
+# --- タブ設定（名称変更） ---
+tab1, tab2, tab3 = st.tabs(["セットスケジュール", "ログ", "ジム"])
 
 # ==========================================
-# Tab 1: セット予定
+# Tab 1: セットスケジュール
 # ==========================================
 with tab1:
-    with st.expander("＋ 新規予定を追加"):
+    with st.expander("＋ スケジュールを登録"):
         with st.form("add_form", clear_on_submit=True):
             sel_gym = st.selectbox("ジム", options=["(選択)"] + sorted_gyms)
             p_url = st.text_input("Instagram URL")
-            c1, c2 = st.columns(2)
-            with c1: s_val = st.date_input("開始", value=datetime.now().date())
-            with c2: e_val = st.date_input("終了", value=s_val)
+            
+            # 複数日程の入力枠
+            new_dates = []
+            for i in range(st.session_state.date_count):
+                st.write(f"日程 {i+1}")
+                c1, c2 = st.columns(2)
+                with c1: s_val = st.date_input(f"開始 {i+1}", key=f"s_date_{i}")
+                with c2: e_val = st.date_input(f"終了 {i+1}", value=s_val, key=f"e_date_{i}")
+            
             if st.form_submit_button("保存"):
                 if sel_gym != "(選択)" and p_url:
-                    new_row = pd.DataFrame([{"gym_name": sel_gym, "start_date": s_val.isoformat(), "end_date": e_val.isoformat(), "post_url": p_url}])
-                    conn.update(worksheet="schedules", data=pd.concat([schedule_df, new_row], ignore_index=True))
-                    st.toast("✅ 保存しました"); st.rerun()
+                    new_rows = []
+                    for i in range(st.session_state.date_count):
+                        new_rows.append({
+                            "gym_name": sel_gym, 
+                            "start_date": st.session_state[f"s_date_{i}"].isoformat(), 
+                            "end_date": st.session_state[f"e_date_{i}"].isoformat(), 
+                            "post_url": p_url
+                        })
+                    conn.update(worksheet="schedules", data=pd.concat([schedule_df, pd.DataFrame(new_rows)], ignore_index=True))
+                    st.toast("✅ 保存しました"); st.session_state.date_count = 1; st.rerun()
+                else:
+                    st.error("ジムとURLを入力してください")
 
+        if st.session_state.date_count < 5:
+            if st.button("＋ 日程枠を追加"):
+                st.session_state.date_count += 1
+                st.rerun()
+
+    # スケジュール表示
     if not schedule_df.empty:
         s_df = schedule_df.copy()
         s_df['start_date'] = pd.to_datetime(s_df['start_date'])
@@ -110,31 +97,26 @@ with tab1:
         m_df['is_past'] = m_df['end_date'].dt.date < datetime.now().date()
         
         for _, row in m_df.sort_values(['is_past', 'start_date']).iterrows():
-            d_start = row['start_date'].strftime('%m/%d')
-            d_end = row['end_date'].strftime('%m/%d')
-            d_display = d_start if d_start == d_end else f"{d_start}-{d_end}"
-            
+            d_s, d_e = row['start_date'].strftime('%m/%d'), row['end_date'].strftime('%m/%d')
+            d_display = d_s if d_s == d_e else f"{d_s}-{d_e}"
             past_class = "past-card" if row['is_past'] else ""
-            status_text = " (終了)" if row['is_past'] else ""
             
-            # 完全にHTMLでカードを生成（これで中央寄せを回避）
-            card_html = f"""
-            <a href="{row['post_url']}" target="_blank" class="custom-link-card {past_class}">
-                <span class="card-date">{d_display}</span>
-                <span class="card-gym">{row['gym_name']}{status_text}</span>
-            </a>
-            """
-            st.markdown(card_html, unsafe_allow_html=True)
+            st.markdown(f"""
+                <a href="{row['post_url']}" target="_blank" class="custom-link-card {past_class}">
+                    <span class="card-date">{d_display}</span>
+                    <span class="card-gym">{row['gym_name']}{' (終了)' if row['is_past'] else ''}</span>
+                </a>
+            """, unsafe_allow_html=True)
 
 # ==========================================
-# Tab 2: 登攀ログ
+# Tab 2: ログ
 # ==========================================
 with tab2:
-    with st.expander("＋ 記録を追加"):
+    with st.expander("＋ 登攀を記録"):
         with st.form("log_form", clear_on_submit=True):
             l_date = st.date_input("日付", value=datetime.now().date())
-            l_gym = st.selectbox("ジム", options=sorted_gyms)
-            if st.form_submit_button("記録"):
+            l_gym = st.selectbox("ジムを選択", options=sorted_gyms)
+            if st.form_submit_button("記録を保存"):
                 conn.update(worksheet="climbing_logs", data=pd.concat([log_df, pd.DataFrame([{"date": l_date.isoformat(), "gym_name": l_gym}])], ignore_index=True))
                 st.toast("🎉 記録しました"); st.rerun()
 
@@ -150,29 +132,39 @@ with tab2:
             c1.metric("登攀回数", f"{len(disp_df)}回")
             c2.metric("ジム数", f"{disp_df['gym_name'].nunique()}")
             
-            # 円グラフ
             counts = disp_df['gym_name'].value_counts().reset_index()
             counts.columns = ['ジム', '回']
             fig = px.pie(counts, values='回', names='ジム', hole=0.6, color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=250, showlegend=True)
+            fig.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=250)
             st.plotly_chart(fig, use_container_width=True)
 
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
                 st.markdown(f"""
-                <div class="custom-link-card" style="pointer-events: none;">
-                    <span class="card-date">{row['date'].strftime('%m/%d')}</span>
-                    <span class="card-gym">{row['gym_name']}</span>
-                </div>
+                    <div class="custom-link-card" style="pointer-events: none;">
+                        <span class="card-date">{row['date'].strftime('%m/%d')}</span>
+                        <span class="card-gym">{row['gym_name']}</span>
+                    </div>
                 """, unsafe_allow_html=True)
 
 # ==========================================
-# Tab 3: ジム名鑑
+# Tab 3: ジム
 # ==========================================
 with tab3:
+    with st.expander("＋ 新しいジムを登録"):
+        with st.form("gym_add_form", clear_on_submit=True):
+            new_gym_name = st.text_input("ジム名")
+            new_gym_url = st.text_input("Instagram URL")
+            if st.form_submit_button("登録"):
+                if new_gym_name and new_gym_url:
+                    new_gym_df = pd.DataFrame([{"gym_name": new_gym_name, "profile_url": new_gym_url}])
+                    conn.update(worksheet="gym_master", data=pd.concat([master_df, new_gym_df], ignore_index=True))
+                    st.toast(f"✅ {new_gym_name} を登録しました"); st.rerun()
+
+    # ジム一覧表示
     for gym in sorted_gyms:
         url = master_df[master_df['gym_name'] == gym]['profile_url'].iloc[0]
         st.markdown(f"""
-        <a href="{url}" target="_blank" class="custom-link-card">
-            <span class="card-gym">{gym}</span>
-        </a>
+            <a href="{url}" target="_blank" class="custom-link-card">
+                <span class="card-gym">{gym}</span>
+            </a>
         """, unsafe_allow_html=True)
