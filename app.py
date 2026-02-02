@@ -1,86 +1,76 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
-from streamlit_calendar import calendar
 import pandas as pd
+from datetime import datetime
 
-# 1. ページ設定
-st.set_page_config(page_title="ボルダリングセット管理", layout="wide")
+st.set_page_config(page_title="ボルダリングセット・タイムライン", layout="centered")
 
-# 2. スプレッドシート接続
+# --- スプレッドシート接続 ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 df = conn.read(ttl=0)
 
-st.title("🧗‍♂️ ボルダリングセット・マスター")
+st.title("🧗‍♂️ セットスケジュール")
 
-# --- 3. 登録セクション ---
-with st.expander("🆕 新しいセット予定を登録する", expanded=False):
-    with st.form("bulk_add_form"):
-        gym_name = st.text_input("ジム名", placeholder="例: B-PUMP 荻窪")
+# --- 登録セクション（折りたたみ） ---
+with st.expander("🆕 新しい予定を登録"):
+    with st.form("add_form"):
+        gym_name = st.text_input("ジム名")
         insta_url = st.text_input("Instagram URL")
-        
         st.write("---")
         entries = []
-        cols = st.columns(3)
-        for i in range(3):
-            with cols[i]:
-                st.markdown(f"**箇所 {i+1}**")
-                wall_name = st.text_input(f"壁名 {i+1}", key=f"wall_{i}")
-                start_d = st.date_input(f"開始日 {i+1}", key=f"start_{i}")
-                end_d = st.date_input(f"終了日 {i+1}", key=f"end_{i}")
-                if wall_name:
-                    entries.append({
-                        "gym_name": gym_name,
-                        "date": start_d.isoformat(),
-                        "end_date": end_d.isoformat(),
-                        "wall": wall_name,
-                        "url": insta_url
-                    })
-
+        for i in range(2): # 1度の登録は2件までに簡略化
+            wall = st.text_input(f"壁名 {i+1}", key=f"w_{i}")
+            col1, col2 = st.columns(2)
+            with col1: start_d = st.date_input(f"開始 {i+1}", key=f"s_{i}")
+            with col2: end_d = st.date_input(f"終了 {i+1}", key=f"e_{i}")
+            if wall:
+                entries.append({"gym_name": gym_name, "date": start_d, "end_date": end_d, "wall": wall, "url": insta_url})
+        
         if st.form_submit_button("保存"):
             if gym_name and entries:
-                new_df = pd.DataFrame(entries)
-                updated_df = pd.concat([df, new_df], ignore_index=True)
-                conn.update(data=updated_df)
-                st.success("保存完了！")
+                new_df = pd.concat([df, pd.DataFrame(entries)], ignore_index=True)
+                conn.update(data=new_df)
+                st.success("保存しました！")
                 st.rerun()
 
-# --- 4. カレンダー表示セクション ---
-st.subheader("🗓 セットスケジュールカレンダー")
-
-calendar_events = []
-if not df.empty:
-    for i, row in df.iterrows():
-        calendar_events.append({
-            "id": i,
-            "title": f"🛠{row['gym_name']} ({row['wall']})",
-            "start": str(row['date']),
-            "end": str(row['end_date']),
-            # URLはここでは渡さず、クリックイベントで取得します
-            "extendedProps": {"url": str(row['url'])}
-        })
-
-calendar_options = {
-    "headerToolbar": {"left": "prev,next today", "center": "title", "right": "dayGridMonth"},
-    "initialView": "dayGridMonth",
-    "selectable": True,
-}
-
-# カレンダーの描画
-state = calendar(events=calendar_events, options=calendar_options, key="climbing_cal")
-
-# --- 5. インスタへ飛ばすための「ボタン」を表示 ---
-# カレンダー内の予定がクリックされたら、その下にURLを表示する（これが最も確実で安全です）
-if state.get("eventClick"):
-    event_data = state["eventClick"]["event"]
-    url = event_data.get("extendedProps", {}).get("url")
+# --- タイムライン表示セクション ---
+if df.empty:
+    st.info("予定が登録されていません。")
+else:
+    # データを日付順に整理
+    df['date'] = pd.to_datetime(df['date'])
+    df['end_date'] = pd.to_datetime(df['end_date'])
     
-    st.divider()
-    st.markdown(f"### 🚩 選択中の予定: {event_data['title']}")
-    if url and url.startswith("http"):
-        st.link_button("🔗 このセットのInstagram投稿を開く", url, type="primary")
-    else:
-        st.warning("この予定にはURLが登録されていません。")
+    # 今月以降のデータに絞り込み、日付順にソート
+    today = pd.to_datetime(datetime.now().date())
+    display_df = df[df['end_date'] >= today].sort_values('date')
 
-# --- 6. データ管理 ---
-with st.expander("📝 登録データ一覧"):
-    st.dataframe(df, use_container_width=True)
+    st.subheader(f"📅 {datetime.now().month}月のセット予定")
+
+    # 日付ごとにグループ化して表示
+    for date, group in display_df.groupby('date'):
+        # 日付の見出し
+        date_str = date.strftime('%m/%d (%a)')
+        st.markdown(f"#### 🗓️ {date_str}")
+        
+        for _, row in group.iterrows():
+            # カード形式のUI
+            with st.container(border=True):
+                col_info, col_link = st.columns([4, 1])
+                
+                with col_info:
+                    # ステータスバッジ
+                    if row['date'] == today:
+                        st.markdown("🔴 **TODAY SET**")
+                    
+                    st.markdown(f"### {row['gym_name']}")
+                    st.markdown(f"**📍 {row['wall']}**")
+                    
+                    # 期間表示
+                    period = f"{row['date'].strftime('%m/%d')} 〜 {row['end_date'].strftime('%m/%d')}"
+                    st.caption(f"⏱️ 期間: {period}")
+
+                with col_link:
+                    if row['url']:
+                        st.link_button("見る", row['url'], use_container_width=True)
+        st.write("") # スペース空け
