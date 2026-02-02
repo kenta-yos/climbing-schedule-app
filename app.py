@@ -7,69 +7,73 @@ import plotly.express as px
 
 st.set_page_config(page_title="セット管理Pro", layout="centered")
 
-# --- 究極の崩れ防止CSS ---
+# --- 究極の崩れ防止CSS（ランキング・リスト特化型） ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
-    .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 2rem; }
+    .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
 
     /* インスタ風サマリーカード */
     .insta-card {
         background: linear-gradient(135deg, #FF512F 0%, #DD2476 100%);
-        color: white; padding: 20px; border-radius: 15px; text-align: center;
-        margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        color: white; padding: 22px; border-radius: 18px; text-align: center;
+        margin-bottom: 25px; box-shadow: 0 10px 20px rgba(221, 36, 118, 0.2);
     }
-    .insta-val { font-size: 2.2rem; font-weight: 800; }
-    .insta-label { font-size: 0.8rem; opacity: 0.9; }
+    .insta-val { font-size: 2.4rem; font-weight: 800; line-height: 1.2; }
+    .insta-label { font-size: 0.85rem; opacity: 0.9; font-weight: 500; }
 
-    /* 絶対に崩れないリスト構造 (Grid) */
+    /* 鉄壁のTableレイアウト（絶対に横並びを死守） */
     .item-box {
-        display: grid !important;
-        grid-template-columns: 4px 100px 1fr !important;
-        align-items: center !important;
-        gap: 12px !important;
+        display: table !important;
+        width: 100% !important;
         padding: 14px 0 !important;
         border-bottom: 1px solid #F0F0F0 !important;
-        width: 100% !important;
         text-decoration: none !important;
+        table-layout: fixed !important;
     }
     .item-accent {
+        display: table-cell !important;
         width: 4px !important;
-        height: 1.4rem !important;
-        background-color: #B22222 !important;
+        background-color: #DD2476 !important;
         border-radius: 2px !important;
     }
     .item-date {
-        color: #B22222 !important;
+        display: table-cell !important;
+        width: 95px !important;
+        color: #DD2476 !important;
         font-weight: 700 !important;
         font-size: 0.85rem !important;
+        padding-left: 10px !important;
+        vertical-align: middle !important;
         white-space: nowrap !important;
     }
     .item-gym {
+        display: table-cell !important;
         color: #1A1A1A !important;
         font-weight: 700 !important;
         font-size: 0.95rem !important;
+        padding-left: 5px !important;
+        vertical-align: middle !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-        min-width: 0 !important;
     }
     .past-opacity { opacity: 0.35 !important; }
 
-    /* ジム一覧のカード */
+    /* ジム一覧カード */
     .gym-row {
         display: flex !important;
         justify-content: space-between !important;
         align-items: center !important;
         padding: 15px !important;
-        margin-bottom: 10px !important;
+        margin-bottom: 8px !important;
         background-color: #F8F9FA !important;
-        border-radius: 10px !important;
-        border: 1px solid #E9ECEF !important;
+        border-radius: 12px !important;
+        border: 1px solid #EEE !important;
         text-decoration: none !important;
     }
-    .gym-name { color: #1A1A1A !important; font-weight: 700; flex-grow: 1; margin-right: 10px; }
-    .gym-meta { color: #888 !important; font-size: 0.75rem !important; flex-shrink: 0; }
+    .gym-name { color: #1A1A1A !important; font-weight: 700; }
+    .gym-meta { color: #888 !important; font-size: 0.75rem !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -84,17 +88,16 @@ def load_all_data():
 try:
     master_df, schedule_df, log_df = load_all_data()
 except:
-    st.error("Google API制限中です。少し待って再読み込みしてください。")
+    st.error("Google API制限中です。1分ほど待って再読み込みしてください。")
     st.stop()
 
 sorted_gyms = sorted(master_df['gym_name'].tolist()) if not master_df.empty else []
 if 'date_count' not in st.session_state: st.session_state.date_count = 1
-if 'last_log' not in st.session_state: st.session_state.last_log = None
 
 tab1, tab2, tab3 = st.tabs(["セットスケジュール", "ログ", "ジム"])
 
 # ==========================================
-# Tab 1: セットスケジュール
+# Tab 1: スケジュール
 # ==========================================
 with tab1:
     with st.expander("＋ スケジュールを登録"):
@@ -115,7 +118,9 @@ with tab1:
             st.session_state.date_count += 1; st.rerun()
 
     if not schedule_df.empty:
-        s_df = schedule_df.copy(); s_df['start_date'] = pd.to_datetime(s_df['start_date']); s_df['end_date'] = pd.to_datetime(s_df['end_date'])
+        s_df = schedule_df.copy()
+        s_df['start_date'] = pd.to_datetime(s_df['start_date'])
+        s_df['end_date'] = pd.to_datetime(s_df['end_date'])
         s_df['month_year'] = s_df['start_date'].dt.strftime('%Y年%m月')
         months = sorted(s_df['month_year'].unique().tolist(), reverse=True)
         cur_m = datetime.now().strftime('%Y年%m月')
@@ -125,27 +130,19 @@ with tab1:
             is_past = row['end_date'].date() < date.today()
             d_s, d_e = row['start_date'].strftime('%m/%d'), row['end_date'].strftime('%m/%d')
             d_disp = d_s if d_s == d_e else f"{d_s}-{d_e}"
-            st.markdown(f"""
-                <a href="{row['post_url']}" target="_blank" class="item-box {'past-opacity' if is_past else ''}">
-                    <div class="item-accent"></div>
-                    <span class="item-date">{d_disp}</span>
-                    <span class="item-gym">{row['gym_name']}</span>
-                </a>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<a href="{row["post_url"]}" target="_blank" class="item-box {"past-opacity" if is_past else ""}"><div class="item-accent"></div><div class="item-date">{d_disp}</div><div class="item-gym">{row["gym_name"]}</div></a>', unsafe_allow_html=True)
 
 # ==========================================
-# Tab 2: ログ
+# Tab 2: ログ（ランキング・ランキング・ランキング！）
 # ==========================================
 with tab2:
     with st.expander("＋ 登攀を記録"):
-        if st.session_state.last_log: st.success(f"前回保存：{st.session_state.last_log}")
         with st.form("log_form", clear_on_submit=True):
             l_date = st.date_input("日付", value=date.today())
             l_gym = st.selectbox("ジムを選択", options=["(選択)"] + sorted_gyms)
             if st.form_submit_button("保存"):
                 if l_gym != "(選択)":
                     conn.update(worksheet="climbing_logs", data=pd.concat([log_df, pd.DataFrame([{"date": l_date.isoformat(), "gym_name": l_gym}])], ignore_index=True))
-                    st.session_state.last_log = f"{l_date.strftime('%m/%d')} @ {l_gym}"
                     st.rerun()
 
     if not log_df.empty:
@@ -159,43 +156,38 @@ with tab2:
         disp_df = df_l[(df_l['date'].dt.date >= start_q) & (df_l['date'].dt.date <= end_q)]
         
         if not disp_df.empty:
-            # インスタ風サマリーカード
+            # 1. サマリーカード
             st.markdown(f'<div class="insta-card"><div class="insta-label">{start_q.strftime("%m/%d")} 〜 {end_q.strftime("%m/%d")}</div><div style="display: flex; justify-content: space-around; margin-top: 10px;"><div><div class="insta-val">{len(disp_df)}</div><div class="insta-label">Sessions</div></div><div><div class="insta-val">{disp_df["gym_name"].nunique()}</div><div class="insta-label">Gyms</div></div></div></div>', unsafe_allow_html=True)
             
+            # 2. ランキングデータの作成
             counts = disp_df['gym_name'].value_counts().reset_index()
             counts.columns = ['gym_name', 'count']
-            
-            # --- グラフ描画 ---
-            fig = px.pie(counts, values='count', names='gym_name', hole=0.5, 
-                         color_discrete_sequence=px.colors.qualitative.Pastel)
+            counts = counts.sort_values('count', ascending=True) # グラフは下から描画されるため昇順
+
+            # 3. 横棒グラフ（アイコン無し・ランキング形式）
+            fig = px.bar(counts, x='count', y='gym_name', orientation='h', 
+                         text='count', color='count', color_continuous_scale='Sunsetdark')
             
             fig.update_traces(
-                textinfo='label+value',
-                texttemplate='<b>%{label}</b><br>(%{value}回)',
+                texttemplate='  <b>%{text}回</b>', 
                 textposition='outside',
-                marker=dict(line=dict(color='#FFFFFF', width=2))
+                marker_line_width=0,
+                hovertemplate=None
             )
             
             fig.update_layout(
-                showlegend=False,
-                margin=dict(t=30, b=30, l=60, r=60),
-                height=450,
-                paper_bgcolor='rgba(0,0,0,0)',
-                font=dict(size=12, color="#444")
+                showlegend=False, coloraxis_showscale=False, xaxis_visible=False, yaxis_title=None,
+                margin=dict(t=10, b=10, l=10, r=50),
+                height=max(200, 40 * len(counts)), # ジム数に応じて高さを動的に変更
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(size=14, color="#333")
             )
 
-            # configでアイコンを非表示
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-            # 履歴一覧
+            # 4. 履歴リスト（Table構造）
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
-                st.markdown(f"""
-                    <div class="item-box">
-                        <div class="item-accent"></div>
-                        <span class="item-date">{row['date'].strftime('%m/%d')}</span>
-                        <span class="item-gym">{row['gym_name']}</span>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f'<div class="item-box"><div class="item-accent"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-gym">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
 
 # ==========================================
 # Tab 3: ジム
