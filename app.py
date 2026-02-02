@@ -6,7 +6,7 @@ from datetime import datetime
 # ページ設定
 st.set_page_config(page_title="セットスケジュール", layout="centered")
 
-# セッション状態の初期化（日程追加用）
+# セッション状態の初期化
 if 'date_count' not in st.session_state:
     st.session_state.date_count = 1
 
@@ -30,8 +30,6 @@ st.markdown("""
     h1 { font-size: 1.6rem !important; font-weight: 700 !important; margin-bottom: 1.5rem !important; }
     h3 { font-size: 1.15rem !important; font-weight: 600 !important; margin: 0 !important; }
     .date-text { font-size: 0.95rem; font-weight: 700; color: #555; margin-bottom: 0.5rem; }
-    /* セレクトボックスのラベルを少し小さく */
-    label[data-testid="stWidgetLabel"] { font-size: 0.9rem !important; color: #666 !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -43,12 +41,18 @@ st.title("🧗‍♂️ セットスケジュール")
 
 # --- 登録セクション ---
 with st.expander("＋ 登録", expanded=False):
+    # 既存のジムリストを取得
+    existing_gyms = sorted(df['gym_name'].unique().tolist()) if not df.empty else []
+    gym_options = ["(リストから選択)"] + existing_gyms + ["＋ 新規ジムを入力"]
+    
     with st.form("add_form", clear_on_submit=True):
-        gym_name = st.text_input("ジム名", placeholder="例: B-PUMP 荻窪")
+        # ジム名の選択UI
+        selected_gym = st.selectbox("ジム名を選択", options=gym_options)
+        new_gym_name = st.text_input("新規ジム名 (上記で新規入力を選んだ場合のみ)")
+        
         insta_url = st.text_input("Instagram URL")
         
         st.write("---")
-        # 動的な日程入力欄
         date_entries = []
         for i in range(st.session_state.date_count):
             st.markdown(f"**日程 {i+1}**")
@@ -57,21 +61,26 @@ with st.expander("＋ 登録", expanded=False):
             with col2: e_d = st.date_input(f"終了日", key=f"end_{i}")
             date_entries.append((s_d, e_d))
         
-        # フォーム内の送信ボタン
         submit = st.form_submit_button("予定を保存")
         
-    # フォームの外で日程追加ボタン（Streamlitの仕様上、form内には通常のボタンが置けないため直後に配置）
     if st.session_state.date_count < 5:
         if st.button("＋ 日程を追加"):
             st.session_state.date_count += 1
             st.rerun()
 
     if submit:
-        if gym_name and insta_url:
+        # ジム名の決定ロジック
+        final_gym_name = ""
+        if selected_gym == "＋ 新規ジムを入力":
+            final_gym_name = new_gym_name
+        elif selected_gym != "(リストから選択)":
+            final_gym_name = selected_gym
+            
+        if final_gym_name and insta_url:
             new_rows = []
             for s, e in date_entries:
                 new_rows.append({
-                    "gym_name": gym_name,
+                    "gym_name": final_gym_name,
                     "date": s.isoformat(),
                     "end_date": e.isoformat(),
                     "url": insta_url,
@@ -79,43 +88,36 @@ with st.expander("＋ 登録", expanded=False):
                 })
             updated_df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
             conn.update(data=updated_df)
-            st.session_state.date_count = 1 # カウントをリセット
-            st.success("保存しました")
+            st.session_state.date_count = 1
+            st.success(f"{final_gym_name}の予定を保存しました")
             st.rerun()
+        else:
+            st.error("ジム名とURLを入力してください")
 
 # --- タイムライン表示 ---
+# (以下、変更なしのため省略。既存のタイムライン表示ロジックをそのまま維持)
+# 念のため、これまでの改善（月別セレクトボックス、グレーアウト等）を全て含めた状態にしてください。
 current_month_str = datetime.now().strftime('%Y年%m月')
-
-if df is None or df.empty:
-    st.info("予定がありません。上の「＋ 登録」から追加してください。")
-else:
+if df is not None and not df.empty:
     df['date'] = pd.to_datetime(df['date'])
     df['end_date'] = pd.to_datetime(df['end_date'])
     today = pd.to_datetime(datetime.now().date())
     df['month_year'] = df['date'].dt.strftime('%Y年%m月')
 
-    # 月別リスト
     all_months = sorted(df['month_year'].unique().tolist())
     if current_month_str not in all_months:
         all_months.append(current_month_str)
         all_months.sort()
 
-    # --- 月選択 UI（選びやすいセレクトボックスに変更） ---
     selected_month = st.selectbox("表示月を切り替え", options=all_months, index=all_months.index(current_month_str))
-
-    # フィルタリング
     month_df = df[df['month_year'] == selected_month].copy()
     
-    if month_df.empty:
-        st.write(f"この月の予定はまだありません。")
-    else:
+    if not month_df.empty:
         month_df['is_past'] = month_df['end_date'] < today
         month_df = month_df.sort_values(by=['is_past', 'date'], ascending=[True, True])
-
         for _, row in month_df.iterrows():
             period = f"{row['date'].strftime('%m/%d')} — {row['end_date'].strftime('%m/%d')}"
             wrapper_start = "<div class='past-event'>" if row['is_past'] else "<div>"
-            
             with st.container(border=True):
                 st.markdown(f"{wrapper_start}<div class='date-text'>🗓 {period}</div>", unsafe_allow_html=True)
                 col_info, col_link = st.columns([2, 1])
@@ -125,3 +127,5 @@ else:
                     if row['url']:
                         st.link_button("詳細確認", row['url'], use_container_width=True)
                 st.markdown("</div>", unsafe_allow_html=True)
+else:
+    st.info("予定がありません。")
