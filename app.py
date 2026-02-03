@@ -159,7 +159,6 @@ with tab2:
         disp_df = df_l[(df_l['date'].dt.date >= start_q) & (df_l['date'].dt.date <= end_q)]
         
         if not disp_df.empty:
-            # パディングを減らし、日付フォントを1.5remに微調整してコンパクト化
             st.markdown(f'''
                 <div class="insta-card">
                     <div style="font-size: 1.5rem; font-weight: 800; margin-bottom: 2px;">
@@ -190,7 +189,9 @@ with tab2:
                 textposition='outside',
                 cliponaxis=False,
                 marker_line_width=0,
-                width=0.6
+                width=0.6,
+                # ホバー時の説明パネルも不要な場合は無効化（必要ならここを削除）
+                hoverinfo='none'
             )
             
             fig.update_layout(
@@ -203,10 +204,14 @@ with tab2:
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
                 font=dict(size=12, color="#333"),
-                bargap=0.3
+                bargap=0.3,
+                # --- グラフの操作を完全に無効化する設定 ---
+                dragmode=False,
+                clickmode='none'
             )
 
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+            # staticPlot=True にすることで、クリックや拡大を物理的に受け付けない「静止画」状態にします
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
 
             for _, row in disp_df.sort_values('date', ascending=False).iterrows():
                 st.markdown(f"""
