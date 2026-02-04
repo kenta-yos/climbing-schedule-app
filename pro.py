@@ -210,7 +210,6 @@ tabs = st.tabs(tab_titles)
 
 # Tab 1: Top (変更なし)
 with tabs[0]: # Top
-    st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
     with st.form("quick_log"):
         q_date = st.date_input("日程", value=date.today())
@@ -230,7 +229,6 @@ with tabs[0]: # Top
 
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
-    st.query_params["tab"] = "✨ ジム"
     st.subheader("✨ おすすめ")
     
     target_date = st.date_input("ターゲット日", value=date.today(), key="tg_date")
@@ -311,7 +309,6 @@ with tabs[1]:
 
 # Tab 3: マイページ (Sunsetdark & インスタ風)
 with tabs[2]:
-    st.query_params["tab"] = "📊 マイページ"
     st.subheader("🗓️ 今後の予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
     for i, row in my_plans.iterrows():
@@ -355,7 +352,6 @@ with tabs[2]:
 
 # Tab 4: 👥 仲間 (直近1ヶ月)
 with tabs[3]:
-    st.query_params["tab"] = "👥 仲間"
     st.subheader("👥 仲間の予定 (直近1ヶ月)")
     o_plans = log_df[(log_df['user']!=st.session_state.USER)&(log_df['type']=='予定')&(log_df['date']>=today_ts)&(log_df['date']<=today_ts+timedelta(days=30))].sort_values('date') if not log_df.empty else pd.DataFrame()
     for _, row in o_plans.iterrows():
@@ -373,7 +369,6 @@ with tabs[3]:
 
 # Tab 5: 📅 セット (月選択 & Grid)
 with tabs[4]:
-    st.query_params["tab"] = "📅 セットスケジュール"
     st.subheader("📅 セットスケジュール")
     if not sched_df.empty:
         s_df = sched_df.copy()
@@ -399,7 +394,6 @@ with tabs[4]:
 
 # Tab 6: ⚙️ 管理
 with tabs[5]:
-    st.query_params["tab"] = "⚙️ 管理"
     st.subheader("⚙️ 管理")
     with st.expander("🆕 ジム登録"):
         with st.form("adm_gym"):
