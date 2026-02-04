@@ -180,34 +180,38 @@ tabs = st.tabs(tab_titles)
 with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
-    with st.form("quick_log", clear_on_submit=True):
-        q_date = st.date_input("日程", value=date.today())
-    with st.expander("🏢 ジムを選択してください"):
-        q_gym = st.radio(
-            "ジム一覧",
-            options=sorted(gym_df['gym_name'].tolist()),
-            label_visibility="collapsed" 
-        )
-        
-        c1, c2 = st.columns(2)
-        if c1.form_submit_button("✋ 登ります"):
-            if q_gym:
-                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '予定']], 
-                                     columns=['date','gym_name','user','type'])
-                # 既存のlog_dfに新しい行を「追加」して保存
-                combined_df = pd.concat([log_df, new_row], ignore_index=True)
-                safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
-            else:
-                st.warning("ジムを選択してください")
+    
+    # フォームを使わず、直接配置することで自由度を上げます
+    q_date = st.date_input("日程", value=date.today())
+    
+    # ジム選択：ラジオボタンを直接置く（expanderなしの方が手数が少なくて楽です）
+    st.write("🏢 ジムを選択")
+    q_gym = st.radio(
+        "ジム一覧",
+        options=sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [],
+        label_visibility="collapsed",
+        index=None  # 最初は何も選ばれていない状態にする
+    )
+    
+    # 登録ボタン（フォームではないので st.button を使います）
+    c1, c2 = st.columns(2)
+    if c1.button("✋ 登ります", use_container_width=True):
+        if q_gym:
+            new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '予定']], 
+                                 columns=['date','gym_name','user','type'])
+            combined_df = pd.concat([log_df, new_row], ignore_index=True)
+            safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
+        else:
+            st.warning("ジムを選択してください")
 
-        if c2.form_submit_button("✊ 登りました"):
-            if q_gym:
-                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '実績']], 
-                                     columns=['date','gym_name','user','type'])
-                combined_df = pd.concat([log_df, new_row], ignore_index=True)
-                safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
-            else:
-                st.warning("ジムを選択してください")
+    if c2.button("✊ 登りました", use_container_width=True):
+        if q_gym:
+            new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '実績']], 
+                                 columns=['date','gym_name','user','type'])
+            combined_df = pd.concat([log_df, new_row], ignore_index=True)
+            safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
+        else:
+            st.warning("ジムを選択してください")
 
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
