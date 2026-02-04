@@ -78,64 +78,66 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. データ読み込み ---
+# --- 2. データ読み込み (新方式：バラバラ読み込み & 長期キャッシュ) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-def load_data():
+# 個別に読み込むための関数（1時間はAPIを叩かずキャッシュを使う）
+@st.cache_data(ttl=3600)
+def get_sheet(sheet_name):
     try:
-        # 各シートの読み込み
-        gyms = conn.read(worksheet="gym_master", ttl=1).dropna(how='all')
-        sched = conn.read(worksheet="schedules", ttl=1).dropna(how='all')
-        logs = conn.read(worksheet="climbing_logs", ttl=1).dropna(how='all')
-        users = conn.read(worksheet="users", ttl=1).dropna(how='all')
-        area_m = conn.read(worksheet="area_master", ttl=1).dropna(how='all')
-
-        # カラム名を整える補助関数
-        def format_df(df, required_cols):
-            if df.empty: return pd.DataFrame(columns=required_cols)
-            # 全ての列名を小文字にし、前後の空白を削除
-            df.columns = [str(c).strip().lower() for c in df.columns]
-            return df
-
-        # 各DataFrameのフォーマット適用
-        gym_df = format_df(gyms, ['gym_name', 'profile_url', 'area_tag'])
-        sched_df = format_df(sched, ['gym_name', 'start_date', 'end_date', 'post_url'])
-        log_df = format_df(logs, ['date', 'gym_name', 'user', 'type'])
-        user_df = format_df(users, ['user', 'color', 'icon'])
-        area_master = format_df(area_m, ['major_area', 'area_tag'])
-
-        # 日付データの変換
-        if not log_df.empty:
-            log_df['date'] = pd.to_datetime(log_df['date'], errors='coerce').dt.tz_localize(None)
-        if not sched_df.empty:
-            sched_df['start_date'] = pd.to_datetime(sched_df['start_date'], errors='coerce').dt.tz_localize(None)
-            sched_df['end_date'] = pd.to_datetime(sched_df['end_date'], errors='coerce').dt.tz_localize(None)
-            
-        return gym_df, sched_df, log_df, user_df, area_master
+        df = conn.read(worksheet=sheet_name, ttl=3600).dropna(how='all')
+        # 全ての列名を小文字にし、前後の空白を削除
+        df.columns = [str(c).strip().lower() for c in df.columns]
+        return df
     except Exception as e:
-        st.error(f"データ読み込み中にエラーが発生しました: {e}")
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        st.error(f"シート {sheet_name} の読み込みエラー: {e}")
+        return pd.DataFrame()
 
-# データの受け取り（5つの変数で受ける）
-gym_df, sched_df, log_df, user_df, area_master = load_data()
+# 5つのデータを個別に取得（キャッシュがあれば一瞬で終わる）
+gym_df = get_sheet("gym_master")
+sched_df = get_sheet("schedules")
+log_df = get_sheet("climbing_logs")
+user_df = get_sheet("users")
+area_master = get_sheet("area_master")
 
+# 日付データの変換（ここはキャッシュせず毎回実行してOK）
+if not log_df.empty:
+    log_df['date'] = pd.to_datetime(log_df['date'], errors='coerce').dt.tz_localize(None)
+if not sched_df.empty:
+    sched_df['start_date'] = pd.to_datetime(sched_df['start_date'], errors='coerce').dt.tz_localize(None)
+    sched_df['end_date'] = pd.to_datetime(sched_df['end_date'], errors='coerce').dt.tz_localize(None)
+
+# 削除処理（URLパラメータがある場合）
 params = st.query_params
 if "del_id" in params:
     idx = int(params["del_id"])
-    # 予定(p)か履歴(h)かを判定して削除
-    # (実際はインデックスがずれる可能性があるため、より安全には日付とジム名で照合しますが、
-    #  まずはこのシンプルな方法で動作を確認しましょう)
-    new_log_df = log_df.drop(idx)
-    st.query_params.clear() # パラメータを消さないと無限ループします
-    safe_save("climbing_logs", new_log_df)
+    if not log_df.empty and idx in log_df.index:
+        new_log_df = log_df.drop(idx)
+        st.query_params.clear() 
+        # 保存関数を呼ぶ（下で定義しているもの）
+        save_df = new_log_df.copy()
+        for col in ['date', 'start_date', 'end_date']:
+            if col in save_df.columns:
+                save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
+        conn.update(worksheet="climbing_logs", data=save_df)
+        st.cache_data.clear()
+        st.rerun()
 
+# 保存用関数
+# 1. 自分が操作した時（自動リフレッシュ）
 def safe_save(worksheet, df):
     save_df = df.copy()
     for col in ['date', 'start_date', 'end_date']:
         if col in save_df.columns:
             save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
     conn.update(worksheet=worksheet, data=save_df)
-    st.cache_data.clear(); st.rerun()
+    st.cache_data.clear() # 自分が更新した時は全キャッシュをリセット
+    st.rerun()
+
+# 2. 仲間の更新を見たい時（手動リフレッシュ）
+if st.button("🔄 最新の情報に更新"):
+    st.cache_data.clear() # 1時間待たずに今すぐAPIへ取りに行く
+    st.rerun()
 
 # --- 3. 認証 (変更なし) ---
 if 'USER' not in st.session_state:
@@ -163,6 +165,15 @@ if not st.session_state.USER:
 today_ts = pd.Timestamp(date.today()).replace(hour=0, minute=0, second=0, microsecond=0)
 
 # --- 4. タブ ---
+
+col_title, col_btn = st.columns([0.7, 0.3])
+with col_title:
+    st.write(f"🧗 Let's Go Bouldering **{st.session_state.U_ICON} {st.session_state.USER}**")
+with col_btn:
+    if st.button("🔄 最新に更新", use_container_width=True):
+        st.cache_data.clear()
+        st.rerun()
+
 tabs = st.tabs(["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"])
 
 # Tab 1: Top (変更なし)
