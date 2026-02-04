@@ -8,11 +8,6 @@ import plotly.express as px
 # --- 1. ページ設定 & CSS (変更なし) ---
 st.set_page_config(page_title="Go Bouldering Pro", layout="centered")
 
-# セッション状態を安全に初期化
-if 'USER' not in st.session_state:
-    st.session_state.USER = None
-all_data = get_all_data(st.session_state.data_tick)
-
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
@@ -108,6 +103,15 @@ def get_all_data(update_tick=0):
     except Exception as e:
         st.error(f"❌ 読み込みエラー: {e}")
         st.stop()
+
+# --- 3. セッション状態の初期化 (参照する前に作る) ---
+if 'data_tick' not in st.session_state:
+    st.session_state.data_tick = 0
+if 'USER' not in st.session_state:
+    st.session_state.USER = None
+
+# --- 4. データの取得実行 ---
+all_data = get_all_data(st.session_state.data_tick)
 
 # --- データの割り当て ---
 all_data = get_all_data()
