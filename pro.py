@@ -331,7 +331,7 @@ with tabs[2]:
         ''', unsafe_allow_html=True)
 
     if st.button("🗑️ 削除", key=f"del_plan_{i}"):
-    delete_log(i)
+        delete_log(i)
     
     st.divider()
     sc1, sc2 = st.columns(2)
@@ -357,6 +357,8 @@ with tabs[2]:
         ''', unsafe_allow_html=True)
 
     if st.button("削除", key=f"h_{i}"): delete_log(i)
+        delete_log(i)
+
 
 # Tab 4: 👥 仲間 (直近1ヶ月)
 with tabs[3]:
