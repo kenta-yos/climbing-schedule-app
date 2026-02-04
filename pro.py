@@ -215,19 +215,34 @@ with tabs[5]:
             n, u, a = st.text_input("ジム名"), st.text_input("Instagram URL"), st.text_input("エリアタグ")
             if st.form_submit_button("登録"):
                 new = pd.DataFrame([[n, u, a]], columns=['gym_name','profile_url','area_tag'])
-                conn.update(worksheet="gym_master", data=pd.concat([gym_df, new], ignore_index=True)); st.cache_data.clear(); st.rerun()
+                conn.update(worksheet="gym_master", data=pd.concat([gym_df, new], ignore_index=True))
+                st.cache_data.clear(); st.success("ジムを登録しました"); st.rerun()
+
     with st.expander("📅 セット登録"):
         selected_gym = st.selectbox("ジム", gym_df['gym_name'].tolist()) if not gym_df.empty else ""
         post_url = st.text_input("告知URL", key="admin_url")
         if "rows" not in st.session_state: st.session_state.rows = 1
+        
         dates = []
         for i in range(st.session_state.rows):
             c1, c2 = st.columns(2)
             sd = c1.date_input(f"開始日 {i+1}", key=f"asd_{i}")
             ed = c2.date_input(f"終了日 {i+1}", key=f"aed_{i}")
             dates.append((sd, ed))
-        if st.button("➕ 日程追加"): st.session_state.rows += 1; st.rerun()
+            
+        if st.button("➕ 日程追加"): 
+            st.session_state.rows += 1
+            st.rerun()
+            
         if st.button("🚀 一括登録"):
             new_s = pd.DataFrame([[selected_gym, sd.isoformat(), ed.isoformat(), post_url] for sd, ed in dates], columns=['gym_name','start_date','end_date','post_url'])
             conn.update(worksheet="schedules", data=pd.concat([sched_df, new_s], ignore_index=True))
-            st.
+            st.session_state.rows = 1
+            st.cache_data.clear(); st.success("スケジュールを登録しました"); st.rerun()
+
+    st.divider()
+    # ログアウト処理の完結
+    if st.button("🚪 ログアウト"):
+        st.session_state.USER = None
+        st.query_params.clear()
+        st.rerun()
