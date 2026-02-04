@@ -39,20 +39,41 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
     try:
+        # ttl=0 でキャッシュを強制無効化し、常に最新を読み込む
         gyms = conn.read(worksheet="gym_master", ttl=0).dropna(how='all')
         sched = conn.read(worksheet="schedules", ttl=0).dropna(how='all')
         logs = conn.read(worksheet="climbing_logs", ttl=0).dropna(how='all')
         users = conn.read(worksheet="users", ttl=0).dropna(how='all')
+        
+        # 【重要】カラム名を一旦すべてリセットして確実に認識させる
         for df in [gyms, sched, logs, users]:
-            df.columns = df.columns.str.strip()
-        # 型変換
-        sched['start_date'] = pd.to_datetime(sched['start_date'])
-        logs['date'] = pd.to_datetime(logs['date'])
+            # 空白削除と小文字化。さらに、もし1行目がデータ扱いされていれば補正
+            df.columns = [str(c).strip().lower() for c in df.columns]
+            
         return gyms, sched, logs, users
-    except:
+    except Exception as e:
+        st.error(f"データ接続エラー: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
+# データの再読み込み
 gym_df, sched_df, log_df, user_df = load_data()
+
+# --- ログイン判定（ここが line 71 の修正） ---
+if st.session_state.USER is None:
+    params = st.query_params
+    if "user" in params and not user_df.empty:
+        saved_user = params["user"]
+        # 'user' カラムが確実に存在するかチェックしてからアクセス
+        if 'user' in user_df.columns:
+            u_match = user_df[user_df['user'].astype(str) == str(saved_user)]
+            if not u_match.empty:
+                u_info = u_match.iloc[0]
+                st.session_state.USER = u_info['user']
+                st.session_state.U_COLOR = u_info['color']
+                st.session_state.U_ICON = u_info['icon']
+        else:
+            # 万が一カラムが見つからない場合はデバッグ情報を出す
+            st.error(f"usersシートに 'user' 列が見つかりません。現在の列: {list(user_df.columns)}")
 
 # --- 認証（再訪問時の自動ログイン対応 ＆ 全員ボタン表示） ---
 # --- 1. セッション状態の初期化（ここが抜けていると AttributeError になります） ---
