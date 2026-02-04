@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime, date, timedelta
 import plotly.express as px
 
-# --- 1. ページ設定 & CSS (変更なし) ---
+# --- 1. ページ設定 & CSS ---
 st.set_page_config(page_title="Go Bouldering Pro", layout="centered")
 
 st.markdown("""
