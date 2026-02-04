@@ -8,6 +8,11 @@ import plotly.express as px
 # --- 1. ページ設定 & CSS (変更なし) ---
 st.set_page_config(page_title="Go Bouldering Pro", layout="centered")
 
+# セッション状態を安全に初期化
+if 'USER' not in st.session_state:
+    st.session_state.USER = None
+all_data = get_all_data(st.session_state.data_tick)
+
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
@@ -150,11 +155,6 @@ def safe_save(worksheet, df, target_tab=None):
         st.stop()
 
 # --- 3. 認証 (安定化アップデート版) ---
-# セッション状態を安全に初期化
-if 'USER' not in st.session_state:
-    st.session_state.USER = None
-all_data = get_all_data(st.session_state.data_tick)
-
 # URLパラメータからユーザー復元
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
