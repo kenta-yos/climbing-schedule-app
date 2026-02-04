@@ -159,7 +159,7 @@ if not st.session_state.get('USER'):
 # ログイン後の時間を固定
 today_ts = pd.Timestamp(date.today()).replace(hour=0, minute=0, second=0, microsecond=0)
 
-# --- 4. タブ ---
+# --- 5. タブ表示 ---
 
 col_title, col_btn = st.columns([0.7, 0.3])
 with col_title:
@@ -169,24 +169,11 @@ with col_btn:
         st.cache_data.clear()
         st.rerun()
 
-# --- タブの制御ロジック ---
+# --- 5. タブ表示 ---
 tab_titles = ["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"]
-
-# 1. URLから現在のタブを取得
 query_tab = st.query_params.get("tab", "🏠 Top")
-
-# 2. もしURLのタブがリストにない変な値だったらTopに戻す
-if query_tab not in tab_titles:
-    query_tab = "🏠 Top"
-
-# 3. タブを作成
+active_tab_idx = tab_titles.index(query_tab) if query_tab in tab_titles else 0
 tabs = st.tabs(tab_titles)
-
-# 4. 【重要】各タブの中身を「URLと一致する場合のみ」表示する（またはURLを更新する）
-# こうすることで、保存後に指定したタブがパッと開きます
-
-# Tab 1: Top (変更なし)
-
 
 # --- Tab 1: クイック登録のボタン処理も修正 ---
 with tabs[0]: 
