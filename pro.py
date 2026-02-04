@@ -104,30 +104,42 @@ log_df = get_sheet("climbing_logs")
 user_df = get_sheet("users")
 area_master = get_sheet("area_master")
 
-# --- 削除・保存を一本化 ---
-
+# --- 保存用関数（安全版） ---
 def safe_save(worksheet, df, target_tab=None):
     try:
+        if df.empty:
+            st.error("保存するデータが空です。処理を中断しました。")
+            return
+
         save_df = df.copy()
-        # 日付を文字列に変換...
         
-        # 1. 保存
+        # 1. 日付をスプレッドシートの既存形式 "2025-11-27 0:00:00" に厳密に合わせる
+        for col in ['date', 'start_date', 'end_date']:
+            if col in save_df.columns:
+                # 一旦datetimeに変換してから、時刻付き文字列フォーマットに固定
+                save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d 00:00:00')
+        
+        # 2. 重複や空行を排除（念のため）
+        save_df = save_df.dropna(subset=[save_df.columns[0]]) # 最初の列が空の行を削除
+        
+        # 3. Google Sheets更新
         conn.update(worksheet=worksheet, data=save_df)
         
-        # 2. ★ 更新したシートのキャッシュだけを個別に消す（他は残すのでAPI節約！）
-        get_sheet.clear(worksheet)
+        # 4. キャッシュをクリア
+        get_sheet.clear() 
+        st.cache_data.clear()
         
-        # 3. リロードの準備
+        # 5. タブを維持してリロード
         params = {"user": st.session_state.USER}
         if target_tab:
             params["tab"] = target_tab
         elif "tab" in st.query_params:
             params["tab"] = st.query_params["tab"]
-            
         st.query_params.from_dict(params)
+        
         st.rerun()
     except Exception as e:
-        st.error("保存失敗。API制限かもしれません。1分待ってください。")
+        st.error(f"❌ 保存失敗: {e}")
         st.stop()
 
 # --- 3. 認証 (安定化アップデート版) ---
@@ -192,24 +204,35 @@ tabs = st.tabs(tab_titles)
 # こうすることで、保存後に指定したタブがパッと開きます
 
 # Tab 1: Top (変更なし)
-with tabs[0]: # Top
+
+
+# --- Tab 1: クイック登録のボタン処理も修正 ---
+with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
     with st.form("quick_log"):
         q_date = st.date_input("日程", value=date.today())
-        q_gym = st.selectbox(
-            "ジムを選択", 
-            sorted(gym_df['gym_name'].tolist()), 
-            index=None, 
-            placeholder="ジムを選んでください..."
-        ) if not gym_df.empty else st.text_input("ジム名")
+        q_gym = st.selectbox("ジムを選択", sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [], index=None)
+        
         c1, c2 = st.columns(2)
         if c1.form_submit_button("✋ 登ります"):
-            new = pd.DataFrame([[q_date, q_gym, st.session_state.USER, '予定']], columns=['date','gym_name','user','type'])
-            safe_save("climbing_logs", pd.concat([log_df, new]), target_tab="🏠 Top")
+            if q_gym:
+                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '予定']], 
+                                     columns=['date','gym_name','user','type'])
+                # 既存のlog_dfに新しい行を「追加」して保存
+                combined_df = pd.concat([log_df, new_row], ignore_index=True)
+                safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
+            else:
+                st.warning("ジムを選択してください")
+
         if c2.form_submit_button("✊ 登ったぜ"):
-            new = pd.DataFrame([[q_date, q_gym, st.session_state.USER, '実績']], columns=['date','gym_name','user','type'])
-            safe_save("climbing_logs", pd.concat([log_df, new]), target_tab="🏠 Top")
+            if q_gym:
+                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '実績']], 
+                                     columns=['date','gym_name','user','type'])
+                combined_df = pd.concat([log_df, new_row], ignore_index=True)
+                safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
+            else:
+                st.warning("ジムを選択してください")
 
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
