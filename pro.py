@@ -152,22 +152,24 @@ def safe_save(worksheet, df, target_tab=None):
         if col in save_df.columns:
             save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
     
-    # Google Sheetsを更新
-    conn.update(worksheet=worksheet, data=save_df)
-    
-    # 【重要】TypeErrorの回避策
-    # get_sheet.clear() を使うのが現在のStreamlitの正解です
-    get_sheet.clear() 
-    
-    # URL状態の構築
-    current_user = st.session_state.get('USER')
-    current_tab = target_tab if target_tab else st.query_params.get("tab", "🏠 Top")
-    
-    if current_user: st.query_params["user"] = current_user
-    st.query_params["tab"] = current_tab
+    # --- 2. Google Sheets更新 ---
+        conn.update(worksheet="climbing_logs", data=save_df)
+        get_sheet.clear()
+        
+        # --- 3. 【修正】URL状態を固定してリロード ---
+        current_user = st.session_state.get('USER')
+        
+        # URLから削除用パラメータを消し、ユーザーとタブを強制セット
+        if current_user:
+            st.query_params["user"] = current_user
+        st.query_params["tab"] = "📊 マイページ"
+        
+        # 削除ボタンの残骸(del_id)を確実に消す
+        if "del_id" in st.query_params:
+            del st.query_params["del_id"]
 
-    st.rerun()
-
+        st.rerun() # ここで確実にログイン情報を引き継いだまま再起動
+        
 # --- 3. 認証 (安定化アップデート版) ---
 # セッション状態を安全に初期化
 if 'USER' not in st.session_state:
