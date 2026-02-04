@@ -54,29 +54,58 @@ def load_data():
 
 gym_df, sched_df, log_df, user_df = load_data()
 
-# --- 認証（ログイン済み判断含む） ---
-if 'USER' not in st.session_state: st.session_state.USER = None
+# --- 認証（再訪問時の自動ログイン対応 ＆ 全員ボタン表示） ---
 
-if not st.session_state.USER:
-    st.title("🧗 Go Bouldering")
-    if not user_df.empty:
-        # アイコン+名前の表示用リスト
-        user_list = [f"{row['icon']} {row['user']}" for _, row in user_df.iterrows()]
-        sel_u_raw = st.selectbox("自分を選択してログイン", user_list)
-        
-        target_name = sel_u_raw.split(" ")[1]
-        u_info = user_df[user_df['user'] == target_name].iloc[0]
-        
-        # ボタンをパーソナライズ
-        st.markdown(f"<style>div.stButton > button {{ background-color: {u_info['color']}; color:white; border:none; width:100%; height:3rem; border-radius:10px; font-weight:bold; }}</style>", unsafe_allow_html=True)
-        
-        if st.button(f"{sel_u_raw} として開始"):
-            st.session_state.USER = target_name
+# 1. 保存されたユーザー情報の復元（URLパラメータから）
+if st.session_state.USER is None:
+    params = st.query_params
+    if "user" in params:
+        saved_user = params["user"]
+        u_match = user_df[user_df['user'] == saved_user]
+        if not u_match.empty:
+            u_info = u_match.iloc[0]
+            st.session_state.USER = saved_user
             st.session_state.U_COLOR = u_info['color']
             st.session_state.U_ICON = u_info['icon']
-            st.rerun()
-    st.stop()
 
+# 2. ログイン画面（ボタン並列表示）
+if not st.session_state.USER:
+    st.title("🧗 Go Bouldering")
+    st.subheader("自分を選んでスタート")
+    
+    if not user_df.empty:
+        # ユーザーをボタンとして並べる
+        # モバイルで見やすいよう、1行に2人ずつ並べる構成
+        cols = st.columns(2)
+        for i, (_, row) in enumerate(user_df.iterrows()):
+            with cols[i % 2]:
+                # 各ユーザー専用のカラーを適用したボタン
+                st.markdown(f"""
+                    <style>
+                    div.stButton > button[key="login_{row['user']}"] {{
+                        background-color: {row['color']};
+                        color: white;
+                        border: none;
+                        width: 100%;
+                        height: 4rem;
+                        border-radius: 15px;
+                        font-weight: bold;
+                        font-size: 1.1rem;
+                        margin-bottom: 10px;
+                    }}
+                    </style>
+                """, unsafe_allow_html=True)
+                
+                if st.button(f"{row['icon']} {row['user']}", key=f"login_{row['user']}"):
+                    st.session_state.USER = row['user']
+                    st.session_state.U_COLOR = row['color']
+                    st.session_state.U_ICON = row['icon']
+                    # 次回アクセスのためにURLに保存
+                    st.query_params["user"] = row['user']
+                    st.rerun()
+    else:
+        st.warning("usersシートにデータがありません。")
+    st.stop()
 # --- メインロジック ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 Top", "📊 ログ", "📅 セット", "👥 仲間", "⚙️ 管理"])
 
