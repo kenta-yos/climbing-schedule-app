@@ -74,6 +74,22 @@ st.markdown("""
     .tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 40px; background: #F0F0F0; color: #666; }
     .tag-hot { background: #FFF0F0; color: #FF512F; font-weight: 700; border: 1px solid #FFDADA; }
     .past-opacity { opacity: 0.35 !important; }
+
+    /* --- スマホのキーボード出現を抑制する設定 --- */
+    /* 入力エリアのカーソルを消し、タップしても入力モードになりにくくする */
+    input[role="combobox"], 
+    input[type="text"], 
+    .stDateInput input {
+        caret-color: transparent !important;
+        cursor: pointer !important;
+    }
+    
+    /* モバイル端末で入力フィールドがフォーカスされた時の青枠などを消す */
+    input:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    
     </style>
 """, unsafe_allow_html=True)
 
