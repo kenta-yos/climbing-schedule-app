@@ -6,8 +6,6 @@ import calendar
 import plotly.express as px
 
 # --- 1. ページ設定 & CSS ---
-st.set_page_config(page_title="Go Bouldering Pro", layout="centered")
-
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
@@ -22,7 +20,7 @@ st.markdown("""
     .insta-val { font-size: 2.2rem; font-weight: 800; }
     .insta-label { font-size: 0.8rem; opacity: 0.9; }
 
-    /* Grid リスト構造 (削除ボタンなし/あり両対応) */
+    /* Grid リスト構造 (マイページ履歴用：4カラム) */
     .item-box {
         display: grid !important;
         grid-template-columns: 4px 80px 1fr 40px !important;
@@ -32,19 +30,37 @@ st.markdown("""
         border-bottom: 1px solid #F0F0F0 !important;
         text-decoration: none !important;
     }
-    /* セットスケジュール専用 */
+
+    /* セットスケジュール専用 (3カラム) */
     .set-box {
         display: grid !important;
-        grid-template-columns: 4px 100px 1fr !important;
+        grid-template-columns: 4px 105px 1fr !important; /* 日付幅を確保 */
         align-items: center !important;
         gap: 12px !important;
-        padding: 14px 0 !important;
+        padding: 15px 5px !important;
         border-bottom: 1px solid #F0F0F0 !important;
         text-decoration: none !important;
+        width: 100% !important;
     }
-    .item-accent { width: 4px !important; height: 1.4rem !important; border-radius: 2px !important; }
-    .item-date { color: #B22222 !important; font-weight: 700 !important; font-size: 0.85rem !important; }
-    .item-gym { color: #1A1A1A !important; font-weight: 700 !important; font-size: 0.95rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .item-accent { width: 4px !important; height: 1.4rem !important; border-radius: 2px !important; flex-shrink: 0; }
+    
+    /* 文字の縦並びを絶対阻止する設定 */
+    .item-date { 
+        color: #B22222 !important; 
+        font-weight: 700 !important; 
+        font-size: 0.85rem !important; 
+        white-space: nowrap !important; /* ← 改行禁止 */
+        display: inline-block !important; 
+    }
+    .item-gym { 
+        color: #1A1A1A !important; 
+        font-weight: 700 !important; 
+        font-size: 0.95rem !important; 
+        overflow: hidden !important; 
+        text-overflow: ellipsis !important; 
+        white-space: nowrap !important; /* ← 改行禁止 */
+    }
     
     .gym-card { padding: 15px; background: #FFF; border-radius: 12px; border: 1px solid #E9ECEF; margin-bottom: 12px; }
     .tag-container { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
