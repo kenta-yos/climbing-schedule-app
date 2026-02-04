@@ -248,22 +248,22 @@ with tabs[2]:
     st.subheader("🗓️ 今後の予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
     for i, row in my_plans.iterrows():
-    # 1. 比率を少し調整（0.85:0.15）
-    c1, c2 = st.columns([0.85, 0.15])
-    with c1:
-        # 2. ジム名を <div> で囲い、CSSの .item-gym クラスを適用（これで改行が効く）
-        st.markdown(f'''
-            <div class="item-box">
-                <div class="item-accent" style="background:#4CAF50 !important"></div>
-                <span class="item-date">{row["date"].strftime("%m/%d")}</span>
-                <div class="item-gym">{row["gym_name"]}</div>
-            </div>
-        ''', unsafe_allow_html=True)
-    with c2:
-        # 3. ボタンの上の余白を調整（改行時でも位置がズレにくい）
-        st.write("") 
-        if st.button("🗑️", key=f"del_p_{i}"):
-            safe_save("climbing_logs", log_df.drop(i))
+        # 1. 比率を少し調整（0.85:0.15）
+        c1, c2 = st.columns([0.85, 0.15])
+        with c1:
+            # 2. ジム名を <div> で囲い、CSSの .item-gym クラスを適用（これで改行が効く）
+            st.markdown(f'''
+                <div class="item-box">
+                    <div class="item-accent" style="background:#4CAF50 !important"></div>
+                    <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                    <div class="item-gym">{row["gym_name"]}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+        with c2:
+            # 3. ボタンの上の余白を調整（改行時でも位置がズレにくい）
+            st.write("") 
+            if st.button("🗑️", key=f"del_p_{i}"):
+                safe_save("climbing_logs", log_df.drop(i))
     
     st.divider()
     sc1, sc2 = st.columns(2)
