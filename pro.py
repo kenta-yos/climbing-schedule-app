@@ -23,9 +23,9 @@ st.markdown("""
 
     .item-box {
         display: grid !important;
-        grid-template-columns: 4px 80px 1fr 40px !important;
+        grid-template-columns: 4px 60px 1fr !important; /* 列を整理 */
         align-items: center !important;
-        gap: 12px !important;
+        gap: 8px !important;
         padding: 14px 0 !important;
         border-bottom: 1px solid #F0F0F0 !important;
         text-decoration: none !important;
@@ -157,16 +157,16 @@ with tabs[0]:
             placeholder="ジムを選んでください..."
         ) if not gym_df.empty else st.text_input("ジム名")
         c1, c2 = st.columns(2)
-        if c1.form_submit_button("✋ 予定"):
+        if c1.form_submit_button("✋ 登ります"):
             new = pd.DataFrame([[q_date, q_gym, st.session_state.USER, '予定']], columns=['date','gym_name','user','type'])
             safe_save("climbing_logs", pd.concat([log_df, new], ignore_index=True))
-        if c2.form_submit_button("✅ 実績"):
+        if c2.form_submit_button("✊ 登ったぜ"):
             new = pd.DataFrame([[q_date, q_gym, st.session_state.USER, '実績']], columns=['date','gym_name','user','type'])
             safe_save("climbing_logs", pd.concat([log_df, new], ignore_index=True))
 
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
-    st.subheader("🎯 おすすめ")
+    st.subheader("✨ おすすめ")
     
     target_date = st.date_input("ターゲット日", value=date.today(), key="tg_date")
     t_dt = pd.to_datetime(target_date).replace(tzinfo=None)
@@ -280,7 +280,16 @@ with tabs[3]:
     o_plans = log_df[(log_df['user']!=st.session_state.USER)&(log_df['type']=='予定')&(log_df['date']>=today_ts)&(log_df['date']<=today_ts+timedelta(days=30))].sort_values('date') if not log_df.empty else pd.DataFrame()
     for _, row in o_plans.iterrows():
         u = user_df[user_df['user'] == row['user']].iloc[0] if not user_df.empty and row['user'] in user_df['user'].values else {"icon":"👤", "color":"#CCC"}
-        st.markdown(f'<div class="item-box"><div class="item-accent" style="background:{u["color"]} !important"></div><span class="item-date">{row["date"].strftime("%m/%d")}</span><span class="item-gym"><b>{u["icon"]} {row["user"]}</b></span><span style="font-size:0.8rem; color:#666;">@{row["gym_name"]}</span></div>', unsafe_allow_html=True)
+        st.markdown(f'''
+            <div class="item-box">
+                <div class="item-accent" style="background:{u["color"]} !important"></div>
+                <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                <span class="item-gym">
+                    <b>{u["icon"]} {row["user"]}</b> 
+                    <span style="font-size:0.8rem; color:#666; margin-left:8px;">@{row["gym_name"]}</span>
+                </span>
+            </div>
+        ''', unsafe_allow_html=True)
 
 # Tab 5: 📅 セット (月選択 & Grid)
 with tabs[4]:
