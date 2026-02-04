@@ -124,7 +124,6 @@ if "del_id" in params:
         st.rerun()
 
 # 保存用関数
-# 1. 自分が操作した時（自動リフレッシュ）
 def safe_save(worksheet, df):
     save_df = df.copy()
     for col in ['date', 'start_date', 'end_date']:
@@ -132,11 +131,6 @@ def safe_save(worksheet, df):
             save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
     conn.update(worksheet=worksheet, data=save_df)
     st.cache_data.clear() # 自分が更新した時は全キャッシュをリセット
-    st.rerun()
-
-# 2. 仲間の更新を見たい時（手動リフレッシュ）
-if st.button("🔄 最新の情報に更新"):
-    st.cache_data.clear() # 1時間待たずに今すぐAPIへ取りに行く
     st.rerun()
 
 # --- 3. 認証 (変更なし) ---
