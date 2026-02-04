@@ -113,10 +113,10 @@ if "del_id" in params:
     idx = int(params["del_id"])
     if not log_df.empty and idx in log_df.index:
         new_log_df = log_df.drop(idx)
-        
-        # 1. まずURLをクリアする（del_idなどを消す）
+        current_user = st.session_state.get('USER')
         st.query_params.clear() 
-        # 2. 次に「マイページ」タブを開くようにURLに刻む
+        if current_user:
+            st.query_params["user"] = current_user
         st.query_params["tab"] = "📊 マイページ" 
 
         save_df = new_log_df.copy()
@@ -133,11 +133,12 @@ def safe_save(worksheet, df):
     for col in ['date', 'start_date', 'end_date']:
         if col in save_df.columns:
             save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
-    conn.update(worksheet=worksheet, data=save_df)
-    
-    # 現在開いているタブの名前をURLに引き継ぐ（これでTopに戻らない）
-    # ※もしURLにtabがなければTopを指定する
+    conn.update(worksheet=worksheet, data=save_df)   
+    current_user = st.session_state.get('USER')
     current_tab = st.query_params.get("tab", "🏠 Top")
+    
+    if current_user:
+        st.query_params["user"] = current_user
     st.query_params["tab"] = current_tab
 
     st.cache_data.clear() 
