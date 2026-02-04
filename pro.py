@@ -5,13 +5,14 @@ from datetime import datetime, date, timedelta
 import calendar
 import plotly.express as px
 
-# --- 1. ページ設定 & CSS ---
+# --- 1. ページ設定 & CSS (変更なし) ---
+st.set_page_config(page_title="Go Bouldering Pro", layout="centered")
+
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
     .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
 
-    /* インスタ風サマリーカード */
     .insta-card {
         background: linear-gradient(135deg, #FF512F 0%, #DD2476 100%);
         color: white; padding: 12px 15px; border-radius: 15px; text-align: center;
@@ -20,7 +21,6 @@ st.markdown("""
     .insta-val { font-size: 2.2rem; font-weight: 800; }
     .insta-label { font-size: 0.8rem; opacity: 0.9; }
 
-    /* Grid リスト構造 (マイページ履歴用：4カラム) */
     .item-box {
         display: grid !important;
         grid-template-columns: 4px 80px 1fr 40px !important;
@@ -31,10 +31,9 @@ st.markdown("""
         text-decoration: none !important;
     }
 
-    /* セットスケジュール専用 (3カラム) */
     .set-box {
         display: grid !important;
-        grid-template-columns: 4px 105px 1fr !important; /* 日付幅を確保 */
+        grid-template-columns: 4px 105px 1fr !important;
         align-items: center !important;
         gap: 12px !important;
         padding: 15px 5px !important;
@@ -45,12 +44,11 @@ st.markdown("""
 
     .item-accent { width: 4px !important; height: 1.4rem !important; border-radius: 2px !important; flex-shrink: 0; }
     
-    /* 文字の縦並びを絶対阻止する設定 */
     .item-date { 
         color: #B22222 !important; 
         font-weight: 700 !important; 
         font-size: 0.85rem !important; 
-        white-space: nowrap !important; /* ← 改行禁止 */
+        white-space: nowrap !important; 
         display: inline-block !important; 
     }
     .item-gym { 
@@ -59,7 +57,7 @@ st.markdown("""
         font-size: 0.95rem !important; 
         overflow: hidden !important; 
         text-overflow: ellipsis !important; 
-        white-space: nowrap !important; /* ← 改行禁止 */
+        white-space: nowrap !important; 
     }
     
     .gym-card { padding: 15px; background: #FFF; border-radius: 12px; border: 1px solid #E9ECEF; margin-bottom: 12px; }
@@ -70,7 +68,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. データ読み込み（空データ耐性強化） ---
+# --- 2. データ読み込み ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
@@ -79,6 +77,7 @@ def load_data():
         sched = conn.read(worksheet="schedules", ttl=1).dropna(how='all')
         logs = conn.read(worksheet="climbing_logs", ttl=1).dropna(how='all')
         users = conn.read(worksheet="users", ttl=1).dropna(how='all')
+        area_m = conn.read(worksheet="area_master", ttl=1).dropna(how='all') # 追加
         
         def format_df(df, required_cols):
             if df.empty: return pd.DataFrame(columns=required_cols)
@@ -89,19 +88,20 @@ def load_data():
         sched = format_df(sched, ['gym_name', 'start_date', 'end_date', 'post_url'])
         logs = format_df(logs, ['date', 'gym_name', 'user', 'type'])
         users = format_df(users, ['user', 'color', 'icon'])
+        area_m = format_df(area_m, ['major_area', 'area_tag']) # 追加
 
         if not logs.empty:
             logs['date'] = pd.to_datetime(logs['date'], errors='coerce').dt.tz_localize(None)
-            logs = logs.dropna(subset=['date'])
         if not sched.empty:
             sched['start_date'] = pd.to_datetime(sched['start_date'], errors='coerce').dt.tz_localize(None)
             sched['end_date'] = pd.to_datetime(sched['end_date'], errors='coerce').dt.tz_localize(None)
             
-        return gyms, sched, logs, users
+        return gyms, sched, logs, user_df, area_m # 5つの値を返す
     except:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-gym_df, sched_df, log_df, user_df = load_data()
+# 変数受け取りを5つに修正
+gym_df, sched_df, log_df, user_df, area_master = load_data()
 
 def safe_save(worksheet, df):
     save_df = df.copy()
@@ -111,7 +111,7 @@ def safe_save(worksheet, df):
     conn.update(worksheet=worksheet, data=save_df)
     st.cache_data.clear(); st.rerun()
 
-# --- 3. 認証 ---
+# --- 3. 認証 (変更なし) ---
 if 'USER' not in st.session_state:
     saved_user = st.query_params.get("user")
     if saved_user and not user_df.empty:
@@ -139,7 +139,7 @@ today_ts = pd.Timestamp(date.today()).replace(hour=0, minute=0, second=0, micros
 # --- 4. タブ ---
 tabs = st.tabs(["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"])
 
-# Tab 1: Top
+# Tab 1: Top (変更なし)
 with tabs[0]:
     st.subheader("🚀 クイック登録")
     with st.form("quick_log"):
@@ -153,38 +153,43 @@ with tabs[0]:
             new = pd.DataFrame([[q_date, q_gym, st.session_state.USER, '実績']], columns=['date','gym_name','user','type'])
             safe_save("climbing_logs", pd.concat([log_df, new], ignore_index=True))
 
-# Tab 2: ✨ ジム (エリア絞り込み & スコア復活)
+# Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
     st.subheader("🎯 おすすめ")
+    
     target_date = st.date_input("ターゲット日", value=date.today(), key="tg_date")
     t_dt = pd.to_datetime(target_date).replace(tzinfo=None)
-    area_options = ["すべて"] + sorted(gym_df['area_tag'].unique().tolist()) if not gym_df.empty else ["すべて"]
-    sel_area = st.selectbox("エリア絞り込み", area_options)
+
+    # エリア選択のラジオボタン
+    major_choice = st.radio("表示範囲", ["都内・神奈川", "関東", "全国"], horizontal=True, index=0)
+
+    # マスタから対象タグを抽出
+    if major_choice == "全国":
+        allowed_tags = gym_df['area_tag'].unique().tolist() if not gym_df.empty else []
+    else:
+        allowed_tags = area_master[area_master['major_area'] == major_choice]['area_tag'].tolist()
 
     ranked_list = []
     if not gym_df.empty:
         for _, gym in gym_df.iterrows():
-            if sel_area != "すべて" and gym['area_tag'] != sel_area: continue
+            # マスタにないエリアはスキップ
+            if gym['area_tag'] not in allowed_tags:
+                continue
+
             name, score, reasons = gym['gym_name'], 0, []
             
             # --- 1. 鮮度スコア（セット終了日基準） ---
             if not sched_df.empty:
-                # ターゲット日（登る日）時点で、すでにセットが完了しているものだけを抽出
-                # つまり「終了日 <= ターゲット日」のデータ
                 past_sets = sched_df[(sched_df['gym_name'] == name) & (sched_df['end_date'] <= t_dt)]
-                
                 if not past_sets.empty:
-                    # その中で最も新しい終了日を取得
                     latest_end = past_sets['end_date'].max()
                     diff = (t_dt - latest_end).days
-                    
-                    # 完了から14日以内なら「新セット」として評価
                     if 0 <= diff <= 7: 
                         score += 50
                         reasons.append(f"🔥 新セット({diff}日前完了)")
                     elif 8 <= diff <= 14: 
                         score += 30
-                        reasons.append(f"✨ 準新セット({diff}日前完了)")
+                        reasons.append(f"✨ 準新セット")
 
             # --- 2. 仲間スコア ---
             others = log_df[(log_df['gym_name'] == name) & (log_df['user'] != st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] == t_dt)] if not log_df.empty else pd.DataFrame()
@@ -205,9 +210,14 @@ with tabs[1]:
 
             ranked_list.append({"name": name, "score": score, "reasons": reasons, "area": gym['area_tag'], "url": gym['profile_url']})
     
+    # スコア上位6件を表示
     for gym in sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]:
         tag_html = "".join([f'<span class="tag {"tag-hot" if "🔥" in r or "👥" in r else ""}">{r}</span>' for r in gym['reasons']])
         st.markdown(f'<div class="gym-card"><a href="{gym["url"]}" target="_blank" style="color:#007bff; font-weight:700; text-decoration:none;">{gym["name"]}</a> <small>({gym["area"]})</small><div class="tag-container">{tag_html}</div></div>', unsafe_allow_html=True)
+
+    st.divider()
+    g1, g2 = st.tabs(["🏢 訪問済", "🗺️ 未訪問"])
+    # ... (以降の g1, g2, Tab 3~6 は元のコードと同じ)
 
     st.divider()
     g1, g2 = st.tabs(["🏢 訪問済", "🗺️ 未訪問"])
