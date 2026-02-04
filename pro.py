@@ -176,15 +176,18 @@ query_tab = st.query_params.get("tab", "🏠 Top")
 active_tab_idx = tab_titles.index(query_tab) if query_tab in tab_titles else 0
 tabs = st.tabs(tab_titles)
 
-# --- Tab 1: クイック登録 (パネル強制リセット版) ---
 with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
     
-    # 日付選択
+    # 1. 日付選択
     q_date = st.date_input("📅 日程", value=date.today())
     
-    expander_key = f"gym_exp_{str(st.session_state.ticks['climbing_logs'])}"
+    # 2. ジム選択
+    # 変数に一度出してから使うことで、f-string内でのエラーを回避します
+    current_tick = st.session_state.ticks.get('climbing_logs', 0)
+    expander_key = f"gym_exp_reset_{current_tick}"
+
     with st.expander("🏢 ジムを選択してください", expanded=False, key=expander_key):
         q_gym = st.radio(
             "ジム一覧",
@@ -195,6 +198,7 @@ with tabs[0]:
     
     st.write("") 
 
+    # 3. 登録ボタン
     c1, c2 = st.columns(2)
     
     if c1.button("✋ 登ります", use_container_width=True):
@@ -203,7 +207,6 @@ with tabs[0]:
                                  columns=['date','gym_name','user','type'])
             combined_df = pd.concat([log_df, new_row], ignore_index=True)
             safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
-            # safe_saveの中で ticks が更新されるので、リロード後は新しいkeyになりパネルが閉じます
         else:
             st.warning("ジムを選択してください")
 
