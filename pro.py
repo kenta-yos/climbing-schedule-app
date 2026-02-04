@@ -176,26 +176,31 @@ with tabs[0]:
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
 
-    # 1. フォームの外でリストを作成 (安定動作のため)
+    # 1. フォームの外でリストを作成
     sorted_gym_names = []
     if not gym_df.empty and not area_master.empty:
         priority_order = ["都内・神奈川", "関東", "全国"]
+        
         # 地域情報を紐付け
         merged_gyms = pd.merge(gym_df, area_master[['area_tag', 'major_area']], on='area_tag', how='left')
         
         for area in priority_order:
+            # その地域に属するジムを抽出し、名前順に
             subset = merged_gyms[merged_gyms['major_area'] == area]
-            # 地域内で名前順にソート
-            sorted_gym_names.extend(sorted(subset['gym_name'].tolist()))
+            gyms_in_this_area = sorted(subset['gym_name'].tolist())
+            
+            for g_name in gyms_in_this_area:
+                # 【重要】まだリストに入っていないジムだけを追加（これで重複を防ぐ）
+                if g_name not in sorted_gym_names:
+                    sorted_gym_names.append(g_name)
         
-        # マスタに漏れがある場合のフォールバック
-        others = gym_df[~gym_df['gym_name'].isin(sorted_gym_names)]
-        if not others.empty:
-            sorted_gym_names.extend(sorted(others['gym_name'].tolist()))
+        # 最後に、どこにも属さなかったジムを念のため追加
+        all_gyms = gym_df['gym_name'].unique().tolist()
+        others = sorted([g for g in all_gyms if g not in sorted_gym_names])
+        sorted_gym_names.extend(others)
     else:
-        # どちらかのマスタが空なら単純な名前順
         sorted_gym_names = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
-
+        
     # 2. フォームの開始
     with st.form("quick_log_form_v3", clear_on_submit=True):
         q_date = st.date_input("📅 日程", value=today_jp)
