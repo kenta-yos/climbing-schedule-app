@@ -81,22 +81,32 @@ st.markdown("""
 # --- 2. データ読み込み (API制限ガード付き) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=86400) # キャッシュを24時間保持（APIを極力叩かない）
+@st.cache_data(ttl=86400) # キャッシュを24時間保持
 def get_sheet(sheet_name):
     try:
-        # ここでttl=Noneにせず、接続側にも長めのttlを指定
+        # 接続側にも長めのttlを指定してAPIを節約
         df = conn.read(worksheet=sheet_name, ttl=86400).dropna(how='all')
         df.columns = [str(c).strip().lower() for c in df.columns]
-        # ...（日付変換処理）...
+        
+        # --- 日付変換を関数内に閉じ込める ---
+        if sheet_name == "climbing_logs" and not df.empty:
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
+        
+        if sheet_name == "schedules" and not df.empty:
+            if 'start_date' in df.columns:
+                df['start_date'] = pd.to_datetime(df['start_date'], errors='coerce').dt.tz_localize(None)
+            if 'end_date' in df.columns:
+                df['end_date'] = pd.to_datetime(df['end_date'], errors='coerce').dt.tz_localize(None)
+            
         return df
     except Exception as e:
         if "429" in str(e):
-            # 429が出たら即座に画面を止める。これ以上リクエストを送らせない。
-            st.error("⚠️ Google API制限にかかっています。タブを閉じて5分待ってください。")
+            st.error("⚠️ Google API制限にかかっています。5分待ってください。")
             st.stop() 
         return pd.DataFrame()
 
-# 5つのデータを個別に取得（キャッシュがあれば一瞬で終わる）
+# 5つのデータを取得（変換コードは関数内に入ったので、これだけでOK）
 gym_df = get_sheet("gym_master")
 sched_df = get_sheet("schedules")
 log_df = get_sheet("climbing_logs")
@@ -129,34 +139,37 @@ def delete_log(idx):
         # 3. 再描画（URLは変えないのでログイン状態が維持される）
         st.rerun()
 
-# 保存用関数
 def safe_save(worksheet, df, target_tab=None):
-    """保存後に特定のキャッシュだけを消してリロード"""
+    """保存後にキャッシュを消して最新状態にする"""
     save_df = df.copy()
     
-    # 書き込み用に日付を文字列に戻す（ここでエラーが出ないようガード）
+    # 1. 日付を文字列に戻す（このループは保存の「前」に完了させる）
     for col in ['date', 'start_date', 'end_date']:
         if col in save_df.columns:
             save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
     
-    # --- 2. Google Sheets更新 ---
-        conn.update(worksheet="climbing_logs", data=save_df)
-        get_sheet.clear()
-        
-        # --- 3. 【修正】URL状態を固定してリロード ---
-        current_user = st.session_state.get('USER')
-        
-        # URLから削除用パラメータを消し、ユーザーとタブを強制セット
-        if current_user:
-            st.query_params["user"] = current_user
-        st.query_params["tab"] = "📊 マイページ"
-        
-        # 削除ボタンの残骸(del_id)を確実に消す
-        if "del_id" in st.query_params:
-            del st.query_params["del_id"]
+    # --- ここから下の行は、上の for ループの外（左に寄せる）に出す！ ---
 
-        st.rerun() # ここで確実にログイン情報を引き継いだまま再起動
-        
+    # 2. Google Sheets更新 (引数の worksheet を使うよう修正)
+    conn.update(worksheet=worksheet, data=save_df)
+    
+    # 3. キャッシュをクリア（これで全タブが最新データを読み込むようになる）
+    get_sheet.clear()
+    
+    # 4. URL状態を維持
+    current_user = st.session_state.get('USER')
+    if current_user:
+        st.query_params["user"] = current_user
+    
+    # タブ指定があれば反映、なければマイページ
+    st.query_params["tab"] = target_tab if target_tab else "📊 マイページ"
+    
+    # ゴミ掃除
+    if "del_id" in st.query_params:
+        del st.query_params["del_id"]
+
+    st.rerun()
+
 # --- 3. 認証 (安定化アップデート版) ---
 # セッション状態を安全に初期化
 if 'USER' not in st.session_state:
