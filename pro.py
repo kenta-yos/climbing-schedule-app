@@ -381,24 +381,51 @@ with tabs[2]:
             new_log_df = log_df.drop(i)
             safe_save("climbing_logs", new_log_df, target_tab="📊 マイページ")
 
-# Tab 4: 👥 仲間 (直近1ヶ月)
+# --- Tab 4: 👥 仲間 ---
 with tabs[3]:
     st.query_params["tab"] = "👥 仲間"
-    st.subheader("👥 仲間の予定 (直近1ヶ月)")
-    o_plans = log_df[(log_df['user']!=st.session_state.USER)&(log_df['type']=='予定')&(log_df['date']>=today_ts)&(log_df['date']<=today_ts+timedelta(days=30))].sort_values('date') if not log_df.empty else pd.DataFrame()
-    for _, row in o_plans.iterrows():
-        u = user_df[user_df['user'] == row['user']].iloc[0] if not user_df.empty and row['user'] in user_df['user'].values else {"icon":"👤", "color":"#CCC"}
-        st.markdown(f'''
-            <div class="item-box">
-                <div class="item-accent" style="background:{u["color"]} !important"></div>
-                <span class="item-date">{row["date"].strftime("%m/%d")}</span>
-                <span class="item-gym">
-                    <b>{u["icon"]} {row["user"]}</b> 
-                    <span style="font-size:0.8rem; color:#666; margin-left:8px;">@{row["gym_name"]}</span>
-                </span>
-            </div>
-        ''', unsafe_allow_html=True)
-
+    st.subheader("👥 予定一覧 (直近1ヶ月)")
+    
+    # 1. 自分を含めるかどうかのチェックボックス
+    include_me = st.checkbox("自分の予定も表示する", value=False)
+    
+    # 2. データの抽出
+    if not log_df.empty:
+        # 基本条件：予定であること ＆ 未来の予定であること
+        condition = (log_df['type'] == '予定') & \
+                    (log_df['date'] >= today_ts) & \
+                    (log_df['date'] <= today_ts + timedelta(days=30))
+        
+        # 「自分を含めない」がオン（デフォルト）の場合のみ、自分を除外する条件を追加
+        if not include_me:
+            condition = condition & (log_df['user'] != st.session_state.USER)
+            
+        o_plans = log_df[condition].sort_values('date')
+        
+        # 3. 表示ループ
+        if not o_plans.empty:
+            for _, row in o_plans.iterrows():
+                # ユーザー情報の取得（色やアイコン）
+                u = user_df[user_df['user'] == row['user']].iloc[0] if not user_df.empty and row['user'] in user_df['user'].values else {"icon":"👤", "color":"#CCC"}
+                
+                # 自分の名前の横には (自分) と表示して分かりやすくする
+                display_name = f"{row['user']} (自分)" if row['user'] == st.session_state.USER else row['user']
+                
+                st.markdown(f'''
+                    <div class="item-box">
+                        <div class="item-accent" style="background:{u["color"]} !important"></div>
+                        <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                        <span class="item-gym">
+                            <b>{u["icon"]} {display_name}</b> 
+                            <span style="font-size:0.8rem; color:#666; margin-left:8px;">@{row["gym_name"]}</span>
+                        </span>
+                    </div>
+                ''', unsafe_allow_html=True)
+        else:
+            st.info("予定はありません。")
+    else:
+        st.info("データがありません。")
+        
 # Tab 5: 📅 セット (月選択 & Grid)
 with tabs[4]:
     st.query_params["tab"] = "📅 セット"
