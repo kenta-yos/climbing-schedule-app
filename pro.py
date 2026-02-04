@@ -25,17 +25,6 @@ st.markdown("""
     }
     .insta-val { font-size: 2.2rem; font-weight: 800; }
     .insta-label { font-size: 0.8rem; opacity: 0.9; }
-
-    /* 削除リンクのデザイン */
-    .del-link {
-        color: #999 !important;
-        font-size: 0.75rem !important;
-        text-decoration: underline !important; /* 下線をつけてリンクっぽく */
-        cursor: pointer;
-        margin-left: auto;
-        padding: 5px;
-    }
-    .del-link:hover { color: #FF512F !important; }    
     
     .item-box {
         display: grid !important;
