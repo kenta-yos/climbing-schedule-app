@@ -5,6 +5,11 @@ from datetime import datetime, date, timedelta
 import plotly.express as px
 import pytz
 
+# --- 日本時間の定義 ---
+jp_timezone = pytz.timezone('Asia/Tokyo')
+now_jp = datetime.now(jp_timezone)
+today_jp = now_jp.date()
+
 # --- 1. ページ設定 & CSS ---
 st.set_page_config(page_title="Go Bouldering Pro", layout="centered")
 
@@ -160,11 +165,6 @@ if not st.session_state.get('USER'):
 
 # ログイン後の時間を固定
 today_ts = pd.Timestamp(today_jp).replace(hour=0, minute=0, second=0, microsecond=0)
-
-# --- 日本時間の定義 ---
-jp_timezone = pytz.timezone('Asia/Tokyo')
-now_jp = datetime.now(jp_timezone)
-today_jp = now_jp.date()  # 日本時間の「今日」の日付
 
 # --- 5. タブ表示 ---
 
