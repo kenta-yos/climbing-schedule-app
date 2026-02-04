@@ -129,35 +129,31 @@ def delete_log(idx):
         # 即リロード
         st.rerun()
 
+# 保存用関数
 def safe_save(worksheet, df, target_tab=None):
     """保存後にキャッシュを消して最新状態にする"""
     save_df = df.copy()
     
-    # 1. 日付を文字列に戻す（このループは保存の「前」に完了させる）
+    # 1. 日付を文字列に戻す（このループを抜けてから保存する）
     for col in ['date', 'start_date', 'end_date']:
         if col in save_df.columns:
             save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
     
-    # --- ここから下の行は、上の for ループの外（左に寄せる）に出す！ ---
-
-    # 2. Google Sheets更新 (引数の worksheet を使うよう修正)
+    # 2. Google Sheets更新
     conn.update(worksheet=worksheet, data=save_df)
     
-    # 3. キャッシュをクリア（これで全タブが最新データを読み込むようになる）
+    # 3. キャッシュをクリア（最新データを読み込ませるため）
     get_sheet.clear()
     
-    # 4. URL状態を維持
+    # 4. ユーザー情報を維持
     current_user = st.session_state.get('USER')
     if current_user:
         st.query_params["user"] = current_user
     
-    # タブ指定があれば反映、なければマイページ
-    st.query_params["tab"] = target_tab if target_tab else "📊 マイページ"
-    
-    # ゴミ掃除
-    if "del_id" in st.query_params:
-        del st.query_params["del_id"]
-
+    # タブ指定があればセット
+    if target_tab:
+        st.query_params["tab"] = target_tab
+        
     st.rerun()
 
 # --- 3. 認証 (安定化アップデート版) ---
