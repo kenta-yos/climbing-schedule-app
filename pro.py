@@ -184,7 +184,16 @@ with tabs[1]:
 # Tab 3: 📊 マイページ
 # ==========================================
 with tabs[2]:
+    st.subheader("🗓️ 登る予定")
+    my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'].dt.date >= date.today())].sort_values('date')
+    if not my_plans.empty:
+        for i, row in my_plans.iterrows():
+            st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#FFD700"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">✋</div><div class="item-text">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
+    else:
+        st.info("これからの予定はありません。")
+        
     st.subheader("📊 統計 & 予定")
+    st.markdown("---")
     c1, c2 = st.columns(2)
     with c1: ms_date = st.date_input("開始", value=date.today().replace(day=1), key="ms")
     with c2: me_date = st.date_input("終了", value=date.today(), key="me")
@@ -202,15 +211,6 @@ with tabs[2]:
         fig = px.bar(counts, x='count', y='gym_name', orientation='h', text='count', color_discrete_sequence=['#DD2476'])
         fig.update_layout(xaxis_visible=False, yaxis_title=None, height=200, margin=dict(t=0,b=0,l=100,r=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("---")
-    st.subheader("🗓️ 登る予定")
-    my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'].dt.date >= date.today())].sort_values('date')
-    if not my_plans.empty:
-        for i, row in my_plans.iterrows():
-            st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#FFD700"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">✋</div><div class="item-text">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
-    else:
-        st.info("これからの予定はありません。")
 
     st.markdown("---")
     st.subheader("📝 履歴")
