@@ -40,17 +40,26 @@ def load_data():
         for df in [gyms, sched, logs, users]:
             df.columns = [str(c).strip().lower() for c in df.columns]
         
-        # 【重要】日付形式を整理し、空行やゴミデータを削除
+        # --- 修正ポイント：型変換の徹底 ---
         if not logs.empty:
+            # errors='coerce' で変換不能な値を NaT (欠損値) に変換し、dropna で消去
             logs['date'] = pd.to_datetime(logs['date'], errors='coerce')
             logs = logs.dropna(subset=['date'])
+            # タイムゾーン情報を消して純粋な日付型に統一
+            logs['date'] = logs['date'].dt.tz_localize(None)
+
         if not sched.empty:
             sched['start_date'] = pd.to_datetime(sched['start_date'], errors='coerce')
             sched = sched.dropna(subset=['start_date'])
+            sched['start_date'] = sched['start_date'].dt.tz_localize(None)
             
         return gyms, sched, logs, users
     except:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+# --- マイページ (Tab 3) 等の比較ロジック ---
+# 比較対象も Timestamp かつ tz-naive (タイムゾーンなし) に統一
+today_ts = pd.Timestamp(date.today()).replace(hour=0, minute=0, second=0, microsecond=0)
 
 gym_df, sched_df, log_df, user_df = load_data()
 
