@@ -55,8 +55,15 @@ def load_data():
 gym_df, sched_df, log_df, user_df = load_data()
 
 # --- 認証（再訪問時の自動ログイン対応 ＆ 全員ボタン表示） ---
+# --- 1. セッション状態の初期化（ここが抜けていると AttributeError になります） ---
+if 'USER' not in st.session_state:
+    st.session_state.USER = None
+if 'U_COLOR' not in st.session_state:
+    st.session_state.U_COLOR = "#CCC"
+if 'U_ICON' not in st.session_state:
+    st.session_state.U_ICON = "👤"
 
-# 1. 保存されたユーザー情報の復元（URLパラメータから）
+# --- 2. 保存されたユーザー情報の復元（ここから先ほどのコード） ---
 if st.session_state.USER is None:
     params = st.query_params
     if "user" in params:
@@ -68,7 +75,7 @@ if st.session_state.USER is None:
             st.session_state.U_COLOR = u_info['color']
             st.session_state.U_ICON = u_info['icon']
 
-# 2. ログイン画面（ボタン並列表示）
+# --- 3. ログイン画面（ボタン並列表示） ---
 if not st.session_state.USER:
     st.title("🧗 Go Bouldering")
     st.subheader("自分を選んでスタート")
