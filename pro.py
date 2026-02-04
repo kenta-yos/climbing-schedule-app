@@ -162,48 +162,48 @@ with tabs[1]:
     sel_area = st.selectbox("エリア絞り込み", area_options)
 
     ranked_list = []
-        if not gym_df.empty:
-            for _, gym in gym_df.iterrows():
-                if sel_area != "すべて" and gym['area_tag'] != sel_area: continue
-                name, score, reasons = gym['gym_name'], 0, []
+    if not gym_df.empty:
+        for _, gym in gym_df.iterrows():
+            if sel_area != "すべて" and gym['area_tag'] != sel_area: continue
+            name, score, reasons = gym['gym_name'], 0, []
+            
+            # --- 1. 鮮度スコア（セット終了日基準） ---
+            if not sched_df.empty:
+                # ターゲット日（登る日）時点で、すでにセットが完了しているものだけを抽出
+                # つまり「終了日 <= ターゲット日」のデータ
+                past_sets = sched_df[(sched_df['gym_name'] == name) & (sched_df['end_date'] <= t_dt)]
                 
-                # --- 1. 鮮度スコア（セット終了日基準） ---
-                if not sched_df.empty:
-                    # ターゲット日（登る日）時点で、すでにセットが完了しているものだけを抽出
-                    # つまり「終了日 <= ターゲット日」のデータ
-                    past_sets = sched_df[(sched_df['gym_name'] == name) & (sched_df['end_date'] <= t_dt)]
+                if not past_sets.empty:
+                    # その中で最も新しい終了日を取得
+                    latest_end = past_sets['end_date'].max()
+                    diff = (t_dt - latest_end).days
                     
-                    if not past_sets.empty:
-                        # その中で最も新しい終了日を取得
-                        latest_end = past_sets['end_date'].max()
-                        diff = (t_dt - latest_end).days
-                        
-                        # 完了から14日以内なら「新セット」として評価
-                        if 0 <= diff <= 7: 
-                            score += 50
-                            reasons.append(f"🔥 新セット({diff}日前完了)")
-                        elif 8 <= diff <= 14: 
-                            score += 30
-                            reasons.append(f"✨ 準新セット")
-    
-                # --- 2. 仲間スコア ---
-                others = log_df[(log_df['gym_name'] == name) & (log_df['user'] != st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] == t_dt)] if not log_df.empty else pd.DataFrame()
-                if not others.empty:
-                    score += (100 * len(others))
-                    reasons.append(f"👥 仲間{len(others)}名が予定")
-                    
-                # --- 3. 実績スコア ---
-                my_v = log_df[(log_df['gym_name'] == name) & (log_df['user'] == st.session_state.USER) & (log_df['type'] == '実績')] if not log_df.empty else pd.DataFrame()
-                if my_v.empty: 
-                    score += 30
-                    reasons.append("🆕 未訪問")
-                else:
-                    last_v_days = (t_dt - my_v['date'].max()).days
-                    if last_v_days >= 30: 
+                    # 完了から14日以内なら「新セット」として評価
+                    if 0 <= diff <= 7: 
+                        score += 50
+                        reasons.append(f"🔥 新セット({diff}日前完了)")
+                    elif 8 <= diff <= 14: 
                         score += 30
-                        reasons.append(f"⌛ {last_v_days}日ぶり")
-    
-                ranked_list.append({"name": name, "score": score, "reasons": reasons, "area": gym['area_tag'], "url": gym['profile_url']})
+                        reasons.append(f"✨ 準新セット")
+
+            # --- 2. 仲間スコア ---
+            others = log_df[(log_df['gym_name'] == name) & (log_df['user'] != st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] == t_dt)] if not log_df.empty else pd.DataFrame()
+            if not others.empty:
+                score += (100 * len(others))
+                reasons.append(f"👥 仲間{len(others)}名が予定")
+                
+            # --- 3. 実績スコア ---
+            my_v = log_df[(log_df['gym_name'] == name) & (log_df['user'] == st.session_state.USER) & (log_df['type'] == '実績')] if not log_df.empty else pd.DataFrame()
+            if my_v.empty: 
+                score += 30
+                reasons.append("🆕 未訪問")
+            else:
+                last_v_days = (t_dt - my_v['date'].max()).days
+                if last_v_days >= 30: 
+                    score += 30
+                    reasons.append(f"⌛ {last_v_days}日ぶり")
+
+            ranked_list.append({"name": name, "score": score, "reasons": reasons, "area": gym['area_tag'], "url": gym['profile_url']})
     
     for gym in sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:3]:
         tag_html = "".join([f'<span class="tag {"tag-hot" if "🔥" in r or "👥" in r else ""}">{r}</span>' for r in gym['reasons']])
