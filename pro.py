@@ -37,12 +37,22 @@ def load_data():
         sched = conn.read(worksheet="schedules", ttl=1).dropna(how='all')
         logs = conn.read(worksheet="climbing_logs", ttl=1).dropna(how='all')
         users = conn.read(worksheet="users", ttl=1).dropna(how='all')
+        
         for df in [gyms, sched, logs, users]:
             df.columns = [str(c).strip().lower() for c in df.columns]
-        if not sched.empty: sched['start_date'] = pd.to_datetime(sched['start_date'], errors='coerce')
-        if not logs.empty: logs['date'] = pd.to_datetime(logs['date'], errors='coerce')
+        
+        # --- ここを強化 ---
+        if not logs.empty:
+            # 日付カラムを変換し、変換できないゴミデータ(NaT)を削除する
+            logs['date'] = pd.to_datetime(logs['date'], errors='coerce')
+            logs = logs.dropna(subset=['date']) 
+        # ----------------
+            
+        if not sched.empty: 
+            sched['start_date'] = pd.to_datetime(sched['start_date'], errors='coerce')
+            
         return gyms, sched, logs, users
-    except:
+    except Exception as e:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 gym_df, sched_df, log_df, user_df = load_data()
