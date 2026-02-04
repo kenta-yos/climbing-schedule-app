@@ -512,19 +512,20 @@ with tabs[5]:
             sorted(gym_df['gym_name'].tolist()), 
             index=None, 
             placeholder="ジムを選択してください"
-        ) if not gym_df.empty else ""        
-        p_url = st.text_input("告知URL")
-        if "rows" not in st.session_state: st.session_state.rows = 1
-        d_list = []
-        for i in range(st.session_state.rows):
-            c1, c2 = st.columns(2)
-            d_list.append((c1.date_input(f"開始 {i+1}", key=f"sd_{i}"), c2.date_input(f"終了 {i+1}", key=f"ed_{i}")))
-        if st.button("➕ 日程追加"): st.session_state.rows += 1; st.rerun()
-        if st.button("🚀 一括登録"):
-        # 【修正】今回追加する予定(new_s) だけを作る
-        new_s = pd.DataFrame([[sel_g, d[0], d[1], p_url] for d in d_list], 
-                             columns=['gym_name', 'start_date', 'end_date', 'post_url'])
-        st.session_state.rows = 1
-        # 【修正】sched_df を concat せず、new_s だけを渡す
-        safe_save("schedules", new_s, mode="add")
+        ) 
+            if not gym_df.empty else ""        
+            p_url = st.text_input("告知URL")
+            if "rows" not in st.session_state: st.session_state.rows = 1
+            d_list = []
+            for i in range(st.session_state.rows):
+                c1, c2 = st.columns(2)
+                d_list.append((c1.date_input(f"開始 {i+1}", key=f"sd_{i}"), c2.date_input(f"終了 {i+1}", key=f"ed_{i}")))
+            if st.button("➕ 日程追加"): st.session_state.rows += 1; st.rerun()
+            if st.button("🚀 一括登録"):
+            # 【修正】今回追加する予定(new_s) だけを作る
+            new_s = pd.DataFrame([[sel_g, d[0], d[1], p_url] for d in d_list], 
+                                 columns=['gym_name', 'start_date', 'end_date', 'post_url'])
+            st.session_state.rows = 1
+            # 【修正】sched_df を concat せず、new_s だけを渡す
+            safe_save("schedules", new_s, mode="add")
     if st.button("🚪 ログアウト"): st.session_state.USER = None; st.query_params.clear(); st.rerun()
