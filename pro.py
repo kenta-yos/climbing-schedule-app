@@ -80,22 +80,25 @@ st.markdown("""
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- 2. データ読み込み (一括取得でAPIを節約) ---
+# --- 2. データ読み込み (公式推奨の安全な読み込み方) ---
 @st.cache_data(ttl=3600)
 def get_all_data():
     try:
-        # すべてのワークシートを1回のリクエストで取得（これが節約のキモ！）
-        # worksheets() でリストを取得し、それぞれのデータを一括で読み込む
-        all_sheets = conn.client.open_by_key(st.secrets["connections"]["gsheets"]["spreadsheet"]).worksheets()
-        
         data_dict = {}
-        for sheet in all_sheets:
-            name = sheet.title
-            df = pd.DataFrame(sheet.get_all_records())
+        # 取得するシート名を固定して、1つずつ安全に読み込む
+        # こうすることで、Streamlitの内部キャッシュが1シートごとに完璧に効きます
+        sheet_names = ["gym_master", "schedules", "climbing_logs", "users", "area_master"]
+        
+        for name in sheet_names:
+            # conn.read() を使うのが、API制限を避けるための正攻法です
+            # 内部でリトライ処理も持っているため、conn.client よりも遥かに安定します
+            df = conn.read(worksheet=name, ttl="1h")
+            
+            # 列名のクリーンアップ
             df.columns = [str(c).strip().lower() for c in df.columns]
             
             # 日付変換ロジック
-            if name == "climbing_logs" and not df.empty:
+            if name == "climbing_logs" and not df.empty and 'date' in df.columns:
                 df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
             elif name == "schedules" and not df.empty:
                 for col in ['start_date', 'end_date']:
@@ -106,7 +109,9 @@ def get_all_data():
             
         return data_dict
     except Exception as e:
-        st.error(f"データの取得に失敗しました。1分待って再試行してください。")
+        # エラーが出た場合、詳細を表示するように変更（原因特定のため）
+        st.error(f"❌ 読み込みエラー詳細: {e}")
+        st.info("スプレッドシートの共有設定や、SecretsのURL/Sheet名が正しいか確認してください。")
         st.stop()
 
 # --- データの割り当て ---
