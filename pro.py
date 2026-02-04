@@ -21,6 +21,17 @@ st.markdown("""
     .insta-val { font-size: 2.2rem; font-weight: 800; }
     .insta-label { font-size: 0.8rem; opacity: 0.9; }
 
+    /* 削除リンクのデザイン */
+    .del-link {
+        color: #999 !important;
+        font-size: 0.7rem !important;
+        text-decoration: none !important;
+        white-space: nowrap !important;
+        margin-left: auto; /* 右端に寄せる */
+    }
+    .del-link:hover { color: #B22222 !important; }
+    
+    
     .item-box {
         display: grid !important;
         grid-template-columns: 4px 60px 1fr 40px !important;
@@ -195,10 +206,10 @@ with tabs[1]:
                     latest_end = past_sets['end_date'].max()
                     diff = (t_dt - latest_end).days
                     if 0 <= diff <= 7: 
-                        score += 80
+                        score += 40
                         reasons.append(f"🔥 新セット({diff}日前完了)")
                     elif 8 <= diff <= 14: 
-                        score += 40
+                        score += 30
                         reasons.append(f"✨ 準新セット({diff}日前完了)")
 
             # --- 2. 仲間スコア ---
@@ -210,12 +221,12 @@ with tabs[1]:
             # --- 3. 実績スコア ---
             my_v = log_df[(log_df['gym_name'] == name) & (log_df['user'] == st.session_state.USER) & (log_df['type'] == '実績')] if not log_df.empty else pd.DataFrame()
             if my_v.empty: 
-                score += 30
+                score += 10
                 reasons.append("🆕 未訪問")
             else:
                 last_v_days = (t_dt - my_v['date'].max()).days
                 if last_v_days >= 30: 
-                    score += 50
+                    score += 20
                     reasons.append(f"⌛ {last_v_days}日ぶり")
 
             ranked_list.append({"name": name, "score": score, "reasons": reasons, "area": gym['area_tag'], "url": gym['profile_url']})
@@ -248,22 +259,19 @@ with tabs[2]:
     st.subheader("🗓️ 今後の予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
     for i, row in my_plans.iterrows():
-        # 1. 比率を少し調整（0.85:0.15）
-        c1, c2 = st.columns([0.85, 0.15])
-        with c1:
-            # 2. ジム名を <div> で囲い、CSSの .item-gym クラスを適用（これで改行が効く）
-            st.markdown(f'''
-                <div class="item-box">
-                    <div class="item-accent" style="background:#4CAF50 !important"></div>
-                    <span class="item-date">{row["date"].strftime("%m/%d")}</span>
-                    <div class="item-gym">{row["gym_name"]}</div>
-                </div>
-            ''', unsafe_allow_html=True)
-        with c2:
-            # 3. ボタンの上の余白を調整（改行時でも位置がズレにくい）
-            st.write("") 
-            if st.button("🗑️", key=f"del_p_{i}"):
-                safe_save("climbing_logs", log_df.drop(i))
+    with st.container():
+        st.markdown(f'''
+            <div class="item-box">
+                <div class="item-accent" style="background:#4CAF50 !important"></div>
+                <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                <div class="item-gym">{row["gym_name"]}</div>
+                <div class="del-link">削除</div>
+            </div>
+        ''', unsafe_allow_html=True)
+        
+        st.markdown('<style>div[data-testid="stVerticalBlock"] > div:has(button[key^="del_"]) { margin-top: -45px; margin-left: auto; width: 50px; opacity: 0; }</style>', unsafe_allow_html=True)
+        if st.button(" ", key=f"del_p_{i}"):
+            safe_save("climbing_logs", log_df.drop(i))
     
     st.divider()
     sc1, sc2 = st.columns(2)
@@ -278,19 +286,22 @@ with tabs[2]:
         fig.update_layout(showlegend=False, coloraxis_showscale=False, xaxis_visible=False, yaxis_title=None, margin=dict(t=10, b=10, l=120, r=50), height=max(150, 45 * len(counts)), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', dragmode=False)
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
 
-    st.subheader("📝 履歴 (期間内)")
+    st.subheader("📝 履歴")
     for i, row in my_p_res.sort_values('date', ascending=False).iterrows():
-        c1, c2 = st.columns([0.88, 0.12])
-        with c1: 
+        with st.container():
+            # HTMLで見た目を作る
             st.markdown(f'''
-        <div class="item-box">
-            <div class="item-accent" style="background:#4CAF50 !important"></div>
-            <span class="item-date">{row["date"].strftime("%m/%d")}</span>
-            <div class="item-gym">{row["gym_name"]}</div>
-        </div>
-    ''', unsafe_allow_html=True)
-        with c2:
-            if st.button("🗑️", key=f"del_h_{i}"): safe_save("climbing_logs", log_df.drop(i))
+                <div class="item-box">
+                    <div class="item-accent" style="background:#4CAF50 !important"></div>
+                    <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                    <div class="item-gym">{row["gym_name"]}</div>
+                    <div class="del-link">削除</div>
+                </div>
+            ''', unsafe_allow_html=True)
+            
+            st.markdown('<style>div[data-testid="stVerticalBlock"] > div:has(button[key^="del_h_"]) { margin-top: -45px; margin-left: auto; width: 50px; opacity: 0; }</style>', unsafe_allow_html=True)
+            if st.button(" ", key=f"del_h_{i}"):
+                safe_save("climbing_logs", log_df.drop(i))
 
 # Tab 4: 👥 仲間 (直近1ヶ月)
 with tabs[3]:
