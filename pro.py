@@ -78,31 +78,44 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. データ読み込み (API制限ガード付き) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=3600) # 1日だと長すぎるので1時間程度が使いやすいです
-def get_sheet(sheet_name):
+# --- 2. データ読み込み (一括取得でAPIを節約) ---
+@st.cache_data(ttl=3600)
+def get_all_data():
     try:
-        df = conn.read(worksheet=sheet_name, ttl=0).dropna(how='all') # 読み込み時は常に最新を狙う
-        df.columns = [str(c).strip().lower() for c in df.columns]
-        # 日付変換
-        if sheet_name == "climbing_logs" and not df.empty:
-            df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
-        elif sheet_name == "schedules" and not df.empty:
-            for col in ['start_date', 'end_date']:
-                if col in df.columns:
-                    df[col] = pd.to_datetime(df[col], errors='coerce').dt.tz_localize(None)
-        return df
+        # すべてのワークシートを1回のリクエストで取得（これが節約のキモ！）
+        # worksheets() でリストを取得し、それぞれのデータを一括で読み込む
+        all_sheets = conn.client.open_by_key(st.secrets["connections"]["gsheets"]["spreadsheet"]).worksheets()
+        
+        data_dict = {}
+        for sheet in all_sheets:
+            name = sheet.title
+            df = pd.DataFrame(sheet.get_all_records())
+            df.columns = [str(c).strip().lower() for c in df.columns]
+            
+            # 日付変換ロジック
+            if name == "climbing_logs" and not df.empty:
+                df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
+            elif name == "schedules" and not df.empty:
+                for col in ['start_date', 'end_date']:
+                    if col in df.columns:
+                        df[col] = pd.to_datetime(df[col], errors='coerce').dt.tz_localize(None)
+            
+            data_dict[name] = df
+            
+        return data_dict
     except Exception as e:
-        st.warning(f"データ取得に失敗しました。再試行中... ({sheet_name})")
-        return pd.DataFrame()
+        st.error(f"データの取得に失敗しました。1分待って再試行してください。")
+        st.stop()
 
-gym_df = get_sheet("gym_master")
-sched_df = get_sheet("schedules")
-log_df = get_sheet("climbing_logs")
-user_df = get_sheet("users")
-area_master = get_sheet("area_master")
+# --- データの割り当て ---
+all_data = get_all_data()
+gym_df = all_data.get("gym_master", pd.DataFrame())
+sched_df = all_data.get("schedules", pd.DataFrame())
+log_df = all_data.get("climbing_logs", pd.DataFrame())
+user_df = all_data.get("users", pd.DataFrame())
+area_master = all_data.get("area_master", pd.DataFrame())
 
 # --- 保存用関数（安全版） ---
 def safe_save(worksheet, df, target_tab=None):
@@ -126,8 +139,7 @@ def safe_save(worksheet, df, target_tab=None):
         conn.update(worksheet=worksheet, data=save_df)
         
         # 4. キャッシュをクリア
-        get_sheet.clear() 
-        st.cache_data.clear()
+        get_all_data.clear()
         
         # 5. タブを維持してリロード
         params = {"user": st.session_state.USER}
