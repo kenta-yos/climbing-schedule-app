@@ -74,12 +74,6 @@ st.markdown("""
     .tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 40px; background: #F0F0F0; color: #666; }
     .tag-hot { background: #FFF0F0; color: #FF512F; font-weight: 700; border: 1px solid #FFDADA; }
     .past-opacity { opacity: 0.35 !important; }
-
-    /* --- 案1：selectboxの検索を封じてキーボードを出さない --- */
-    div[data-baseweb="select"] input {
-        inputmode: none !important; /* スマホにキーボード不要と伝える */
-        caret-color: transparent !important;
-    }
     
     </style>
 """, unsafe_allow_html=True)
