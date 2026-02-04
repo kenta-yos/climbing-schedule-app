@@ -223,10 +223,6 @@ with tabs[1]:
 
     st.divider()
     g1, g2 = st.tabs(["🏢 訪問済", "🗺️ 未訪問"])
-    # ... (以降の g1, g2, Tab 3~6 は元のコードと同じ)
-
-    st.divider()
-    g1, g2 = st.tabs(["🏢 訪問済", "🗺️ 未訪問"])
     visited_names = []
     if not log_df.empty:
         my_done_logs = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '実績')]
