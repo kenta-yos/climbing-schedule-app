@@ -110,7 +110,7 @@ if not sched_df.empty:
     sched_df['start_date'] = pd.to_datetime(sched_df['start_date'], errors='coerce').dt.tz_localize(None)
     sched_df['end_date'] = pd.to_datetime(sched_df['end_date'], errors='coerce').dt.tz_localize(None)
 
-# 削除処理（URLパラメータがある場合）
+# --- 修正後（これを今のブロックと入れ替えてください） ---
 params = st.query_params
 if "del_id" in params:
     idx = int(params["del_id"])
@@ -126,15 +126,19 @@ if "del_id" in params:
         conn.update(worksheet="climbing_logs", data=save_df)
         get_sheet.clear()
         
-        # 3. 【ここが肝】セッション状態を直接使ってURLを上書き
+        # 3. ユーザーとタブを維持しつつ、削除キーだけをURLから消し去る
+        # ★ .get() を使うことで、万が一の AttributeError を防ぎます
         current_user = st.session_state.get('USER')
         
-        # query_params.clear()は使わず、必要なものだけを上書き・セットする
-        st.query_params["user"] = current_user
+        if current_user:
+            st.query_params["user"] = current_user
+        
         st.query_params["tab"] = "📊 マイページ"
-        # del_idを消すために明示的に削除（これをしないと無限ループになる場合があります）
-        if "del_id" in st.query_params:
-            del st.query_params["del_id"]
+
+        # URLに残っている不要なゴミ（削除IDや遷移元のタイプ）をピンポイントで消去
+        for key in ["del_id", "type"]:
+            if key in st.query_params:
+                del st.query_params[key]
             
         st.rerun()
 
@@ -164,17 +168,23 @@ def safe_save(worksheet, df, target_tab=None):
 
     st.rerun()
 
-# --- 3. 認証 (変更なし) ---
+# --- 3. 認証 (安定化アップデート版) ---
+# セッション状態を安全に初期化
 if 'USER' not in st.session_state:
-    saved_user = st.query_params.get("user")
-    if saved_user and not user_df.empty:
-        u_match = user_df[user_df['user'] == saved_user]
-        if not u_match.empty:
-            row = u_match.iloc[0]
-            st.session_state.USER, st.session_state.U_COLOR, st.session_state.U_ICON = row['user'], row['color'], row['icon']
-    else: st.session_state.USER = None
+    st.session_state.USER = None
 
-if not st.session_state.USER:
+# URLパラメータからユーザー復元
+saved_user = st.query_params.get("user")
+if saved_user and not user_df.empty and st.session_state.USER is None:
+    u_match = user_df[user_df['user'] == saved_user]
+    if not u_match.empty:
+        row = u_match.iloc[0]
+        st.session_state.USER = row['user']
+        st.session_state.U_COLOR = row['color']
+        st.session_state.U_ICON = row['icon']
+
+# ★ここが重要：AttributeErrorを防ぐために .get() を使用
+if not st.session_state.get('USER'):
     st.title("🧗 Go Bouldering")
     if not user_df.empty:
         cols = st.columns(2)
@@ -183,10 +193,14 @@ if not st.session_state.USER:
                 btn_key = f"l_{row['user']}"
                 st.markdown(f"<style>div.stButton > button[key='{btn_key}'] {{ background:{row['color']}; color:white; width:100%; height:4rem; border-radius:15px; font-weight:bold; }}</style>", unsafe_allow_html=True)
                 if st.button(f"{row['icon']} {row['user']}", key=btn_key):
-                    st.session_state.USER, st.session_state.U_COLOR, st.session_state.U_ICON = row['user'], row['color'], row['icon']
-                    st.query_params["user"] = row['user']; st.rerun()
+                    st.session_state.USER = row['user']
+                    st.session_state.U_COLOR = row['color']
+                    st.session_state.U_ICON = row['icon']
+                    st.query_params["user"] = row['user']
+                    st.rerun()
     st.stop()
 
+# ログイン後の時間を固定
 today_ts = pd.Timestamp(date.today()).replace(hour=0, minute=0, second=0, microsecond=0)
 
 # --- 4. タブ ---
