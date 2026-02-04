@@ -23,7 +23,7 @@ st.markdown("""
 
     .item-box {
         display: grid !important;
-        grid-template-columns: 4px 60px 1fr !important; /* 列を整理 */
+        grid-template-columns: 4px 60px 1fr 40px !important;
         align-items: center !important;
         gap: 8px !important;
         padding: 14px 0 !important;
@@ -55,10 +55,8 @@ st.markdown("""
         color: #1A1A1A !important; 
         font-weight: 700 !important; 
         font-size: 0.95rem !important; 
-        overflow: hidden !important;
         word-break: break-all !important;
         line-height: 1.3 !important;
-        text-overflow: ellipsis !important; 
     }
     
     .gym-card { padding: 15px; background: #FFF; border-radius: 12px; border: 1px solid #E9ECEF; margin-bottom: 12px; }
@@ -250,17 +248,22 @@ with tabs[2]:
     st.subheader("🗓️ 今後の予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
     for i, row in my_plans.iterrows():
-        c1, c2 = st.columns([0.88, 0.12])
-        with c1: 
-            st.markdown(f'''
-        <div class="item-box">
-            <div class="item-accent" style="background:#4CAF50 !important"></div>
-            <span class="item-date">{row["date"].strftime("%m/%d")}</span>
-            <div class="item-gym">{row["gym_name"]}</div>
-        </div>
-    ''', unsafe_allow_html=True)
-        with c2: 
-            if st.button("🗑️", key=f"del_p_{i}"): safe_save("climbing_logs", log_df.drop(i))
+    # 1. 比率を少し調整（0.85:0.15）
+    c1, c2 = st.columns([0.85, 0.15])
+    with c1:
+        # 2. ジム名を <div> で囲い、CSSの .item-gym クラスを適用（これで改行が効く）
+        st.markdown(f'''
+            <div class="item-box">
+                <div class="item-accent" style="background:#4CAF50 !important"></div>
+                <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                <div class="item-gym">{row["gym_name"]}</div>
+            </div>
+        ''', unsafe_allow_html=True)
+    with c2:
+        # 3. ボタンの上の余白を調整（改行時でも位置がズレにくい）
+        st.write("") 
+        if st.button("🗑️", key=f"del_p_{i}"):
+            safe_save("climbing_logs", log_df.drop(i))
     
     st.divider()
     sc1, sc2 = st.columns(2)
