@@ -2,7 +2,6 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, date, timedelta
-import calendar
 import plotly.express as px
 
 # --- 1. ページ設定 & CSS (変更なし) ---
@@ -78,98 +77,69 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-conn = st.connection("gsheets", type=GSheetsConnection)
-
-# --- 2. データ読み込み (引数 timestamp でキャッシュをコントロール) ---
-@st.cache_data(ttl=3600)
-def get_all_data(update_tick=0):
-    # update_tick が変わったときだけ、キャッシュを無視してGoogleから再取得する仕組み
-    try:
-        data_dict = {}
-        sheet_names = ["gym_master", "schedules", "climbing_logs", "users", "area_master"]
-        for name in sheet_names:
-            # ここでは conn.read を使う (ttlは1hでOK)
-            df = conn.read(worksheet=name, ttl="1h")
-            df.columns = [str(c).strip().lower() for c in df.columns]
-            # 日付変換ロジック
-            if name == "climbing_logs" and not df.empty and 'date' in df.columns:
-                df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
-            elif name == "schedules" and not df.empty:
-                for col in ['start_date', 'end_date']:
-                    if col in df.columns:
-                        df[col] = pd.to_datetime(df[col], errors='coerce').dt.tz_localize(None)            
-            data_dict[name] = df
-        return data_dict
-    except Exception as e:
-        st.error(f"❌ 読み込みエラー: {e}")
-        st.stop()
-
-# --- 3. セッション状態の初期化 (参照する前に作る) ---
-if 'data_tick' not in st.session_state:
-    st.session_state.data_tick = 0
+# セッション状態の初期化
+if 'ticks' not in st.session_state:
+    st.session_state.ticks = {s: 0 for s in ["gym_master", "schedules", "climbing_logs", "users", "area_master"]}
 if 'USER' not in st.session_state:
     st.session_state.USER = None
 
-# --- 4. データの取得実行 ---
-all_data = get_all_data(st.session_state.data_tick)
+conn = st.connection("gsheets", type=GSheetsConnection)
 
-# --- データの割り当て ---
-all_data = get_all_data()
-gym_df = all_data.get("gym_master", pd.DataFrame())
-sched_df = all_data.get("schedules", pd.DataFrame())
-log_df = all_data.get("climbing_logs", pd.DataFrame())
-user_df = all_data.get("users", pd.DataFrame())
-area_master = all_data.get("area_master", pd.DataFrame())
+# --- 2. データ読み込み (シート個別にキャッシュ管理) ---
+def get_single_sheet(sheet_name):
+    # tickを引数に含めることで、更新時だけキャッシュを破棄させる
+    @st.cache_data(ttl=3600)
+    def _read_with_cache(name, tick):
+        df = conn.read(worksheet=name, ttl=0)
+        df.columns = [str(c).strip().lower() for c in df.columns]
+        # 日付処理
+        if name == "climbing_logs" and not df.empty and 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
+        elif name == "schedules" and not df.empty:
+            for col in ['start_date', 'end_date']:
+                if col in df.columns:
+                    df[col] = pd.to_datetime(df[col], errors='coerce').dt.tz_localize(None)
+        return df    
+    return _read_with_cache(sheet_name, st.session_state.ticks[sheet_name])
 
-# --- 保存用関数（安全版） ---
+# データの取得（ここで必要なシートだけをバラで取る）
+gym_df = get_single_sheet("gym_master")
+sched_df = get_single_sheet("schedules")
+log_df = get_single_sheet("climbing_logs")
+user_df = get_single_sheet("users")
+area_master = get_single_sheet("area_master")
+
+# --- 3. 保存・削除用関数（超軽量版） ---
 def safe_save(worksheet, df, target_tab=None):
     try:
-        if df.empty:
-            st.error("保存するデータが空です。処理を中断しました。")
-            return
-
+        # 保存形式の整形
         save_df = df.copy()
-        
-        # 1. 日付をスプレッドシートの既存形式 "2025-11-27 0:00:00" に厳密に合わせる
         for col in ['date', 'start_date', 'end_date']:
             if col in save_df.columns:
-                # 一旦datetimeに変換してから、時刻付き文字列フォーマットに固定
                 save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d 00:00:00')
         
-        # 2. 重複や空行を排除（念のため）
-        save_df = save_df.dropna(subset=[save_df.columns[0]]) # 最初の列が空の行を削除
-        
-        # 3. Google Sheets更新
+        # 1. Google Sheetsを更新 (リクエスト1回)
         conn.update(worksheet=worksheet, data=save_df)
         
-        # 4. キャッシュをクリア
-        st.session_state.data_tick = datetime.now().timestamp()
+        # 2. 【重要】更新したシートのキャッシュキーだけを更新
+        st.session_state.ticks[worksheet] = datetime.now().timestamp()
         
-        # 5. タブを維持してリロード
+        # 3. リロード
         params = {"user": st.session_state.USER}
-        if target_tab:
-            params["tab"] = target_tab
-        elif "tab" in st.query_params:
-            params["tab"] = st.query_params["tab"]
+        if target_tab: params["tab"] = target_tab
         st.query_params.from_dict(params)
-        
         st.rerun()
     except Exception as e:
         st.error(f"❌ 保存失敗: {e}")
-        st.stop()
 
-# --- 3. 認証 (安定化アップデート版) ---
-# URLパラメータからユーザー復元
+
+# ユーザーログイン処理
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
     u_match = user_df[user_df['user'] == saved_user]
     if not u_match.empty:
-        row = u_match.iloc[0]
-        st.session_state.USER = row['user']
-        st.session_state.U_COLOR = row['color']
-        st.session_state.U_ICON = row['icon']
+        st.session_state.USER, st.session_state.U_COLOR, st.session_state.U_ICON = u_match.iloc[0][['user', 'color', 'icon']]
 
-# ★ここが重要：AttributeErrorを防ぐために .get() を使用
 if not st.session_state.get('USER'):
     st.title("🧗 Go Bouldering")
     if not user_df.empty:
