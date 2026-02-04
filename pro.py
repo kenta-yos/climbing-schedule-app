@@ -106,42 +106,29 @@ user_df = get_single_sheet("users")
 area_master = get_single_sheet("area_master")
 
 # --- 3. 保存・削除用関数（超軽量版） ---
-def safe_save(worksheet, df_to_save, target_tab=None):
+def safe_save(worksheet, df_to_add, target_tab=None):
     try:
-        # 【重要】現在の引数 df_to_save が「全データ」ではなく「追加したい1行」であることを確認
-        # もし関数呼び出し側で pd.concat している場合は、ここでの処理を調整します。
-        
-        # 1. 保存の瞬間に、スプシから「今この瞬間」の最新データを読み直す
+        # 1. 保存の瞬間に、スプシから「本当の最新」を読み直す
         current_df = conn.read(worksheet=worksheet, ttl=0)
         
-        # 2. 最新データに対して、新しいデータを結合する
-        # ※ df_to_save が「追加分のみ」なら concat、
-        # 「全データ」として渡されているなら、この関数内で concat しないよう調整が必要です。
-        # 今回は、安全のため「渡されたデータ」を信じつつ、
-        # gym_master などの「マスタ系」が空で上書きされるのを全力で阻止します。
+        # 2. 最新データに対して、今回の「新しい行」だけを結合する
+        # ※ 呼び出し側からは「追加したい1行(DataFrame)」だけを渡すように変更します
+        final_df = pd.concat([current_df, df_to_add], ignore_index=True)
         
-        if df_to_save.empty:
-            st.error("⚠️ 保存しようとしているデータが空です。上書きを中断しました。")
-            return
-
-        # 3. 日付フォーマットの調整
+        # 3. 日付フォーマットの調整（スプシ側での認識を安定させる）
         for col in ['date', 'start_date', 'end_date']:
-            if col in df_to_save.columns:
-                df_to_save[col] = pd.to_datetime(df_to_save[col]).dt.strftime('%Y-%m-%d 00:00:00')
+            if col in final_df.columns:
+                final_df[col] = pd.to_datetime(final_df[col]).dt.strftime('%Y-%m-%d 00:00:00')
 
         # 4. 上書き保存
-        conn.update(worksheet=worksheet, data=df_to_save)
+        conn.update(worksheet=worksheet, data=final_df)
         
-        # 5. キャッシュを更新するための tick 更新
+        # 5. キャッシュ更新用
         st.session_state.ticks[worksheet] = datetime.now().timestamp()
-        
-        params = {"user": st.session_state.USER}
-        if target_tab: params["tab"] = target_tab
-        st.query_params.from_dict(params)
         st.rerun()
     except Exception as e:
         st.error(f"❌ 保存失敗: {e}")
-        
+
 # ユーザーログイン処理
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
@@ -236,6 +223,15 @@ with tabs[0]:
         btn_done = c2.form_submit_button("✊ 登りました", use_container_width=True)
 
         # 4. 登録処理
+        if btn_plan or btn_done:
+            if q_gym:
+                t_type = '予定' if btn_plan else '実績'
+                # ここでは new_row だけを作る
+                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, t_type]], 
+                             columns=['date','gym_name','user','type'])
+        
+                # 【修正】log_df を混ぜず、new_row だけを渡す！
+                safe_save("climbing_logs", new_row, target_tab="🏠 Top")
         if btn_plan or btn_done:
             if q_gym:
                 t_type = '予定' if btn_plan else '実績'
