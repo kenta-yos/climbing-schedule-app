@@ -127,7 +127,7 @@ if "del_id" in params:
             if col in save_df.columns:
                 save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
         conn.update(worksheet="climbing_logs", data=save_df)
-        st.cache_data.clear(func=get_sheet, args=("climbing_logs",))
+        get_sheet.clear()
         st.rerun()
     
 # 保存用関数
