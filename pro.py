@@ -180,6 +180,8 @@ tabs = st.tabs(tab_titles)
 with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
+    with st.form("quick_log", clear_on_submit=True):
+        q_date = st.date_input("日程", value=date.today())
     with st.expander("🏢 ジムを選択してください"):
         q_gym = st.radio(
             "ジム一覧",
