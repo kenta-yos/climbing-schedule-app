@@ -201,12 +201,28 @@ with tabs[3]:
         u_info = user_df[user_df['user'] == row['user']].iloc[0] if row['user'] in user_df['user'].values else {"icon":"👤", "color":"#CCC"}
         st.markdown(f'<div class="item-box"><div class="item-accent" style="background:{u_info["color"]}"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">{u_info["icon"]}</div><div class="item-text"><b>{row["user"]}</b> @ {row["gym_name"]}</div></div>', unsafe_allow_html=True)
 
-# Tab 5: 📅 セット (レイアウト維持)
+# Tab 5: 📅 セットスケジュール (3カラム & 月次ビュー)
 with tabs[4]:
     st.subheader("📅 セットスケジュール")
-    for _, row in sched_df.sort_values('start_date', ascending=True).iterrows():
-        is_p = row['start_date'] < today_ts
-        st.markdown(f'<a href="{row.get("post_url","#")}" target="_blank" class="item-box {"past-opacity" if is_p else ""}"><div class="item-accent" style="background:#B22222"></div><div class="item-date">{row["start_date"].strftime("%m/%d")}</div><div class="item-icon">🗓️</div><div class="item-text">{row["gym_name"]}</div></a>', unsafe_allow_html=True)
+    # 月の切り替え
+    selected_month = st.date_input("表示月を選択", value=date.today().replace(day=1))
+    start_month = pd.Timestamp(selected_month).replace(day=1)
+    end_month = (start_month + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    
+    m_sched = sched_df[(sched_df['start_date'] >= start_month) & (sched_df['start_date'] <= end_month)].sort_values('start_date')
+    
+    if m_sched.empty:
+        st.info(f"{start_month.strftime('%Y年%m月')}の予定はありません")
+    else:
+        for _, row in m_sched.iterrows():
+            is_p = row['start_date'] < today_ts
+            st.markdown(f'''
+                <a href="{row.get("post_url","#")}" target="_blank" class="set-box {'past-opacity' if is_p else ''}">
+                    <div class="item-accent" style="background:#B22222"></div>
+                    <div class="item-date">{row["start_date"].strftime("%m/%d")}</div>
+                    <div class="item-text">{row["gym_name"]}</div>
+                </a>
+            ''', unsafe_allow_html=True)
 
 # Tab 6: ⚙️ 管理 (1. 一括登録機能を復元)
 with tabs[5]:
