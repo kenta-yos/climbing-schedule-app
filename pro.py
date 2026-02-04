@@ -127,29 +127,27 @@ def delete_log(idx):
 
 # 保存用関数
 def safe_save(worksheet, df, target_tab=None):
-    """保存後にキャッシュを消して最新状態にする"""
     save_df = df.copy()
-    
-    # 1. 日付を文字列に戻す（このループを抜けてから保存する）
     for col in ['date', 'start_date', 'end_date']:
         if col in save_df.columns:
             save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
     
-    # 2. Google Sheets更新
     conn.update(worksheet=worksheet, data=save_df)
+    get_sheet.clear() 
     
-    # 3. キャッシュをクリア（最新データを読み込ませるため）
-    get_sheet.clear()
+    # --- ここで「どのタブに戻るか」をセットする ---
+    new_params = {"user": st.session_state.USER}
     
-    # 4. ユーザー情報を維持
-    current_user = st.session_state.get('USER')
-    if current_user:
-        st.query_params["user"] = current_user
-    
-    # タブ指定があればセット
+    # target_tabが指定されていればそのタブへ、
+    # なければ現在のURLにあるタブを維持、それもなければTopへ
     if target_tab:
-        st.query_params["tab"] = target_tab
-        
+        new_params["tab"] = target_tab
+    elif "tab" in st.query_params:
+        new_params["tab"] = st.query_params["tab"]
+    else:
+        new_params["tab"] = "🏠 Top"
+
+    st.query_params.from_dict(new_params)
     st.rerun()
 
 # --- 3. 認証 (安定化アップデート版) ---
@@ -225,10 +223,10 @@ with tabs[0]: # Top
         c1, c2 = st.columns(2)
         if c1.form_submit_button("✋ 登ります"):
             new = pd.DataFrame([[q_date, q_gym, st.session_state.USER, '予定']], columns=['date','gym_name','user','type'])
-            safe_save("climbing_logs", pd.concat([log_df, new], ignore_index=True))
+            safe_save("climbing_logs", pd.concat([log_df, new]), target_tab="🏠 Top")
         if c2.form_submit_button("✊ 登ったぜ"):
             new = pd.DataFrame([[q_date, q_gym, st.session_state.USER, '実績']], columns=['date','gym_name','user','type'])
-            safe_save("climbing_logs", pd.concat([log_df, new], ignore_index=True))
+            safe_save("climbing_logs", pd.concat([log_df, new]), target_tab="🏠 Top")
 
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
@@ -326,7 +324,8 @@ with tabs[2]:
         ''', unsafe_allow_html=True)
 
         if st.button("🗑️ 削除", key=f"del_plan_{i}"):
-            delete_log(i)
+            new_log_df = log_df.drop(i)
+            safe_save("climbing_logs", new_log_df, target_tab="📊 マイページ")
     
     st.divider()
     sc1, sc2 = st.columns(2)
@@ -350,7 +349,9 @@ with tabs[2]:
                 <div class="item-gym">{row["gym_name"]}</div>
             </div>
         ''', unsafe_allow_html=True)
-        if st.button("削除", key=f"h_{i}"): delete_log(i)
+        if st.button("🗑️ 削除", key=f"del_plan_{i}"):
+            new_log_df = log_df.drop(i)
+            safe_save("climbing_logs", new_log_df, target_tab="📊 マイページ")
 
 # Tab 4: 👥 仲間 (直近1ヶ月)
 with tabs[3]:
