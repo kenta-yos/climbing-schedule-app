@@ -131,20 +131,29 @@ if "del_id" in params:
         st.rerun()
     
 # 保存用関数
-def safe_save(worksheet, df):
+def safe_save(worksheet, df, target_tab=None):
+    """保存後に特定のキャッシュだけを消してリロード"""
     save_df = df.copy()
+    
+    # 書き込み用に日付を文字列に戻す（ここでエラーが出ないようガード）
     for col in ['date', 'start_date', 'end_date']:
         if col in save_df.columns:
             save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
-    conn.update(worksheet=worksheet, data=save_df)   
-    current_user = st.session_state.get('USER')
-    current_tab = st.query_params.get("tab", "🏠 Top")
     
-    if current_user:
-        st.query_params["user"] = current_user
-        st.query_params["tab"] = current_tab
+    # Google Sheetsを更新
+    conn.update(worksheet=worksheet, data=save_df)
+    
+    # 【重要】TypeErrorの回避策
+    # get_sheet.clear() を使うのが現在のStreamlitの正解です
+    get_sheet.clear() 
+    
+    # URL状態の構築
+    current_user = st.session_state.get('USER')
+    current_tab = target_tab if target_tab else st.query_params.get("tab", "🏠 Top")
+    
+    if current_user: st.query_params["user"] = current_user
+    st.query_params["tab"] = current_tab
 
-    st.cache_data.clear(func=get_sheet, args=(worksheet,))
     st.rerun()
 
 # --- 3. 認証 (変更なし) ---
