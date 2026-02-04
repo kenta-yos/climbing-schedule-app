@@ -27,7 +27,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. データ読み込み（エラー対策強化） ---
+# --- 2. データ読み込み（型変換の徹底） ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
@@ -40,13 +40,11 @@ def load_data():
         for df in [gyms, sched, logs, users]:
             df.columns = [str(c).strip().lower() for c in df.columns]
         
-        # --- 修正ポイント：型変換の徹底 ---
+        # 徹底したクリーニング
         if not logs.empty:
-            # errors='coerce' で変換不能な値を NaT (欠損値) に変換し、dropna で消去
             logs['date'] = pd.to_datetime(logs['date'], errors='coerce')
             logs = logs.dropna(subset=['date'])
-            # タイムゾーン情報を消して純粋な日付型に統一
-            logs['date'] = logs['date'].dt.tz_localize(None)
+            logs['date'] = logs['date'].dt.tz_localize(None) # タイムゾーン除去
 
         if not sched.empty:
             sched['start_date'] = pd.to_datetime(sched['start_date'], errors='coerce')
@@ -57,17 +55,13 @@ def load_data():
     except:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-# --- マイページ (Tab 3) 等の比較ロジック ---
-# 比較対象も Timestamp かつ tz-naive (タイムゾーンなし) に統一
-today_ts = pd.Timestamp(date.today()).replace(hour=0, minute=0, second=0, microsecond=0)
-
 gym_df, sched_df, log_df, user_df = load_data()
 
 # --- 3. 保存共通関数（文字列固定） ---
 def safe_save(worksheet, df):
-    # 保存前に日付を文字列 YYYY-MM-DD に強制固定してバグを防ぐ
     for col in ['date', 'start_date', 'end_date']:
         if col in df.columns:
+            # 日付型を文字列 'YYYY-MM-DD' に変換して保存
             df[col] = pd.to_datetime(df[col]).dt.strftime('%Y-%m-%d')
     conn.update(worksheet=worksheet, data=df)
     st.cache_data.clear(); st.rerun()
@@ -94,6 +88,9 @@ if not st.session_state.USER:
                     st.query_params["user"] = row['user']; st.rerun()
     st.stop()
 
+# 比較用の基準日付 (tz-naive)
+today_ts = pd.Timestamp(date.today()).replace(hour=0, minute=0, second=0, microsecond=0)
+
 # --- 5. タブ ---
 tabs = st.tabs(["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"])
 
@@ -118,7 +115,7 @@ with tabs[1]:
     sel_area = st.selectbox("エリア絞り込み", ["すべて"] + sorted(gym_df['area_tag'].unique().tolist()) if not gym_df.empty else ["すべて"])
     
     res = []
-    t_dt = pd.to_datetime(target_date)
+    t_dt = pd.to_datetime(target_date).replace(tzinfo=None)
     for _, gym in gym_df.iterrows():
         if sel_area != "すべて" and gym['area_tag'] != sel_area: continue
         name, score, reasons = gym['gym_name'], 0, []
@@ -134,24 +131,17 @@ with tabs[1]:
     for gym in sorted(res, key=lambda x: x['score'], reverse=True)[:3]:
         tag_html = "".join([f'<span class="tag {"tag-hot" if "🔥" in r or "👥" in r else ""}">{r}</span>' for r in gym['reasons']])
         st.markdown(f'<div class="gym-card"><a href="{gym["url"]}" target="_blank" class="gym-title">{gym["name"]}</a> <div class="tag-container">{tag_html}</div></div>', unsafe_allow_html=True)
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
         if c1.button("✋ 予定", key=f"p_{gym['name']}"):
             new = pd.DataFrame([[target_date, gym['name'], st.session_state.USER, '予定']], columns=['date','gym_name','user','type'])
             safe_save("climbing_logs", pd.concat([log_df, new], ignore_index=True))
         if c2.button("✅ 実績", key=f"r_{gym['name']}"):
             new = pd.DataFrame([[target_date, gym['name'], st.session_state.USER, '実績']], columns=['date','gym_name','user','type'])
             safe_save("climbing_logs", pd.concat([log_df, new], ignore_index=True))
-        p_match = log_df[(log_df['date'] == t_dt) & (log_df['gym_name'] == gym['name']) & (log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定')]
-        if not p_match.empty and c3.button("🔄 変換", key=f"c_{gym['name']}"):
-            save_df = log_df.drop(p_match.index)
-            new = pd.DataFrame([[target_date, gym['name'], st.session_state.USER, '実績']], columns=['date','gym_name','user','type'])
-            safe_save("climbing_logs", pd.concat([save_df, new], ignore_index=True))
 
 # Tab 3: マイページ
 with tabs[2]:
     st.subheader("🗓️ 登る予定")
-    # エラー対策：.dt.date を使わず pd.Timestamp で比較
-    today_ts = pd.Timestamp(date.today())
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date')
     for _, row in my_plans.iterrows():
         st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#FFD700"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">✋</div><div class="item-text">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
