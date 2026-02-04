@@ -499,12 +499,12 @@ with tabs[5]:
     st.subheader("⚙️ 管理")
     
     with st.expander("🆕 ジム登録"):
-    with st.form("adm_gym"):
-        n, u, a = st.text_input("ジム名"), st.text_input("Instagram URL"), st.text_input("エリア")
-        if st.form_submit_button("登録"):
-            # 【修正】新しく作った 1行(new_gym) だけを渡す
-            new_gym = pd.DataFrame([[n, u, a]], columns=['gym_name','profile_url','area_tag'])
-            safe_save("gym_master", new_gym, mode="add") # mode="add" で安全に合体
+        with st.form("adm_gym"):
+            n, u, a = st.text_input("ジム名"), st.text_input("Instagram URL"), st.text_input("エリア")
+            if st.form_submit_button("登録"):
+                # 【修正】新しく作った 1行(new_gym) だけを渡す
+                new_gym = pd.DataFrame([[n, u, a]], columns=['gym_name','profile_url','area_tag'])
+                safe_save("gym_master", new_gym, mode="add") # mode="add" で安全に合体
     
         with st.expander("📅 セット一括登録"):
         sel_g = st.selectbox(
