@@ -110,36 +110,23 @@ if not sched_df.empty:
     sched_df['start_date'] = pd.to_datetime(sched_df['start_date'], errors='coerce').dt.tz_localize(None)
     sched_df['end_date'] = pd.to_datetime(sched_df['end_date'], errors='coerce').dt.tz_localize(None)
 
-# --- 修正後（これを今のブロックと入れ替えてください） ---
-params = st.query_params
-if "del_id" in params:
-    idx = int(params["del_id"])
+# --- 削除処理をURL形式から関数形式へ変更 ---
+def delete_log(idx):
+    """URLを介さずにその場で削除を実行する関数"""
     if not log_df.empty and idx in log_df.index:
-        # 1. データの削除と保存準備
+        # 1. データの削除
         new_log_df = log_df.drop(idx)
         save_df = new_log_df.copy()
+        # 日付変換
         for col in ['date', 'start_date', 'end_date']:
             if col in save_df.columns:
                 save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
         
-        # 2. Google Sheets更新
+        # 2. 保存とキャッシュクリア
         conn.update(worksheet="climbing_logs", data=save_df)
         get_sheet.clear()
         
-        # 3. ユーザーとタブを維持しつつ、削除キーだけをURLから消し去る
-        # ★ .get() を使うことで、万が一の AttributeError を防ぎます
-        current_user = st.session_state.get('USER')
-        
-        if current_user:
-            st.query_params["user"] = current_user
-        
-        st.query_params["tab"] = "📊 マイページ"
-
-        # URLに残っている不要なゴミ（削除IDや遷移元のタイプ）をピンポイントで消去
-        for key in ["del_id", "type"]:
-            if key in st.query_params:
-                del st.query_params[key]
-            
+        # 3. 再描画（URLは変えないのでログイン状態が維持される）
         st.rerun()
 
 # 保存用関数
@@ -340,9 +327,11 @@ with tabs[2]:
                 <div class="item-accent" style="background:#4CAF50 !important"></div>
                 <span class="item-date">{row["date"].strftime("%m/%d")}</span>
                 <div class="item-gym">{row["gym_name"]}</div>
-                <a href="?del_id={i}&type=p" target="_self" class="del-link">削除</a>
             </div>
         ''', unsafe_allow_html=True)
+
+    if st.button("🗑️ 削除", key=f"del_plan_{i}"):
+    delete_log(i)
     
     st.divider()
     sc1, sc2 = st.columns(2)
@@ -364,9 +353,10 @@ with tabs[2]:
                 <div class="item-accent" style="background:#4CAF50 !important"></div>
                 <span class="item-date">{row["date"].strftime("%m/%d")}</span>
                 <div class="item-gym">{row["gym_name"]}</div>
-                <a href="?del_id={i}&type=h" target="_self" class="del-link">削除</a>
             </div>
         ''', unsafe_allow_html=True)
+
+    if st.button("削除", key=f"h_{i}"): delete_log(i)
 
 # Tab 4: 👥 仲間 (直近1ヶ月)
 with tabs[3]:
