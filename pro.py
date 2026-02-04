@@ -171,73 +171,59 @@ query_tab = st.query_params.get("tab", "🏠 Top")
 active_tab_idx = tab_titles.index(query_tab) if query_tab in tab_titles else 0
 tabs = st.tabs(tab_titles)
 
-# Tab 1: 🏠 Top
+# --- Tab 1: 🏠 Top (完成版) ---
 with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
 
-    # --- ジムリストの並び替えロジック ---
+    # 1. フォームの外でリストを作成 (安定動作のため)
     sorted_gym_names = []
     if not gym_df.empty and not area_master.empty:
-        # 1. 表示したい地域の順番を定義
         priority_order = ["都内・神奈川", "関東", "全国"]
-        
-        # gym_df と area_master を結合して、どのジムがどの「大枠エリア」か紐づける
+        # 地域情報を紐付け
         merged_gyms = pd.merge(gym_df, area_master[['area_tag', 'major_area']], on='area_tag', how='left')
         
         for area in priority_order:
-            # 特定の地域に属するジムを抽出
             subset = merged_gyms[merged_gyms['major_area'] == area]
-            # その地域内だけで五十音順にソートしてリストに追加
+            # 地域内で名前順にソート
             sorted_gym_names.extend(sorted(subset['gym_name'].tolist()))
         
-        # もしマスタにないエリアがあった場合のフォールバック（念のため）
+        # マスタに漏れがある場合のフォールバック
         others = gym_df[~gym_df['gym_name'].isin(sorted_gym_names)]
         if not others.empty:
             sorted_gym_names.extend(sorted(others['gym_name'].tolist()))
     else:
-        # マスタが空の場合は単純な五十音順
+        # どちらかのマスタが空なら単純な名前順
         sorted_gym_names = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
 
-    
-    # フォーム全体を包むことで、送信後の自動リセットを狙います
-    with st.form("quick_log_form", clear_on_submit=True):
-        # 1. 日付選択
+    # 2. フォームの開始
+    with st.form("quick_log_form_v3", clear_on_submit=True):
         q_date = st.date_input("📅 日程", value=today_jp)
         
-        # 2. ジム選択（開閉式に戻します。keyは固定の文字列にします）
         with st.expander("🏢 ジムを選択してください", expanded=False):
+            # 修正ポイント: options=sorted_gym_names (イコールは1つ)
             q_gym = st.radio(
                 "ジム一覧",
-                options==sorted_gym_names,
+                options=sorted_gym_names,
                 index=None,
                 label_visibility="collapsed",
-                key="q_gym_radio"
+                key="q_gym_radio_v3"
             )
         
         st.write("") 
 
-        # 3. 登録ボタン (formの中なので form_submit_button を使います)
+        # 3. 送信ボタン (カラムで配置)
         c1, c2 = st.columns(2)
-        
         btn_plan = c1.form_submit_button("✋ 登ります", use_container_width=True)
         btn_done = c2.form_submit_button("✊ 登りました", use_container_width=True)
 
-        if btn_plan:
+        # 4. 登録処理
+        if btn_plan or btn_done:
             if q_gym:
-                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '予定']], 
+                t_type = '予定' if btn_plan else '実績'
+                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, t_type]], 
                                      columns=['date','gym_name','user','type'])
-                combined_df = pd.concat([log_df, new_row], ignore_index=True)
-                safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
-            else:
-                st.warning("ジムを選択してください")
-
-        if btn_done:
-            if q_gym:
-                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '実績']], 
-                                     columns=['date','gym_name','user','type'])
-                combined_df = pd.concat([log_df, new_row], ignore_index=True)
-                safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
+                safe_save("climbing_logs", pd.concat([log_df, new_row], ignore_index=True), target_tab="🏠 Top")
             else:
                 st.warning("ジムを選択してください")
 
