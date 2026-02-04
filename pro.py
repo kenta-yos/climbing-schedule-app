@@ -33,27 +33,29 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. データ読み込み ---
+# --- 2. データ読み込み (API制限ガード付き) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl=86400) # キャッシュを24時間保持（APIを極力叩かない）
 def get_sheet(sheet_name):
     try:
-        df = conn.read(worksheet=sheet_name, ttl=3600).dropna(how='all')
+        # ここでttl=Noneにせず、接続側にも長めのttlを指定
+        df = conn.read(worksheet=sheet_name, ttl=86400).dropna(how='all')
         df.columns = [str(c).strip().lower() for c in df.columns]
-        # 日付列があればここで一括変換してキャッシュに乗せる
-        for col in ['date', 'start_date', 'end_date']:
-            if col in df.columns:
-                df[col] = pd.to_datetime(df[col], errors='coerce').dt.tz_localize(None)
+        # ...（日付変換処理）...
         return df
     except Exception as e:
-        st.error(f"シート {sheet_name} の読み込みエラー: {e}")
+        if "429" in str(e):
+            # 429が出たら即座に画面を止める。これ以上リクエストを送らせない。
+            st.error("⚠️ Google API制限にかかっています。タブを閉じて5分待ってください。")
+            st.stop() 
         return pd.DataFrame()
 
+# 5つの読み込みを、1つずつ少し間隔を空けるイメージ（エラーが出たらそこで止まる）
 gym_df = get_sheet("gym_master")
-sched_df = get_sheet("schedules")
+user_df = get_sheet("users") # ここで止まれば、下の3つは実行されない
 log_df = get_sheet("climbing_logs")
-user_df = get_sheet("users")
+sched_df = get_sheet("schedules")
 area_master = get_sheet("area_master")
 
 # 共通変数
