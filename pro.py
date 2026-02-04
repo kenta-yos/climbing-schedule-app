@@ -13,7 +13,6 @@ st.markdown("""
     .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1rem; }
     .gym-card { padding: 15px; background: #FFF; border-radius: 12px; border: 1px solid #E9ECEF; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
     .gym-title { font-size: 1.1rem; font-weight: 700; color: #1A1A1A !important; text-decoration: none !important; }
-    .gym-link { color: #007bff !important; text-decoration: none !important; font-weight: 600; }
     .tag-container { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
     .tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 40px; background: #F0F0F0; color: #666; font-weight: 500; }
     .tag-hot { background: #FFF0F0; color: #FF512F; font-weight: 700; border: 1px solid #FFDADA; }
@@ -28,7 +27,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. データ接続 ---
+# --- 2. データ読み込み（エラー対策強化） ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
@@ -41,23 +40,30 @@ def load_data():
         for df in [gyms, sched, logs, users]:
             df.columns = [str(c).strip().lower() for c in df.columns]
         
-        # --- ここを強化 ---
+        # 【重要】日付形式を整理し、空行やゴミデータを削除
         if not logs.empty:
-            # 日付カラムを変換し、変換できないゴミデータ(NaT)を削除する
             logs['date'] = pd.to_datetime(logs['date'], errors='coerce')
-            logs = logs.dropna(subset=['date']) 
-        # ----------------
-            
-        if not sched.empty: 
+            logs = logs.dropna(subset=['date'])
+        if not sched.empty:
             sched['start_date'] = pd.to_datetime(sched['start_date'], errors='coerce')
+            sched = sched.dropna(subset=['start_date'])
             
         return gyms, sched, logs, users
-    except Exception as e:
+    except:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 gym_df, sched_df, log_df, user_df = load_data()
 
-# --- 3. 認証 ---
+# --- 3. 保存共通関数（文字列固定） ---
+def safe_save(worksheet, df):
+    # 保存前に日付を文字列 YYYY-MM-DD に強制固定してバグを防ぐ
+    for col in ['date', 'start_date', 'end_date']:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col]).dt.strftime('%Y-%m-%d')
+    conn.update(worksheet=worksheet, data=df)
+    st.cache_data.clear(); st.rerun()
+
+# --- 4. 認証 ---
 saved_user = st.query_params.get("user")
 if 'USER' not in st.session_state:
     if saved_user and not user_df.empty:
@@ -79,15 +85,6 @@ if not st.session_state.USER:
                     st.query_params["user"] = row['user']; st.rerun()
     st.stop()
 
-# --- 4. 共通保存ロジック（日付を文字列に固定） ---
-def safe_save(worksheet_name, df):
-    # 日付カラムが存在する場合、すべて文字列に変換してスプシの型壊れを防ぐ
-    for col in ['date', 'start_date', 'end_date']:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col]).dt.strftime('%Y-%m-%d')
-    conn.update(worksheet=worksheet_name, data=df)
-    st.cache_data.clear(); st.rerun()
-
 # --- 5. タブ ---
 tabs = st.tabs(["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"])
 
@@ -105,22 +102,23 @@ with tabs[0]:
             new = pd.DataFrame([[q_date, q_gym, st.session_state.USER, '実績']], columns=['date','gym_name','user','type'])
             safe_save("climbing_logs", pd.concat([log_df, new], ignore_index=True))
 
-# Tab 2: ジム (おすすめ)
+# Tab 2: ジム
 with tabs[1]:
     st.subheader("🎯 おすすめ")
     target_date = st.date_input("ターゲット日", value=date.today(), key="tg_gym")
     sel_area = st.selectbox("エリア絞り込み", ["すべて"] + sorted(gym_df['area_tag'].unique().tolist()) if not gym_df.empty else ["すべて"])
     
     res = []
+    t_dt = pd.to_datetime(target_date)
     for _, gym in gym_df.iterrows():
         if sel_area != "すべて" and gym['area_tag'] != sel_area: continue
         name, score, reasons = gym['gym_name'], 0, []
         if not sched_df.empty:
             g_s = sched_df[sched_df['gym_name'] == name]['start_date'].dropna()
             if not g_s.empty:
-                diff = (pd.to_datetime(target_date) - g_s.max()).days
+                diff = (t_dt - g_s.max()).days
                 if 0 <= diff <= 7: score += 50; reasons.append(f"🔥 新セット({diff}日前)")
-        others = log_df[(log_df['gym_name'] == name) & (log_df['user'] != st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] == pd.to_datetime(target_date))]
+        others = log_df[(log_df['gym_name'] == name) & (log_df['user'] != st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] == t_dt)]
         if not others.empty: score += (15 * len(others)); reasons.append(f"👥 {len(others)}名の予定")
         res.append({"name": name, "score": score, "reasons": reasons, "area": gym['area_tag'], "url": gym['profile_url']})
     
@@ -134,7 +132,7 @@ with tabs[1]:
         if c2.button("✅ 実績", key=f"r_{gym['name']}"):
             new = pd.DataFrame([[target_date, gym['name'], st.session_state.USER, '実績']], columns=['date','gym_name','user','type'])
             safe_save("climbing_logs", pd.concat([log_df, new], ignore_index=True))
-        p_match = log_df[(log_df['date'] == pd.to_datetime(target_date)) & (log_df['gym_name'] == gym['name']) & (log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定')]
+        p_match = log_df[(log_df['date'] == t_dt) & (log_df['gym_name'] == gym['name']) & (log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定')]
         if not p_match.empty and c3.button("🔄 変換", key=f"c_{gym['name']}"):
             save_df = log_df.drop(p_match.index)
             new = pd.DataFrame([[target_date, gym['name'], st.session_state.USER, '実績']], columns=['date','gym_name','user','type'])
@@ -143,7 +141,9 @@ with tabs[1]:
 # Tab 3: マイページ
 with tabs[2]:
     st.subheader("🗓️ 登る予定")
-    my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'].dt.date >= date.today())].sort_values('date')
+    # エラー対策：.dt.date を使わず pd.Timestamp で比較
+    today_ts = pd.Timestamp(date.today())
+    my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date')
     for _, row in my_plans.iterrows():
         st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#FFD700"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">✋</div><div class="item-text">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
     
@@ -152,7 +152,7 @@ with tabs[2]:
     c1, c2 = st.columns(2)
     ms = c1.date_input("開始", value=date.today().replace(day=1), key="ms")
     me = c2.date_input("終了", value=date.today(), key="me")
-    my_period_logs = log_df[(log_df['user'] == st.session_state.USER) & (log_df['date'].dt.date >= ms) & (log_df['date'].dt.date <= me)].sort_values('date', ascending=False)
+    my_period_logs = log_df[(log_df['user'] == st.session_state.USER) & (log_df['date'] >= pd.Timestamp(ms)) & (log_df['date'] <= pd.Timestamp(me))].sort_values('date', ascending=False)
     my_period_res = my_period_logs[my_period_logs['type'] == '実績']
     
     if not my_period_res.empty:
@@ -170,8 +170,7 @@ with tabs[2]:
 # Tab 4: 仲間
 with tabs[3]:
     st.subheader("👥 仲間の予定")
-    valid_logs = log_df.dropna(subset=['date'])
-    others = valid_logs[(valid_logs['user'] != st.session_state.USER) & (valid_logs['type'] == '予定') & (valid_logs['date'].dt.date >= date.today())].sort_values('date')
+    others = log_df[(log_df['user'] != st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date')
     for _, row in others.iterrows():
         u_info = user_df[user_df['user'] == row['user']].iloc[0] if row['user'] in user_df['user'].values else {"icon":"👤", "color":"#CCC"}
         st.markdown(f'<div class="item-box"><div class="item-accent" style="background:{u_info["color"]}"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">{u_info["icon"]}</div><div class="item-text"><b>{row["user"]}</b> @ {row["gym_name"]}</div></div>', unsafe_allow_html=True)
@@ -180,13 +179,12 @@ with tabs[3]:
 with tabs[4]:
     st.subheader("📅 セット")
     for _, row in sched_df.sort_values('start_date', ascending=True).iterrows():
-        if pd.isna(row['start_date']): continue
         is_past = row['start_date'].date() < date.today()
         st.markdown(f'<a href="{row.get("post_url","#")}" target="_blank" class="item-box {"past-opacity" if is_past else ""}"><div class="item-accent" style="background:#B22222"></div><div class="item-date">{row["start_date"].strftime("%m/%d")}</div><div class="item-icon">🗓️</div><div class="item-text">{row["gym_name"]}</div></a>', unsafe_allow_html=True)
 
-# Tab 6: 管理 (完全復活版)
+# Tab 6: 管理
 with tabs[5]:
-    st.subheader("⚙️ 管理機能")
+    st.subheader("⚙️ 管理")
     with st.expander("🆕 ジムの新規登録"):
         with st.form("admin_gym"):
             n = st.text_input("ジム名")
@@ -200,16 +198,16 @@ with tabs[5]:
         sel_gym = st.selectbox("対象ジム", gym_df['gym_name'].tolist()) if not gym_df.empty else ""
         p_url = st.text_input("告知URL")
         if "rows" not in st.session_state: st.session_state.rows = 1
-        dates = []
+        dates_list = []
         for i in range(st.session_state.rows):
             c1, c2 = st.columns(2)
             sd = c1.date_input(f"開始 {i+1}", key=f"sd_{i}")
             ed = c2.date_input(f"終了 {i+1}", key=f"ed_{i}")
-            dates.append((sd, ed))
+            dates_list.append((sd, ed))
         if st.button("➕ 日程を追加"):
             st.session_state.rows += 1; st.rerun()
         if st.button("🚀 この内容で一括登録"):
-            new_s = pd.DataFrame([[sel_gym, d[0], d[1], p_url] for d in dates], columns=['gym_name','start_date','end_date','post_url'])
+            new_s = pd.DataFrame([[sel_gym, d[0], d[1], p_url] for d in dates_list], columns=['gym_name','start_date','end_date','post_url'])
             st.session_state.rows = 1
             safe_save("schedules", pd.concat([sched_df, new_s], ignore_index=True))
 
