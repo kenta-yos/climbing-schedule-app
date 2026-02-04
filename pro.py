@@ -55,9 +55,10 @@ st.markdown("""
         color: #1A1A1A !important; 
         font-weight: 700 !important; 
         font-size: 0.95rem !important; 
-        overflow: hidden !important; 
+        overflow: hidden !important;
+        word-break: break-all !important;
+        line-height: 1.3 !important;
         text-overflow: ellipsis !important; 
-        white-space: nowrap !important; 
     }
     
     .gym-card { padding: 15px; background: #FFF; border-radius: 12px; border: 1px solid #E9ECEF; margin-bottom: 12px; }
@@ -249,8 +250,15 @@ with tabs[2]:
     st.subheader("🗓️ 今後の予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
     for i, row in my_plans.iterrows():
-        c1, c2 = st.columns([5, 1])
-        with c1: st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#FFD700 !important"></div><span class="item-date">{row["date"].strftime("%m/%d")}</span><span class="item-gym">✋ {row["gym_name"]}</span><div></div></div>', unsafe_allow_html=True)
+        c1, c2 = st.columns([0.88, 0.12])
+        with c1: 
+            st.markdown(f'''
+        <div class="item-box">
+            <div class="item-accent" style="background:#4CAF50 !important"></div>
+            <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+            <div class="item-gym">{row["gym_name"]}</div>
+        </div>
+    ''', unsafe_allow_html=True)
         with c2: 
             if st.button("🗑️", key=f"del_p_{i}"): safe_save("climbing_logs", log_df.drop(i))
     
@@ -269,8 +277,15 @@ with tabs[2]:
 
     st.subheader("📝 履歴 (期間内)")
     for i, row in my_p_res.sort_values('date', ascending=False).iterrows():
-        c1, c2 = st.columns([5, 1])
-        with c1: st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#B22222 !important"></div><span class="item-date">{row["date"].strftime("%m/%d")}</span><span class="item-gym">✅ {row["gym_name"]}</span><div></div></div>', unsafe_allow_html=True)
+        c1, c2 = st.columns([0.88, 0.12])
+        with c1: 
+            st.markdown(f'''
+        <div class="item-box">
+            <div class="item-accent" style="background:#4CAF50 !important"></div>
+            <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+            <div class="item-gym">{row["gym_name"]}</div>
+        </div>
+    ''', unsafe_allow_html=True)
         with c2:
             if st.button("🗑️", key=f"del_h_{i}"): safe_save("climbing_logs", log_df.drop(i))
 
