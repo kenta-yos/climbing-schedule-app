@@ -81,14 +81,12 @@ st.markdown("""
 # --- 2. データ読み込み (API制限ガード付き) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=86400)
+@st.cache_data(ttl=3600) # 1日だと長すぎるので1時間程度が使いやすいです
 def get_sheet(sheet_name):
     try:
-        # APIリクエスト
-        df = conn.read(worksheet=sheet_name, ttl=86400).dropna(how='all')
+        df = conn.read(worksheet=sheet_name, ttl=0).dropna(how='all') # 読み込み時は常に最新を狙う
         df.columns = [str(c).strip().lower() for c in df.columns]
-        
-        # 関数内で日付型に統一（重要！）
+        # 日付変換
         if sheet_name == "climbing_logs" and not df.empty:
             df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
         elif sheet_name == "schedules" and not df.empty:
@@ -97,58 +95,29 @@ def get_sheet(sheet_name):
                     df[col] = pd.to_datetime(df[col], errors='coerce').dt.tz_localize(None)
         return df
     except Exception as e:
-        if "429" in str(e):
-            st.error("⚠️ Google API制限中です。数分待ってから更新してください。")
-            st.stop()
+        st.warning(f"データ取得に失敗しました。再試行中... ({sheet_name})")
         return pd.DataFrame()
 
-# 5つのデータを取得
-gym_df = get_sheet("gym_master")
-sched_df = get_sheet("schedules")
-log_df = get_sheet("climbing_logs")
-user_df = get_sheet("users")
-area_master = get_sheet("area_master")
-
-# --- 削除処理をURL形式から関数形式へ変更 ---
-def delete_log(idx):
-    if not log_df.empty and idx in log_df.index:
-        new_log_df = log_df.drop(idx)
-        save_df = new_log_df.copy()
+# --- 削除・保存を一本化 ---
+def safe_save(worksheet, df, target_tab=None):
+    try:
+        save_df = df.copy()
         for col in ['date', 'start_date', 'end_date']:
             if col in save_df.columns:
                 save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
         
-        # 保存先を climbing_logs に指定
-        conn.update(worksheet="climbing_logs", data=save_df)
-        # 記憶を消す
-        get_sheet.clear()
-        # 即リロード
+        conn.update(worksheet=worksheet, data=save_df)
+        st.cache_data.clear() # 全キャッシュをクリアして確実に最新にする
+        
+        # URLパラメータの構築
+        params = {"user": st.session_state.USER}
+        if target_tab:
+            params["tab"] = target_tab
+        st.query_params.from_dict(params)
         st.rerun()
-
-# 保存用関数
-def safe_save(worksheet, df, target_tab=None):
-    save_df = df.copy()
-    for col in ['date', 'start_date', 'end_date']:
-        if col in save_df.columns:
-            save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
-    
-    conn.update(worksheet=worksheet, data=save_df)
-    get_sheet.clear() 
-    
-    # --- ここで「どのタブに戻るか」をセットする ---
-    new_params = {"user": st.session_state.USER}
-    
-    # target_tabが指定されていればそのタブへ、
-    # なければ現在のURLにあるタブを維持、それもなければTopへ
-    if target_tab:
-        new_params["tab"] = target_tab
-    elif "tab" in st.query_params:
-        new_params["tab"] = st.query_params["tab"]
-    else:
-        new_params["tab"] = "🏠 Top"
-
-    st.query_params.from_dict(new_params)
-    st.rerun()
+    except Exception as e:
+        st.error("保存に失敗しました。API制限の可能性があります。1分待ってからお試しください。")
+        st.stop()
 
 # --- 3. 認証 (安定化アップデート版) ---
 # セッション状態を安全に初期化
@@ -195,21 +164,25 @@ with col_btn:
         st.cache_data.clear()
         st.rerun()
 
-# タブの名前リスト
+# --- タブの制御ロジック ---
 tab_titles = ["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"]
 
-# 現在のURLから「どのタブにいたか」を取得（なければTop）
+# 1. URLから現在のタブを取得
 query_tab = st.query_params.get("tab", "🏠 Top")
 
-# get_sheetなどの読み込み後に、もしタブ指定があればそのインデックスを探す
-active_tab_idx = tab_titles.index(query_tab) if query_tab in tab_titles else 0
+# 2. もしURLのタブがリストにない変な値だったらTopに戻す
+if query_tab not in tab_titles:
+    query_tab = "🏠 Top"
 
-# 【重要】 st.tabsに直接インデックスは渡せませんが、
-# ページ上部の更新ボタンや削除処理の後に URLに ?tab=... をつけることで制御します。
+# 3. タブを作成
 tabs = st.tabs(tab_titles)
+
+# 4. 【重要】各タブの中身を「URLと一致する場合のみ」表示する（またはURLを更新する）
+# こうすることで、保存後に指定したタブがパッと開きます
 
 # Tab 1: Top (変更なし)
 with tabs[0]: # Top
+    st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
     with st.form("quick_log"):
         q_date = st.date_input("日程", value=date.today())
@@ -229,6 +202,7 @@ with tabs[0]: # Top
 
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
+    st.query_params["tab"] = "✨ ジム"
     st.subheader("✨ おすすめ")
     
     target_date = st.date_input("ターゲット日", value=date.today(), key="tg_date")
@@ -309,6 +283,7 @@ with tabs[1]:
 
 # Tab 3: マイページ (Sunsetdark & インスタ風)
 with tabs[2]:
+    st.query_params["tab"] = "📊 マイページ"
     st.subheader("🗓️ 今後の予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
     for i, row in my_plans.iterrows():
@@ -352,6 +327,7 @@ with tabs[2]:
 
 # Tab 4: 👥 仲間 (直近1ヶ月)
 with tabs[3]:
+    st.query_params["tab"] = "👥 仲間"
     st.subheader("👥 仲間の予定 (直近1ヶ月)")
     o_plans = log_df[(log_df['user']!=st.session_state.USER)&(log_df['type']=='予定')&(log_df['date']>=today_ts)&(log_df['date']<=today_ts+timedelta(days=30))].sort_values('date') if not log_df.empty else pd.DataFrame()
     for _, row in o_plans.iterrows():
@@ -369,6 +345,7 @@ with tabs[3]:
 
 # Tab 5: 📅 セット (月選択 & Grid)
 with tabs[4]:
+    st.query_params["tab"] = "📅 セット"
     st.subheader("📅 セットスケジュール")
     if not sched_df.empty:
         s_df = sched_df.copy()
@@ -394,6 +371,7 @@ with tabs[4]:
 
 # Tab 6: ⚙️ 管理
 with tabs[5]:
+    st.query_params["tab"] = "⚙️ 管理"    
     st.subheader("⚙️ 管理")
     with st.expander("🆕 ジム登録"):
         with st.form("adm_gym"):
