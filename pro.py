@@ -507,12 +507,12 @@ with tabs[5]:
                 safe_save("gym_master", new_gym, mode="add") # mode="add" で安全に合体
     
         with st.expander("📅 セット一括登録"):
-        sel_g = st.selectbox(
-            "対象ジム", 
-            sorted(gym_df['gym_name'].tolist()), 
-            index=None, 
-            placeholder="ジムを選択してください"
-        ) 
+            sel_g = st.selectbox(
+                "対象ジム", 
+                sorted(gym_df['gym_name'].tolist()), 
+                index=None, 
+                placeholder="ジムを選択してください"
+            ) 
             if not gym_df.empty else ""        
             p_url = st.text_input("告知URL")
             if "rows" not in st.session_state: st.session_state.rows = 1
