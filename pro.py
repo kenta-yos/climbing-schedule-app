@@ -73,34 +73,40 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
     try:
+        # 各シートの読み込み
         gyms = conn.read(worksheet="gym_master", ttl=1).dropna(how='all')
         sched = conn.read(worksheet="schedules", ttl=1).dropna(how='all')
         logs = conn.read(worksheet="climbing_logs", ttl=1).dropna(how='all')
         users = conn.read(worksheet="users", ttl=1).dropna(how='all')
-        area_m = conn.read(worksheet="area_master", ttl=1).dropna(how='all') # 追加
-        
+        area_m = conn.read(worksheet="area_master", ttl=1).dropna(how='all')
+
+        # カラム名を整える補助関数
         def format_df(df, required_cols):
             if df.empty: return pd.DataFrame(columns=required_cols)
+            # 全ての列名を小文字にし、前後の空白を削除
             df.columns = [str(c).strip().lower() for c in df.columns]
             return df
 
-        gyms = format_df(gyms, ['gym_name', 'profile_url', 'area_tag'])
-        sched = format_df(sched, ['gym_name', 'start_date', 'end_date', 'post_url'])
-        logs = format_df(logs, ['date', 'gym_name', 'user', 'type'])
-        users = format_df(users, ['user', 'color', 'icon'])
-        area_m = format_df(area_m, ['major_area', 'area_tag']) # 追加
+        # 各DataFrameのフォーマット適用
+        gym_df = format_df(gyms, ['gym_name', 'profile_url', 'area_tag'])
+        sched_df = format_df(sched, ['gym_name', 'start_date', 'end_date', 'post_url'])
+        log_df = format_df(logs, ['date', 'gym_name', 'user', 'type'])
+        user_df = format_df(users, ['user', 'color', 'icon'])
+        area_master = format_df(area_m, ['major_area', 'area_tag'])
 
-        if not logs.empty:
-            logs['date'] = pd.to_datetime(logs['date'], errors='coerce').dt.tz_localize(None)
-        if not sched.empty:
-            sched['start_date'] = pd.to_datetime(sched['start_date'], errors='coerce').dt.tz_localize(None)
-            sched['end_date'] = pd.to_datetime(sched['end_date'], errors='coerce').dt.tz_localize(None)
+        # 日付データの変換
+        if not log_df.empty:
+            log_df['date'] = pd.to_datetime(log_df['date'], errors='coerce').dt.tz_localize(None)
+        if not sched_df.empty:
+            sched_df['start_date'] = pd.to_datetime(sched_df['start_date'], errors='coerce').dt.tz_localize(None)
+            sched_df['end_date'] = pd.to_datetime(sched_df['end_date'], errors='coerce').dt.tz_localize(None)
             
-        return gyms, sched, logs, user_df, area_m # 5つの値を返す
-    except:
+        return gym_df, sched_df, log_df, user_df, area_master
+    except Exception as e:
+        st.error(f"データ読み込み中にエラーが発生しました: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-# 変数受け取りを5つに修正
+# データの受け取り（5つの変数で受ける）
 gym_df, sched_df, log_df, user_df, area_master = load_data()
 
 def safe_save(worksheet, df):
