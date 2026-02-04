@@ -238,7 +238,7 @@ with tabs[1]:
             last_v_df = my_done_logs.groupby('gym_name')['date'].max().sort_values(ascending=True).reset_index()
             for _, row in last_v_df.iterrows():
                 g_url = gym_df[gym_df['gym_name'] == row['gym_name']]['profile_url'].iloc[0] if not gym_df[gym_df['gym_name'] == row['gym_name']].empty else "#"
-                st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#007bff !important"></div><span class="item-date">{row["date"].strftime("%m/%d")}</span><span class="item-gym"><a href="{g_url}" target="_blank" style="color:inherit; text-decoration:none;">{row["gym_name"]}</a></span><div></div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#007bff !important"></div><span class="item-date">{row["date"].strftime("%Y/%m/%d")}</span><span class="item-gym"><a href="{g_url}" target="_blank" style="color:inherit; text-decoration:none;">{row["gym_name"]}</a></span><div></div></div>', unsafe_allow_html=True)
     with g2:
         unv = gym_df[~gym_df['gym_name'].isin(visited_names)].sort_values('gym_name') if not gym_df.empty else pd.DataFrame()
         for _, row in unv.iterrows():
