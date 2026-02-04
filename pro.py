@@ -186,8 +186,8 @@ tabs = st.tabs(tab_titles)
 with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
-        q_date = st.date_input("日程", value=date.today())
-        q_gym = st.selectbox("ジムを選択", sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [], index=None, placeholder="ジムを選択")
+    q_date = st.date_input("日程", value=date.today())
+    q_gym = st.selectbox("ジムを選択", sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [], index=None, placeholder="ジムを選択")
 
         c1, c2 = st.columns(2)
         if c1.form_submit_button("✋ 登ります"):
