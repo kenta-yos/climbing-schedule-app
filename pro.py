@@ -304,16 +304,54 @@ with tabs[1]:
         my_done_logs = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '実績')]
         visited_names = my_done_logs['gym_name'].unique().tolist()
         
-    with g1:
-        if visited_names:
-            last_v_df = my_done_logs.groupby('gym_name')['date'].max().sort_values(ascending=True).reset_index()
-            for _, row in last_v_df.iterrows():
-                g_url = gym_df[gym_df['gym_name'] == row['gym_name']]['profile_url'].iloc[0] if not gym_df[gym_df['gym_name'] == row['gym_name']].empty else "#"
-                st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#007bff !important"></div><span class="item-date">{row["date"].strftime("%Y/%m/%d")}</span><span class="item-gym"><a href="{g_url}" target="_blank" style="color:inherit; text-decoration:none;">{row["gym_name"]}</a></span><div></div></div>', unsafe_allow_html=True)
+    with g1: # 訪問済タブ
+    if visited_names:
+        # 日付でソート
+        last_v_df = my_done_logs.groupby('gym_name')['date'].max().sort_values(ascending=False).reset_index()
+        
+        for _, row in last_v_df.iterrows():
+            # --- ここを安全な書き方に変更 ---
+            target_gym_name = row['gym_name']
+            g_url = "#" # デフォルト
+            
+            if not gym_df.empty and 'gym_name' in gym_df.columns:
+                match = gym_df[gym_df['gym_name'] == target_gym_name]
+                if not match.empty and 'profile_url' in match.columns:
+                    g_url = match['profile_url'].iloc[0]
+            
+            st.markdown(f'''
+                <div class="item-box">
+                    <div class="item-accent" style="background:#007bff !important"></div>
+                    <span class="item-date">{row["date"].strftime("%Y/%m/%d")}</span>
+                    <span class="item-gym">
+                        <a href="{g_url}" target="_blank" style="color:inherit; text-decoration:none;">{target_gym_name}</a>
+                    </span>
+                    <div></div>
+                </div>
+            ''', unsafe_allow_html=True)
+
     with g2:
-        unv = gym_df[~gym_df['gym_name'].isin(visited_names)].sort_values('gym_name') if not gym_df.empty else pd.DataFrame()
-        for _, row in unv.iterrows():
-            st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#CCC !important"></div><span class="item-date">NEW</span><span class="item-gym"><a href="{row["profile_url"]}" target="_blank" style="color:inherit; text-decoration:none;">{row["gym_name"]}</a></span></div>', unsafe_allow_html=True)
+        # 1. gym_df が空でなく、かつ必要な列があるかチェック
+        if not gym_df.empty and 'gym_name' in gym_df.columns:
+            # 未訪問のジムを抽出
+            unv = gym_df[~gym_df['gym_name'].isin(visited_names)].sort_values('gym_name')
+            
+            for _, row in unv.iterrows():
+                # 列の存在を確認しながら値を取得
+                g_name = row.get('gym_name', 'Unknown')
+                g_url = row.get('profile_url', '#')
+                
+                st.markdown(f'''
+                    <div class="item-box">
+                        <div class="item-accent" style="background:#CCC !important"></div>
+                        <span class="item-date">NEW</span>
+                        <span class="item-gym">
+                            <a href="{g_url}" target="_blank" style="color:inherit; text-decoration:none;">{g_name}</a>
+                        </span>
+                    </div>
+                ''', unsafe_allow_html=True)
+        else:
+            st.info("ジム情報が読み込めませんでした。更新ボタンを押してみてください。")
 
 # Tab 3: マイページ (Sunsetdark & インスタ風)
 with tabs[2]:
