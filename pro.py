@@ -210,9 +210,9 @@ tabs = st.tabs(tab_titles)
 with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
-    with st.form("quick_log"):
+    with st.form("quick_log", clear_on_submit=True):
         q_date = st.date_input("日程", value=date.today())
-        q_gym = st.selectbox("ジムを選択", sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [], index=None)
+        q_gym = st.selectbox("ジムを選択", sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [], index=None, placeholder="ジムを選択")
         
         c1, c2 = st.columns(2)
         if c1.form_submit_button("✋ 登ります"):
@@ -225,7 +225,7 @@ with tabs[0]:
             else:
                 st.warning("ジムを選択してください")
 
-        if c2.form_submit_button("✊ 登ったぜ"):
+        if c2.form_submit_button("✊ 登りました"):
             if q_gym:
                 new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '実績']], 
                                      columns=['date','gym_name','user','type'])
