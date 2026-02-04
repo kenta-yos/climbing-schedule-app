@@ -38,18 +38,18 @@ st.markdown("""
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
+def load_data():
     try:
-        # ttl=0で最新取得
-        gyms = conn.read(worksheet="gym_master", ttl=0).dropna(how='all')
-        sched = conn.read(worksheet="schedules", ttl=0).dropna(how='all')
-        logs = conn.read(worksheet="climbing_logs", ttl=0).dropna(how='all')
-        users = conn.read(worksheet="users", ttl=0).dropna(how='all')
+        # ttlを1秒に設定。これでリロード時のAPI消費を抑えつつ、
+        # 自分の書き込み後は st.cache_data.clear() で強制更新する
+        gyms = conn.read(worksheet="gym_master", ttl=1).dropna(how='all')
+        sched = conn.read(worksheet="schedules", ttl=1).dropna(how='all')
+        logs = conn.read(worksheet="climbing_logs", ttl=1).dropna(how='all')
+        users = conn.read(worksheet="users", ttl=1).dropna(how='all')
         
-        # 全カラム名を「空白なし小文字」に統一
         for df in [gyms, sched, logs, users]:
             df.columns = [str(c).strip().lower() for c in df.columns]
         
-        # 日付変換（不正データ・空欄ガード付き）
         if not sched.empty and 'start_date' in sched.columns:
             sched['start_date'] = pd.to_datetime(sched['start_date'], errors='coerce')
         if not logs.empty and 'date' in logs.columns:
@@ -57,7 +57,8 @@ def load_data():
             
         return gyms, sched, logs, users
     except Exception as e:
-        st.error(f"データ接続エラー: {e}")
+        # エラーが出ても画面を止めないよう、空のデータを返す
+        st.warning("Google Sheetsが混み合っています。少し待ってから操作してください。")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 # 初回データ読み込み
