@@ -38,7 +38,6 @@ st.markdown("""
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_data():
-def load_data():
     try:
         # ttlを1秒に設定。これでリロード時のAPI消費を抑えつつ、
         # 自分の書き込み後は st.cache_data.clear() で強制更新する
