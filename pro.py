@@ -72,13 +72,42 @@ if 'USER' not in st.session_state: st.session_state.USER = None
 if not st.session_state.USER:
     st.title("🧗 Go Bouldering")
     if not user_df.empty:
-        selected_u = st.selectbox("自分を選択してください", user_df['user'].tolist())
-        if st.button("ログイン"):
-            u_info = user_df[user_df['user'] == selected_u].iloc[0]
-            st.session_state.USER = selected_u
-            st.session_state.U_COLOR = u_info['color']
-            st.session_state.U_ICON = u_info['icon']
+        # 名前とアイコンを合体させたリストを作成（例： "🧗 Kenta"）
+        user_options = {f"{row['icon']} {row['user']}": row['user'] for _, row in user_df.iterrows()}
+        
+        display_name = st.selectbox(
+            "自分を選択してください", 
+            options=list(user_options.keys())
+        )
+        
+        # 選択されたユーザーの詳細情報を取得
+        target_user_name = user_options[display_name]
+        u_info = user_df[user_df['user'] == target_user_name].iloc[0]
+        u_color = u_info['color']
+        u_icon = u_info['icon']
+
+        # ボタンにも個別のカラーを反映（CSSインジェクション）
+        st.markdown(f"""
+            <style>
+            div.stButton > button:first-child {{
+                background-color: {u_color};
+                color: white;
+                border: none;
+                font-weight: bold;
+                width: 100%;
+                height: 3rem;
+                border-radius: 10px;
+            }}
+            </style>
+        """, unsafe_allow_html=True)
+
+        if st.button(f"{u_icon} {target_user_name} としてログイン"):
+            st.session_state.USER = target_user_name
+            st.session_state.U_COLOR = u_color
+            st.session_state.U_ICON = u_icon
             st.rerun()
+    else:
+        st.warning("usersシートにデータがありません。スプレッドシートを確認してください。")
     st.stop()
 
 MY_NAME = st.session_state.USER
