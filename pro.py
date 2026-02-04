@@ -81,62 +81,52 @@ st.markdown("""
 # --- 2. データ読み込み (API制限ガード付き) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=86400) # キャッシュを24時間保持
+@st.cache_data(ttl=86400) # 24時間キャッシュ
 def get_sheet(sheet_name):
     try:
-        # 接続側にも長めのttlを指定してAPIを節約
+        # API節約のためttlを指定。dropnaで空行を除去。
         df = conn.read(worksheet=sheet_name, ttl=86400).dropna(how='all')
         df.columns = [str(c).strip().lower() for c in df.columns]
         
-        # --- 日付変換を関数内に閉じ込める ---
+        # --- 重要：関数内で日付を「日付型」に変換する ---
+        # これをやらないと、キャッシュクリア後の再読み込み時にただの文字列になってしまいます
         if sheet_name == "climbing_logs" and not df.empty:
             if 'date' in df.columns:
                 df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
         
         if sheet_name == "schedules" and not df.empty:
-            if 'start_date' in df.columns:
-                df['start_date'] = pd.to_datetime(df['start_date'], errors='coerce').dt.tz_localize(None)
-            if 'end_date' in df.columns:
-                df['end_date'] = pd.to_datetime(df['end_date'], errors='coerce').dt.tz_localize(None)
+            for col in ['start_date', 'end_date']:
+                if col in df.columns:
+                    df[col] = pd.to_datetime(df[col], errors='coerce').dt.tz_localize(None)
             
         return df
     except Exception as e:
         if "429" in str(e):
-            st.error("⚠️ Google API制限にかかっています。5分待ってください。")
-            st.stop() 
+            st.error("⚠️ Google API制限中です。数分待ってから更新してください。")
+            st.stop()
         return pd.DataFrame()
 
-# 5つのデータを取得（変換コードは関数内に入ったので、これだけでOK）
+# データの取得（ここを関数のすぐ下で実行）
 gym_df = get_sheet("gym_master")
 sched_df = get_sheet("schedules")
 log_df = get_sheet("climbing_logs")
 user_df = get_sheet("users")
 area_master = get_sheet("area_master")
 
-# 日付データの変換（ここはキャッシュせず毎回実行してOK）
-if not log_df.empty:
-    log_df['date'] = pd.to_datetime(log_df['date'], errors='coerce').dt.tz_localize(None)
-if not sched_df.empty:
-    sched_df['start_date'] = pd.to_datetime(sched_df['start_date'], errors='coerce').dt.tz_localize(None)
-    sched_df['end_date'] = pd.to_datetime(sched_df['end_date'], errors='coerce').dt.tz_localize(None)
-
 # --- 削除処理をURL形式から関数形式へ変更 ---
 def delete_log(idx):
-    """URLを介さずにその場で削除を実行する関数"""
     if not log_df.empty and idx in log_df.index:
-        # 1. データの削除
         new_log_df = log_df.drop(idx)
         save_df = new_log_df.copy()
-        # 日付変換
         for col in ['date', 'start_date', 'end_date']:
             if col in save_df.columns:
                 save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
         
-        # 2. 保存とキャッシュクリア
+        # 保存先を climbing_logs に指定
         conn.update(worksheet="climbing_logs", data=save_df)
+        # 記憶を消す
         get_sheet.clear()
-        
-        # 3. 再描画（URLは変えないのでログイン状態が維持される）
+        # 即リロード
         st.rerun()
 
 def safe_save(worksheet, df, target_tab=None):
