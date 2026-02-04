@@ -305,30 +305,30 @@ with tabs[1]:
         visited_names = my_done_logs['gym_name'].unique().tolist()
         
     with g1: # 訪問済タブ
-    if visited_names:
-        # 日付でソート
-        last_v_df = my_done_logs.groupby('gym_name')['date'].max().sort_values(ascending=False).reset_index()
-        
-        for _, row in last_v_df.iterrows():
-            # --- ここを安全な書き方に変更 ---
-            target_gym_name = row['gym_name']
-            g_url = "#" # デフォルト
+        if visited_names:
+            # 日付でソート
+            last_v_df = my_done_logs.groupby('gym_name')['date'].max().sort_values(ascending=False).reset_index()
             
-            if not gym_df.empty and 'gym_name' in gym_df.columns:
-                match = gym_df[gym_df['gym_name'] == target_gym_name]
-                if not match.empty and 'profile_url' in match.columns:
-                    g_url = match['profile_url'].iloc[0]
-            
-            st.markdown(f'''
-                <div class="item-box">
-                    <div class="item-accent" style="background:#007bff !important"></div>
-                    <span class="item-date">{row["date"].strftime("%Y/%m/%d")}</span>
-                    <span class="item-gym">
-                        <a href="{g_url}" target="_blank" style="color:inherit; text-decoration:none;">{target_gym_name}</a>
-                    </span>
-                    <div></div>
-                </div>
-            ''', unsafe_allow_html=True)
+            for _, row in last_v_df.iterrows():
+                # --- ここを安全な書き方に変更 ---
+                target_gym_name = row['gym_name']
+                g_url = "#" # デフォルト
+                
+                if not gym_df.empty and 'gym_name' in gym_df.columns:
+                    match = gym_df[gym_df['gym_name'] == target_gym_name]
+                    if not match.empty and 'profile_url' in match.columns:
+                        g_url = match['profile_url'].iloc[0]
+                
+                st.markdown(f'''
+                    <div class="item-box">
+                        <div class="item-accent" style="background:#007bff !important"></div>
+                        <span class="item-date">{row["date"].strftime("%Y/%m/%d")}</span>
+                        <span class="item-gym">
+                            <a href="{g_url}" target="_blank" style="color:inherit; text-decoration:none;">{target_gym_name}</a>
+                        </span>
+                        <div></div>
+                    </div>
+                ''', unsafe_allow_html=True)
 
     with g2:
         # 1. gym_df が空でなく、かつ必要な列があるかチェック
