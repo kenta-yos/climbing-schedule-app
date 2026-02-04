@@ -184,8 +184,7 @@ with tabs[0]:
     # 日付選択
     q_date = st.date_input("📅 日程", value=date.today())
     
-    expander_key = f"gym_exp_{st.session_state.ticks['climbing_logs']}"
-
+    expander_key = f"gym_exp_{str(st.session_state.ticks['climbing_logs'])}"
     with st.expander("🏢 ジムを選択してください", expanded=False, key=expander_key):
         q_gym = st.radio(
             "ジム一覧",
