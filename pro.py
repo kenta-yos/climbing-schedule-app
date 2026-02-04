@@ -150,7 +150,12 @@ with tabs[0]:
     st.subheader("🚀 クイック登録")
     with st.form("quick_log"):
         q_date = st.date_input("日程", value=date.today())
-        q_gym = st.selectbox("ジムを選択", sorted(gym_df['gym_name'].tolist())) if not gym_df.empty else st.text_input("ジム名")
+        q_gym = st.selectbox(
+            "ジムを選択", 
+            sorted(gym_df['gym_name'].tolist()), 
+            index=None, 
+            placeholder="ジムを選んでください..."
+        ) if not gym_df.empty else st.text_input("ジム名")
         c1, c2 = st.columns(2)
         if c1.form_submit_button("✋ 予定"):
             new = pd.DataFrame([[q_date, q_gym, st.session_state.USER, '予定']], columns=['date','gym_name','user','type'])
@@ -311,7 +316,12 @@ with tabs[5]:
             if st.form_submit_button("登録"):
                 safe_save("gym_master", pd.concat([gym_df, pd.DataFrame([[n, u, a]], columns=['gym_name','profile_url','area_tag'])], ignore_index=True))
     with st.expander("📅 セット一括登録"):
-        sel_g = st.selectbox("対象ジム", sorted(gym_df['gym_name'].tolist())) if not gym_df.empty else ""
+        sel_g = st.selectbox(
+            "対象ジム", 
+            sorted(gym_df['gym_name'].tolist()), 
+            index=None, 
+            placeholder="ジムを選択してください"
+        ) if not gym_df.empty else ""        
         p_url = st.text_input("告知URL")
         if "rows" not in st.session_state: st.session_state.rows = 1
         d_list = []
