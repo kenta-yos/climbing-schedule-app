@@ -24,13 +24,13 @@ st.markdown("""
     /* 削除リンクのデザイン */
     .del-link {
         color: #999 !important;
-        font-size: 0.7rem !important;
-        text-decoration: none !important;
-        white-space: nowrap !important;
-        margin-left: auto; /* 右端に寄せる */
+        font-size: 0.75rem !important;
+        text-decoration: underline !important; /* 下線をつけてリンクっぽく */
+        cursor: pointer;
+        margin-left: auto;
+        padding: 5px;
     }
-    .del-link:hover { color: #B22222 !important; }
-    
+    .del-link:hover { color: #FF512F !important; }    
     
     .item-box {
         display: grid !important;
@@ -259,19 +259,14 @@ with tabs[2]:
     st.subheader("🗓️ 今後の予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
     for i, row in my_plans.iterrows():
-        with st.container():
-            st.markdown(f'''
-                <div class="item-box">
-                    <div class="item-accent" style="background:#4CAF50 !important"></div>
-                    <span class="item-date">{row["date"].strftime("%m/%d")}</span>
-                    <div class="item-gym">{row["gym_name"]}</div>
-                    <div class="del-link">削除</div>
-                </div>
-            ''', unsafe_allow_html=True)
-            
-            st.markdown('<style>div[data-testid="stVerticalBlock"] > div:has(button[key^="del_"]) { margin-top: -45px; margin-left: auto; width: 50px; opacity: 0; }</style>', unsafe_allow_html=True)
-            if st.button(" ", key=f"del_p_{i}"):
-                safe_save("climbing_logs", log_df.drop(i))
+        st.markdown(f'''
+            <div class="item-box">
+                <div class="item-accent" style="background:#4CAF50 !important"></div>
+                <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                <div class="item-gym">{row["gym_name"]}</div>
+                <a href="?del_id={i}&type=p" target="_self" class="del-link">削除</a>
+            </div>
+        ''', unsafe_allow_html=True)
     
     st.divider()
     sc1, sc2 = st.columns(2)
@@ -288,20 +283,14 @@ with tabs[2]:
 
     st.subheader("📝 履歴")
     for i, row in my_p_res.sort_values('date', ascending=False).iterrows():
-        with st.container():
-            # HTMLで見た目を作る
-            st.markdown(f'''
-                <div class="item-box">
-                    <div class="item-accent" style="background:#4CAF50 !important"></div>
-                    <span class="item-date">{row["date"].strftime("%m/%d")}</span>
-                    <div class="item-gym">{row["gym_name"]}</div>
-                    <div class="del-link">削除</div>
-                </div>
-            ''', unsafe_allow_html=True)
-            
-            st.markdown('<style>div[data-testid="stVerticalBlock"] > div:has(button[key^="del_h_"]) { margin-top: -45px; margin-left: auto; width: 50px; opacity: 0; }</style>', unsafe_allow_html=True)
-            if st.button(" ", key=f"del_h_{i}"):
-                safe_save("climbing_logs", log_df.drop(i))
+        st.markdown(f'''
+            <div class="item-box">
+                <div class="item-accent" style="background:#4CAF50 !important"></div>
+                <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                <div class="item-gym">{row["gym_name"]}</div>
+                <a href="?del_id={i}&type=h" target="_self" class="del-link">削除</a>
+            </div>
+        ''', unsafe_allow_html=True)
 
 # Tab 4: 👥 仲間 (直近1ヶ月)
 with tabs[3]:
