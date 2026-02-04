@@ -175,6 +175,30 @@ tabs = st.tabs(tab_titles)
 with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
+
+    # --- ジムリストの並び替えロジック ---
+    sorted_gym_names = []
+    if not gym_df.empty and not area_master.empty:
+        # 1. 表示したい地域の順番を定義
+        priority_order = ["都内・神奈川", "関東", "全国"]
+        
+        # gym_df と area_master を結合して、どのジムがどの「大枠エリア」か紐づける
+        merged_gyms = pd.merge(gym_df, area_master[['area_tag', 'major_area']], on='area_tag', how='left')
+        
+        for area in priority_order:
+            # 特定の地域に属するジムを抽出
+            subset = merged_gyms[merged_gyms['major_area'] == area]
+            # その地域内だけで五十音順にソートしてリストに追加
+            sorted_gym_names.extend(sorted(subset['gym_name'].tolist()))
+        
+        # もしマスタにないエリアがあった場合のフォールバック（念のため）
+        others = gym_df[~gym_df['gym_name'].isin(sorted_gym_names)]
+        if not others.empty:
+            sorted_gym_names.extend(sorted(others['gym_name'].tolist()))
+    else:
+        # マスタが空の場合は単純な五十音順
+        sorted_gym_names = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
+
     
     # フォーム全体を包むことで、送信後の自動リセットを狙います
     with st.form("quick_log_form", clear_on_submit=True):
@@ -182,28 +206,6 @@ with tabs[0]:
         q_date = st.date_input("📅 日程", value=today_jp)
         
         # 2. ジム選択（開閉式に戻します。keyは固定の文字列にします）
-        # --- ジムリストの並び替えロジック ---
-        sorted_gym_names = []
-        if not gym_df.empty and not area_master.empty:
-            # 1. 表示したい地域の順番を定義
-            priority_order = ["都内・神奈川", "関東", "全国"]
-            
-            # gym_df と area_master を結合して、どのジムがどの「大枠エリア」か紐づける
-            merged_gyms = pd.merge(gym_df, area_master[['area_tag', 'major_area']], on='area_tag', how='left')
-            
-            for area in priority_order:
-                # 特定の地域に属するジムを抽出
-                subset = merged_gyms[merged_gyms['major_area'] == area]
-                # その地域内だけで五十音順にソートしてリストに追加
-                sorted_gym_names.extend(sorted(subset['gym_name'].tolist()))
-            
-            # もしマスタにないエリアがあった場合のフォールバック（念のため）
-            others = gym_df[~gym_df['gym_name'].isin(sorted_gym_names)]
-            if not others.empty:
-                sorted_gym_names.extend(sorted(others['gym_name'].tolist()))
-        else:
-            # マスタが空の場合は単純な五十音順
-            sorted_gym_names = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
         with st.expander("🏢 ジムを選択してください", expanded=False):
             q_gym = st.radio(
                 "ジム一覧",
