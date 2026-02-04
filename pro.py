@@ -246,20 +246,13 @@ with tabs[0]:
         if btn_plan or btn_done:
             if q_gym:
                 t_type = '予定' if btn_plan else '実績'
-                # 新しい1行だけ作成
                 new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, t_type]], 
                                      columns=['date','gym_name','user','type'])
-                # mode="add" で呼び出し（デフォルトなので省略可）
+                # これだけでOK！
                 safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
-        if btn_plan or btn_done:
-            if q_gym:
-                t_type = '予定' if btn_plan else '実績'
-                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, t_type]], 
-                                     columns=['date','gym_name','user','type'])
-                safe_save("climbing_logs", pd.concat([log_df, new_row], ignore_index=True), target_tab="🏠 Top")
             else:
                 st.warning("ジムを選択してください")
-
+    
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
     st.query_params["tab"] = "✨ ジム"
@@ -504,12 +497,16 @@ with tabs[4]:
 with tabs[5]:
     st.query_params["tab"] = "⚙️ 管理"    
     st.subheader("⚙️ 管理")
+    
     with st.expander("🆕 ジム登録"):
-        with st.form("adm_gym"):
-            n, u, a = st.text_input("ジム名"), st.text_input("Instagram URL"), st.text_input("エリア")
-            if st.form_submit_button("登録"):
-                safe_save("gym_master", pd.concat([gym_df, pd.DataFrame([[n, u, a]], columns=['gym_name','profile_url','area_tag'])], ignore_index=True))
-    with st.expander("📅 セット一括登録"):
+    with st.form("adm_gym"):
+        n, u, a = st.text_input("ジム名"), st.text_input("Instagram URL"), st.text_input("エリア")
+        if st.form_submit_button("登録"):
+            # 【修正】新しく作った 1行(new_gym) だけを渡す
+            new_gym = pd.DataFrame([[n, u, a]], columns=['gym_name','profile_url','area_tag'])
+            safe_save("gym_master", new_gym, mode="add") # mode="add" で安全に合体
+    
+        with st.expander("📅 セット一括登録"):
         sel_g = st.selectbox(
             "対象ジム", 
             sorted(gym_df['gym_name'].tolist()), 
@@ -524,7 +521,10 @@ with tabs[5]:
             d_list.append((c1.date_input(f"開始 {i+1}", key=f"sd_{i}"), c2.date_input(f"終了 {i+1}", key=f"ed_{i}")))
         if st.button("➕ 日程追加"): st.session_state.rows += 1; st.rerun()
         if st.button("🚀 一括登録"):
-            new_s = pd.DataFrame([[sel_g, d[0], d[1], p_url] for d in d_list], columns=['gym_name', 'start_date', 'end_date', 'post_url'])
-            st.session_state.rows = 1
-            safe_save("schedules", pd.concat([sched_df, new_s], ignore_index=True))
+        # 【修正】今回追加する予定(new_s) だけを作る
+        new_s = pd.DataFrame([[sel_g, d[0], d[1], p_url] for d in d_list], 
+                             columns=['gym_name', 'start_date', 'end_date', 'post_url'])
+        st.session_state.rows = 1
+        # 【修正】sched_df を concat せず、new_s だけを渡す
+        safe_save("schedules", new_s, mode="add")
     if st.button("🚪 ログアウト"): st.session_state.USER = None; st.query_params.clear(); st.rerun()
