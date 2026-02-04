@@ -176,48 +176,51 @@ query_tab = st.query_params.get("tab", "🏠 Top")
 active_tab_idx = tab_titles.index(query_tab) if query_tab in tab_titles else 0
 tabs = st.tabs(tab_titles)
 
+# Tab 1: 🏠 Top
 with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
     
-    # 1. 日付選択
-    q_date = st.date_input("📅 日程", value=date.today())
-    
-    # 2. ジム選択
-    # 変数に一度出してから使うことで、f-string内でのエラーを回避します
-    current_tick = st.session_state.ticks.get('climbing_logs', 0)
-    expander_key = f"gym_exp_reset_{current_tick}"
+    # フォーム全体を包むことで、送信後の自動リセットを狙います
+    with st.form("quick_log_form", clear_on_submit=True):
+        # 1. 日付選択
+        q_date = st.date_input("📅 日程", value=date.today())
+        
+        # 2. ジム選択（開閉式に戻します。keyは固定の文字列にします）
+        with st.expander("🏢 ジムを選択してください", expanded=False):
+            q_gym = st.radio(
+                "ジム一覧",
+                options=sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [],
+                index=None,
+                label_visibility="collapsed",
+                key="q_gym_radio"
+            )
+        
+        st.write("") 
 
-    with st.expander("🏢 ジムを選択してください", expanded=False, key=expander_key):
-        q_gym = st.radio(
-            "ジム一覧",
-            options=sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [],
-            index=None,
-            label_visibility="collapsed"
-        )
-    
-    st.write("") 
+        # 3. 登録ボタン (formの中なので form_submit_button を使います)
+        c1, c2 = st.columns(2)
+        
+        btn_plan = c1.form_submit_button("✋ 登ります", use_container_width=True)
+        btn_done = c2.form_submit_button("✊ 登りました", use_container_width=True)
 
-    # 3. 登録ボタン
-    c1, c2 = st.columns(2)
-    
-    if c1.button("✋ 登ります", use_container_width=True):
-        if q_gym:
-            new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '予定']], 
-                                 columns=['date','gym_name','user','type'])
-            combined_df = pd.concat([log_df, new_row], ignore_index=True)
-            safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
-        else:
-            st.warning("ジムを選択してください")
+        if btn_plan:
+            if q_gym:
+                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '予定']], 
+                                     columns=['date','gym_name','user','type'])
+                combined_df = pd.concat([log_df, new_row], ignore_index=True)
+                safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
+            else:
+                st.warning("ジムを選択してください")
 
-    if c2.button("✊ 登りました", use_container_width=True):
-        if q_gym:
-            new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '実績']], 
-                                 columns=['date','gym_name','user','type'])
-            combined_df = pd.concat([log_df, new_row], ignore_index=True)
-            safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
-        else:
-            st.warning("ジムを選択してください")
+        if btn_done:
+            if q_gym:
+                new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '実績']], 
+                                     columns=['date','gym_name','user','type'])
+                combined_df = pd.concat([log_df, new_row], ignore_index=True)
+                safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
+            else:
+                st.warning("ジムを選択してください")
 
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
