@@ -51,18 +51,48 @@ def load_data():
 
 gym_df, sched_df, log_df, user_df = load_data()
 
-# --- セッション認証 ---
-if 'USER' not in st.session_state: st.session_state.USER = None
+# --- 3. セッション & 認証 (ログイン保持対応版) ---
 
+# URLパラメータからユーザー名を取得
+saved_user = st.query_params.get("user")
+
+# セッション状態の初期化
+if 'USER' not in st.session_state:
+    if saved_user and not user_df.empty:
+        # URLに保存されたユーザーがいる場合、自動ログインを試行
+        u_match = user_df[user_df['user'] == saved_user]
+        if not u_match.empty:
+            row = u_match.iloc[0]
+            st.session_state.USER = row['user']
+            st.session_state.U_COLOR = row['color']
+            st.session_state.U_ICON = row['icon']
+    else:
+        st.session_state.USER = None
+
+# --- ログイン画面 ---
 if not st.session_state.USER:
     st.title("🧗 Go Bouldering")
+    st.subheader("ユーザーを選択してログイン")
     if not user_df.empty:
         cols = st.columns(2)
         for i, (_, row) in enumerate(user_df.iterrows()):
             with cols[i % 2]:
-                st.markdown(f"<style>div.stButton > button[key='l_{row['user']}'] {{ background:{row['color']}; color:white; width:100%; border-radius:15px; font-weight:bold; }}</style>", unsafe_allow_html=True)
+                # ユーザー固有カラーのボタン
+                st.markdown(f"""
+                    <style>
+                    div.stButton > button[key='l_{row['user']}'] {{
+                        background:{row['color']}; color:white; width:100%; 
+                        height:4rem; border-radius:15px; font-weight:bold;
+                    }}
+                    </style>
+                """, unsafe_allow_html=True)
                 if st.button(f"{row['icon']} {row['user']}", key=f"l_{row['user']}"):
-                    st.session_state.USER, st.session_state.U_COLOR, st.session_state.U_ICON = row['user'], row['color'], row['icon']
+                    # セッションに保存
+                    st.session_state.USER = row['user']
+                    st.session_state.U_COLOR = row['color']
+                    st.session_state.U_ICON = row['icon']
+                    # URLパラメータに保存（これで次回アクセス時も有効になる）
+                    st.query_params["user"] = row['user']
                     st.rerun()
     st.stop()
 
