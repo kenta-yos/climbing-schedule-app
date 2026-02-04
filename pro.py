@@ -113,8 +113,12 @@ if "del_id" in params:
     idx = int(params["del_id"])
     if not log_df.empty and idx in log_df.index:
         new_log_df = log_df.drop(idx)
+        
+        # 1. まずURLをクリアする（del_idなどを消す）
         st.query_params.clear() 
-        # 保存関数を呼ぶ（下で定義しているもの）
+        # 2. 次に「マイページ」タブを開くようにURLに刻む
+        st.query_params["tab"] = "📊 マイページ" 
+
         save_df = new_log_df.copy()
         for col in ['date', 'start_date', 'end_date']:
             if col in save_df.columns:
@@ -130,7 +134,13 @@ def safe_save(worksheet, df):
         if col in save_df.columns:
             save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
     conn.update(worksheet=worksheet, data=save_df)
-    st.cache_data.clear() # 自分が更新した時は全キャッシュをリセット
+    
+    # 現在開いているタブの名前をURLに引き継ぐ（これでTopに戻らない）
+    # ※もしURLにtabがなければTopを指定する
+    current_tab = st.query_params.get("tab", "🏠 Top")
+    st.query_params["tab"] = current_tab
+
+    st.cache_data.clear() 
     st.rerun()
 
 # --- 3. 認証 (変更なし) ---
@@ -168,10 +178,22 @@ with col_btn:
         st.cache_data.clear()
         st.rerun()
 
-tabs = st.tabs(["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"])
+# タブの名前リスト
+tab_titles = ["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"]
+
+# 現在のURLから「どのタブにいたか」を取得（なければTop）
+query_tab = st.query_params.get("tab", "🏠 Top")
+
+# get_sheetなどの読み込み後に、もしタブ指定があればそのインデックスを探す
+active_tab_idx = tab_titles.index(query_tab) if query_tab in tab_titles else 0
+
+# 【重要】 st.tabsに直接インデックスは渡せませんが、
+# ページ上部の更新ボタンや削除処理の後に URLに ?tab=... をつけることで制御します。
+tabs = st.tabs(tab_titles)
 
 # Tab 1: Top (変更なし)
-with tabs[0]:
+with tabs[0]: # Top
+    st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
     with st.form("quick_log"):
         q_date = st.date_input("日程", value=date.today())
@@ -191,6 +213,7 @@ with tabs[0]:
 
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
+    st.query_params["tab"] = "✨ ジム"
     st.subheader("✨ おすすめ")
     
     target_date = st.date_input("ターゲット日", value=date.today(), key="tg_date")
@@ -271,6 +294,7 @@ with tabs[1]:
 
 # Tab 3: マイページ (Sunsetdark & インスタ風)
 with tabs[2]:
+    st.query_params["tab"] = "📊 マイページ"
     st.subheader("🗓️ 今後の予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
     for i, row in my_plans.iterrows():
@@ -309,6 +333,7 @@ with tabs[2]:
 
 # Tab 4: 👥 仲間 (直近1ヶ月)
 with tabs[3]:
+    st.query_params["tab"] = "👥 仲間"
     st.subheader("👥 仲間の予定 (直近1ヶ月)")
     o_plans = log_df[(log_df['user']!=st.session_state.USER)&(log_df['type']=='予定')&(log_df['date']>=today_ts)&(log_df['date']<=today_ts+timedelta(days=30))].sort_values('date') if not log_df.empty else pd.DataFrame()
     for _, row in o_plans.iterrows():
@@ -326,6 +351,7 @@ with tabs[3]:
 
 # Tab 5: 📅 セット (月選択 & Grid)
 with tabs[4]:
+    st.query_params["tab"] = "📅 セットスケジュール"
     st.subheader("📅 セットスケジュール")
     if not sched_df.empty:
         s_df = sched_df.copy()
@@ -351,6 +377,7 @@ with tabs[4]:
 
 # Tab 6: ⚙️ 管理
 with tabs[5]:
+    st.query_params["tab"] = "⚙️ 管理"
     st.subheader("⚙️ 管理")
     with st.expander("🆕 ジム登録"):
         with st.form("adm_gym"):
