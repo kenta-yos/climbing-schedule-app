@@ -81,24 +81,20 @@ st.markdown("""
 # --- 2. データ読み込み (API制限ガード付き) ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-@st.cache_data(ttl=86400) # 24時間キャッシュ
+@st.cache_data(ttl=86400)
 def get_sheet(sheet_name):
     try:
-        # API節約のためttlを指定。dropnaで空行を除去。
+        # APIリクエスト
         df = conn.read(worksheet=sheet_name, ttl=86400).dropna(how='all')
         df.columns = [str(c).strip().lower() for c in df.columns]
         
-        # --- 重要：関数内で日付を「日付型」に変換する ---
-        # これをやらないと、キャッシュクリア後の再読み込み時にただの文字列になってしまいます
+        # 関数内で日付型に統一（重要！）
         if sheet_name == "climbing_logs" and not df.empty:
-            if 'date' in df.columns:
-                df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
-        
-        if sheet_name == "schedules" and not df.empty:
+            df['date'] = pd.to_datetime(df['date'], errors='coerce').dt.tz_localize(None)
+        elif sheet_name == "schedules" and not df.empty:
             for col in ['start_date', 'end_date']:
                 if col in df.columns:
                     df[col] = pd.to_datetime(df[col], errors='coerce').dt.tz_localize(None)
-            
         return df
     except Exception as e:
         if "429" in str(e):
@@ -106,7 +102,7 @@ def get_sheet(sheet_name):
             st.stop()
         return pd.DataFrame()
 
-# データの取得（ここを関数のすぐ下で実行）
+# 5つのデータを取得
 gym_df = get_sheet("gym_master")
 sched_df = get_sheet("schedules")
 log_df = get_sheet("climbing_logs")
