@@ -23,12 +23,20 @@ st.markdown("""
 
     .item-box {
         display: grid !important;
-        grid-template-columns: 4px 60px 1fr !important; /* 列を整理 */
+        grid-template-columns: 4px 55px 1fr !important; /* アクセント(4px), 日付/NEW(55px), 内容(残り全部) */
         align-items: center !important;
-        gap: 8px !important;
-        padding: 14px 0 !important;
+        gap: 12px !important;
+        padding: 12px 5px !important;
         border-bottom: 1px solid #F0F0F0 !important;
         text-decoration: none !important;
+        width: 100% !important;
+    }
+
+    .item-gym {
+        display: flex !important;
+        align-items: baseline !important;
+        flex-wrap: wrap !important; /* スマホで入り切らない時は改行を許可 */
+        gap: 8px !important;
     }
 
     .set-box {
