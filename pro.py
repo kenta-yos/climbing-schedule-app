@@ -23,20 +23,12 @@ st.markdown("""
 
     .item-box {
         display: grid !important;
-        grid-template-columns: 4px 55px 1fr !important; /* アクセント(4px), 日付/NEW(55px), 内容(残り全部) */
+        grid-template-columns: 4px 60px 1fr !important; /* 列を整理 */
         align-items: center !important;
-        gap: 12px !important;
-        padding: 12px 5px !important;
+        gap: 8px !important;
+        padding: 14px 0 !important;
         border-bottom: 1px solid #F0F0F0 !important;
         text-decoration: none !important;
-        width: 100% !important;
-    }
-
-    .item-gym {
-        display: flex !important;
-        align-items: baseline !important;
-        flex-wrap: wrap !important; /* スマホで入り切らない時は改行を許可 */
-        gap: 8px !important;
     }
 
     .set-box {
@@ -250,7 +242,7 @@ with tabs[1]:
     with g2:
         unv = gym_df[~gym_df['gym_name'].isin(visited_names)].sort_values('gym_name') if not gym_df.empty else pd.DataFrame()
         for _, row in unv.iterrows():
-            st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#CCC !important"></div><span class="item-date">NEW</span><span class="item-gym"><a href="{row["profile_url"]}" target="_blank" style="color:inherit; text-decoration:none;">{row["gym_name"]}</a></span><span style="font-size:0.7rem; color:#888;">{row["area_tag"]}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#CCC !important"></div><span class="item-date">NEW</span><span class="item-gym"><a href="{row["profile_url"]}" target="_blank" style="color:inherit; text-decoration:none;">{row["gym_name"]}</a></span></div>', unsafe_allow_html=True)
 
 # Tab 3: マイページ (Sunsetdark & インスタ風)
 with tabs[2]:
