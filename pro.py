@@ -115,21 +115,29 @@ params = st.query_params
 if "del_id" in params:
     idx = int(params["del_id"])
     if not log_df.empty and idx in log_df.index:
+        # 1. データの削除と保存準備
         new_log_df = log_df.drop(idx)
-        current_user = st.session_state.get('USER')
-        st.query_params.clear() 
-        if current_user:
-            st.query_params["user"] = current_user
-        st.query_params["tab"] = "📊 マイページ" 
-
         save_df = new_log_df.copy()
         for col in ['date', 'start_date', 'end_date']:
             if col in save_df.columns:
                 save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
+        
+        # 2. Google Sheets更新
         conn.update(worksheet="climbing_logs", data=save_df)
         get_sheet.clear()
+        
+        # 3. 【ここが肝】セッション状態を直接使ってURLを上書き
+        current_user = st.session_state.get('USER')
+        
+        # query_params.clear()は使わず、必要なものだけを上書き・セットする
+        st.query_params["user"] = current_user
+        st.query_params["tab"] = "📊 マイページ"
+        # del_idを消すために明示的に削除（これをしないと無限ループになる場合があります）
+        if "del_id" in st.query_params:
+            del st.query_params["del_id"]
+            
         st.rerun()
-    
+
 # 保存用関数
 def safe_save(worksheet, df, target_tab=None):
     """保存後に特定のキャッシュだけを消してリロード"""
