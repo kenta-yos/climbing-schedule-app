@@ -325,7 +325,7 @@ with tabs[1]:
 # Tab 3: マイページ (Sunsetdark & インスタ風)
 with tabs[2]:
     st.query_params["tab"] = "📊 マイページ"
-    st.subheader("🗓️ 今後の予定")
+    st.subheader("🗓️ 登る予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
     for i, row in my_plans.iterrows():
         st.markdown(f'''
@@ -340,6 +340,7 @@ with tabs[2]:
             new_log_df = log_df.drop(i)
             safe_save("climbing_logs", new_log_df, target_tab="📊 マイページ")
     
+    st.subheader("📊 登った実績")
     st.divider()
     sc1, sc2 = st.columns(2)
     ms, me = sc1.date_input("開始", value=date.today().replace(day=1)), sc2.date_input("終了", value=date.today())
@@ -353,7 +354,7 @@ with tabs[2]:
         fig.update_layout(showlegend=False, coloraxis_showscale=False, xaxis_visible=False, yaxis_title=None, margin=dict(t=10, b=10, l=120, r=50), height=max(150, 45 * len(counts)), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', dragmode=False)
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
 
-    st.subheader("📝 履歴")
+    st.subheader("📝 詳細")
     for i, row in my_p_res.sort_values('date', ascending=False).iterrows():
         st.markdown(f'''
             <div class="item-box">
