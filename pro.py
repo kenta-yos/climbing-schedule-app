@@ -98,25 +98,36 @@ def get_sheet(sheet_name):
         st.warning(f"データ取得に失敗しました。再試行中... ({sheet_name})")
         return pd.DataFrame()
 
+gym_df = get_sheet("gym_master")
+sched_df = get_sheet("schedules")
+log_df = get_sheet("climbing_logs")
+user_df = get_sheet("users")
+area_master = get_sheet("area_master")
+
 # --- 削除・保存を一本化 ---
+
 def safe_save(worksheet, df, target_tab=None):
     try:
         save_df = df.copy()
-        for col in ['date', 'start_date', 'end_date']:
-            if col in save_df.columns:
-                save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d')
+        # 日付を文字列に変換...
         
+        # 1. 保存
         conn.update(worksheet=worksheet, data=save_df)
-        st.cache_data.clear() # 全キャッシュをクリアして確実に最新にする
         
-        # URLパラメータの構築
+        # 2. ★ 更新したシートのキャッシュだけを個別に消す（他は残すのでAPI節約！）
+        get_sheet.clear(worksheet)
+        
+        # 3. リロードの準備
         params = {"user": st.session_state.USER}
         if target_tab:
             params["tab"] = target_tab
+        elif "tab" in st.query_params:
+            params["tab"] = st.query_params["tab"]
+            
         st.query_params.from_dict(params)
         st.rerun()
     except Exception as e:
-        st.error("保存に失敗しました。API制限の可能性があります。1分待ってからお試しください。")
+        st.error("保存失敗。API制限かもしれません。1分待ってください。")
         st.stop()
 
 # --- 3. 認証 (安定化アップデート版) ---
