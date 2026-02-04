@@ -209,7 +209,7 @@ with tabs[0]:
         with st.expander("🏢 ジムを選択してください", expanded=False):
             q_gym = st.radio(
                 "ジム一覧",
-                options=sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [],
+                options==sorted_gym_names,
                 index=None,
                 label_visibility="collapsed",
                 key="q_gym_radio"
