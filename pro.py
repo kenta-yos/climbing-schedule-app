@@ -90,7 +90,7 @@ def get_single_sheet(sheet_name):
     # tickを引数に含めることで、更新時だけキャッシュを破棄させる
     @st.cache_data(ttl=3600)
     def _read_with_cache(name, tick):
-        df = conn.read(worksheet=name, ttl=1)
+        df = conn.read(worksheet=name, ttl=0)
         df.columns = [str(c).strip().lower() for c in df.columns]
         # 日付処理
         if name == "climbing_logs" and not df.empty and 'date' in df.columns:
