@@ -106,29 +106,49 @@ user_df = get_single_sheet("users")
 area_master = get_single_sheet("area_master")
 
 # --- 3. 保存・削除用関数（超軽量版） ---
-def safe_save(worksheet, df_to_add, target_tab=None):
+def safe_save(worksheet, df_input, mode="add", target_tab=None):
+    """
+    mode="add": 新規追加（スプシの最新に合流させる。増殖を防ぐ）
+    mode="overwrite": 全上書き（削除時や一括更新用）
+    """
     try:
-        # 1. 保存の瞬間に、スプシから「本当の最新」を読み直す
-        current_df = conn.read(worksheet=worksheet, ttl=0)
-        
-        # 2. 最新データに対して、今回の「新しい行」だけを結合する
-        # ※ 呼び出し側からは「追加したい1行(DataFrame)」だけを渡すように変更します
-        final_df = pd.concat([current_df, df_to_add], ignore_index=True)
-        
-        # 3. 日付フォーマットの調整（スプシ側での認識を安定させる）
+        if df_input.empty and mode == "overwrite":
+            # 削除の結果、空になった場合などは許可
+            pass
+        elif df_input.empty:
+            st.error("⚠️ 保存しようとしているデータが空です。")
+            return
+
+        # 1. モードに応じて保存データを作成
+        if mode == "add":
+            # 追加モード：最新を読み直して合体（重複は削除）
+            latest_df = conn.read(worksheet=worksheet, ttl=0)
+            final_df = pd.concat([latest_df, df_input], ignore_index=True)
+            # 全く同じ行があれば削除（増殖防止の保険）
+            final_df = final_df.drop_duplicates()
+        else:
+            # 上書きモード：渡されたデータをそのまま使う（削除処理用）
+            final_df = df_input
+
+        # 2. 日付フォーマットの調整
         for col in ['date', 'start_date', 'end_date']:
             if col in final_df.columns:
                 final_df[col] = pd.to_datetime(final_df[col]).dt.strftime('%Y-%m-%d 00:00:00')
 
-        # 4. 上書き保存
+        # 3. 保存
         conn.update(worksheet=worksheet, data=final_df)
         
-        # 5. キャッシュ更新用
+        # 4. キャッシュ更新
         st.session_state.ticks[worksheet] = datetime.now().timestamp()
+        
+        # リロード処理
+        params = {"user": st.session_state.USER}
+        if target_tab: params["tab"] = target_tab
+        st.query_params.from_dict(params)
         st.rerun()
     except Exception as e:
         st.error(f"❌ 保存失敗: {e}")
-
+    
 # ユーザーログイン処理
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
@@ -226,12 +246,11 @@ with tabs[0]:
         if btn_plan or btn_done:
             if q_gym:
                 t_type = '予定' if btn_plan else '実績'
-                # ここでは new_row だけを作る
+                # 新しい1行だけ作成
                 new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, t_type]], 
-                             columns=['date','gym_name','user','type'])
-        
-                # 【修正】log_df を混ぜず、new_row だけを渡す！
-                safe_save("climbing_logs", new_row, target_tab="🏠 Top")
+                                     columns=['date','gym_name','user','type'])
+                # mode="add" で呼び出し（デフォルトなので省略可）
+                safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
         if btn_plan or btn_done:
             if q_gym:
                 t_type = '予定' if btn_plan else '実績'
@@ -374,9 +393,12 @@ with tabs[2]:
             </div>
         ''', unsafe_allow_html=True)
 
-        if st.button("🗑️ 削除", key=f"del_plan_{i}"):
+
+        if st.button("🗑️ 削除", key=f"del_{i}"):
+            # 現在の表示用 log_df から1行消したデータを作成
             new_log_df = log_df.drop(i)
-            safe_save("climbing_logs", new_log_df, target_tab="📊 マイページ")
+            # mode="overwrite" で「これに差し替えて！」と命令する
+            safe_save("climbing_logs", new_log_df, mode="overwrite", target_tab="📊 マイページ")
     
     st.subheader("📊 登った実績")
     st.divider()
@@ -401,9 +423,11 @@ with tabs[2]:
                 <div class="item-gym">{row["gym_name"]}</div>
             </div>
         ''', unsafe_allow_html=True)
-        if st.button("🗑️ 削除", key=f"del_plan_{i}"):
+        if st.button("🗑️ 削除", key=f"del_{i}"):
+            # 現在の表示用 log_df から1行消したデータを作成
             new_log_df = log_df.drop(i)
-            safe_save("climbing_logs", new_log_df, target_tab="📊 マイページ")
+            # mode="overwrite" で「これに差し替えて！」と命令する
+            safe_save("climbing_logs", new_log_df, mode="overwrite", target_tab="📊 マイページ")
 
 # --- Tab 4: 👥 仲間 ---
 with tabs[3]:
