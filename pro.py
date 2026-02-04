@@ -73,23 +73,7 @@ st.markdown("""
     .tag-container { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
     .tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 40px; background: #F0F0F0; color: #666; }
     .tag-hot { background: #FFF0F0; color: #FF512F; font-weight: 700; border: 1px solid #FFDADA; }
-    .past-opacity { opacity: 0.35 !important; }
-
-    /* --- スマホのキーボード出現を抑制する設定 --- */
-    /* 入力エリアのカーソルを消し、タップしても入力モードになりにくくする */
-    input[role="combobox"], 
-    input[type="text"], 
-    .stDateInput input {
-        caret-color: transparent !important;
-        cursor: pointer !important;
-    }
-    
-    /* モバイル端末で入力フィールドがフォーカスされた時の青枠などを消す */
-    input:focus {
-        outline: none !important;
-        box-shadow: none !important;
-    }
-    
+    .past-opacity { opacity: 0.35 !important; }    
     </style>
 """, unsafe_allow_html=True)
 
@@ -196,9 +180,24 @@ with tabs[0]:
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
     with st.form("quick_log", clear_on_submit=True):
-        q_date = st.date_input("日程", value=date.today())
-        q_gym = st.selectbox("ジムを選択", sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [], index=None, placeholder="ジムを選択")
+        # 日付：よく使う「今日・昨日」をボタンスタイルで
+        q_date_selection = st.radio("日程", ["今日", "昨日", "カレンダー"], horizontal=True)
         
+        if q_date_selection == "今日":
+            q_date = date.today()
+        elif q_date_selection == "昨日":
+            q_date = date.today() - timedelta(days=1)
+        else:
+            q_date = st.date_input("日付を選択", value=date.today())
+
+        # ジム：案2の st.pills を採用
+        # (gym_nameが多すぎる場合は、自動で折り返して表示されます)
+        q_gym = st.pills(
+            "ジムを選択", 
+            options=sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [],
+            selection_mode="single"
+        )
+            
         c1, c2 = st.columns(2)
         if c1.form_submit_button("✋ 登ります"):
             if q_gym:
