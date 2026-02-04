@@ -184,12 +184,12 @@ with tabs[1]:
                         reasons.append(f"🔥 新セット({diff}日前完了)")
                     elif 8 <= diff <= 14: 
                         score += 30
-                        reasons.append(f"✨ 準新セット")
+                        reasons.append(f"✨ 準新セット({diff}日前完了)")
 
             # --- 2. 仲間スコア ---
             others = log_df[(log_df['gym_name'] == name) & (log_df['user'] != st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] == t_dt)] if not log_df.empty else pd.DataFrame()
             if not others.empty:
-                score += (100 * len(others))
+                score += (50 * len(others))
                 reasons.append(f"👥 仲間{len(others)}名が予定")
                 
             # --- 3. 実績スコア ---
@@ -200,12 +200,12 @@ with tabs[1]:
             else:
                 last_v_days = (t_dt - my_v['date'].max()).days
                 if last_v_days >= 30: 
-                    score += 30
+                    score += 50
                     reasons.append(f"⌛ {last_v_days}日ぶり")
 
             ranked_list.append({"name": name, "score": score, "reasons": reasons, "area": gym['area_tag'], "url": gym['profile_url']})
     
-    for gym in sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:3]:
+    for gym in sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]:
         tag_html = "".join([f'<span class="tag {"tag-hot" if "🔥" in r or "👥" in r else ""}">{r}</span>' for r in gym['reasons']])
         st.markdown(f'<div class="gym-card"><a href="{gym["url"]}" target="_blank" style="color:#007bff; font-weight:700; text-decoration:none;">{gym["name"]}</a> <small>({gym["area"]})</small><div class="tag-container">{tag_html}</div></div>', unsafe_allow_html=True)
 
