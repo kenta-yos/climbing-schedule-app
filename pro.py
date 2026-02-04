@@ -176,27 +176,26 @@ query_tab = st.query_params.get("tab", "🏠 Top")
 active_tab_idx = tab_titles.index(query_tab) if query_tab in tab_titles else 0
 tabs = st.tabs(tab_titles)
 
-# --- Tab 1: クイック登録 (開閉式・リセット機能付き) ---
+# --- Tab 1: クイック登録 (パネル強制リセット版) ---
 with tabs[0]: 
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
     
-    # 1. 日付選択
+    # 日付選択
     q_date = st.date_input("📅 日程", value=date.today())
     
-    # 2. ジム選択 (開閉パネル)
-    # 登録後に st.rerun() が走ることで、expanded=False (閉じた状態) に戻ります
-    with st.expander("🏢 ジムを選択してください", expanded=False):
+    expander_key = f"gym_exp_{st.session_state.ticks['climbing_logs']}"
+
+    with st.expander("🏢 ジムを選択してください", expanded=False, key=expander_key):
         q_gym = st.radio(
             "ジム一覧",
             options=sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else [],
-            index=None, # これにより初期状態は未選択（クリア）になります
+            index=None,
             label_visibility="collapsed"
         )
     
-    st.write("") # 少し余白
+    st.write("") 
 
-    # 3. 登録ボタン
     c1, c2 = st.columns(2)
     
     if c1.button("✋ 登ります", use_container_width=True):
@@ -204,8 +203,8 @@ with tabs[0]:
             new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, '予定']], 
                                  columns=['date','gym_name','user','type'])
             combined_df = pd.concat([log_df, new_row], ignore_index=True)
-            # safe_save内の st.rerun() でパネルが閉じ、選択もリセットされます
             safe_save("climbing_logs", combined_df, target_tab="🏠 Top")
+            # safe_saveの中で ticks が更新されるので、リロード後は新しいkeyになりパネルが閉じます
         else:
             st.warning("ジムを選択してください")
 
