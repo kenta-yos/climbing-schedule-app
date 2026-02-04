@@ -40,11 +40,10 @@ def load_data():
         for df in [gyms, sched, logs, users]:
             df.columns = [str(c).strip().lower() for c in df.columns]
         
-        # 徹底したクリーニング
         if not logs.empty:
             logs['date'] = pd.to_datetime(logs['date'], errors='coerce')
             logs = logs.dropna(subset=['date'])
-            logs['date'] = logs['date'].dt.tz_localize(None) # タイムゾーン除去
+            logs['date'] = logs['date'].dt.tz_localize(None)
 
         if not sched.empty:
             sched['start_date'] = pd.to_datetime(sched['start_date'], errors='coerce')
@@ -61,7 +60,6 @@ gym_df, sched_df, log_df, user_df = load_data()
 def safe_save(worksheet, df):
     for col in ['date', 'start_date', 'end_date']:
         if col in df.columns:
-            # 日付型を文字列 'YYYY-MM-DD' に変換して保存
             df[col] = pd.to_datetime(df[col]).dt.strftime('%Y-%m-%d')
     conn.update(worksheet=worksheet, data=df)
     st.cache_data.clear(); st.rerun()
@@ -88,7 +86,6 @@ if not st.session_state.USER:
                     st.query_params["user"] = row['user']; st.rerun()
     st.stop()
 
-# 比較用の基準日付 (tz-naive)
 today_ts = pd.Timestamp(date.today()).replace(hour=0, minute=0, second=0, microsecond=0)
 
 # --- 5. タブ ---
@@ -143,15 +140,25 @@ with tabs[1]:
 with tabs[2]:
     st.subheader("🗓️ 登る予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date')
-    for _, row in my_plans.iterrows():
-        st.markdown(f'<div class="item-box"><div class="item-accent" style="background:#FFD700"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">✋</div><div class="item-text">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
+    
+    if my_plans.empty:
+        st.info("今後の予定はありません")
+    else:
+        for i, row in my_plans.iterrows():
+            cc1, cc2 = st.columns([5, 1])
+            cc1.markdown(f'<div class="item-box"><div class="item-accent" style="background:#FFD700"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">✋</div><div class="item-text">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
+            if cc2.button("🗑️", key=f"del_plan_{i}"): safe_save("climbing_logs", log_df.drop(i))
     
     st.markdown("---")
     st.subheader("📊 統計")
     c1, c2 = st.columns(2)
     ms = c1.date_input("開始", value=date.today().replace(day=1), key="ms")
     me = c2.date_input("終了", value=date.today(), key="me")
+    
+    # 統計・履歴用のデータ抽出（期間内）
     my_period_logs = log_df[(log_df['user'] == st.session_state.USER) & (log_df['date'] >= pd.Timestamp(ms)) & (log_df['date'] <= pd.Timestamp(me))].sort_values('date', ascending=False)
+    
+    # 実績のみを抽出
     my_period_res = my_period_logs[my_period_logs['type'] == '実績']
     
     if not my_period_res.empty:
@@ -160,11 +167,14 @@ with tabs[2]:
         fig.update_layout(height=200, margin=dict(t=0,b=0,l=100,r=40), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("📝 履歴")
-    for i, row in my_period_logs.iterrows():
-        cc1, cc2 = st.columns([5, 1])
-        cc1.markdown(f'<div class="item-box"><div class="item-accent" style="background:{"#B22222" if row["type"]=="実績" else "#FFD700"}"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">{"✅" if row["type"]=="実績" else "✋"}</div><div class="item-text">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
-        if cc2.button("🗑️", key=f"del_{i}"): safe_save("climbing_logs", log_df.drop(i))
+    st.subheader("📝 履歴 (実績のみ)")
+    if my_period_res.empty:
+        st.write("この期間の実績はありません")
+    else:
+        for i, row in my_period_res.iterrows():
+            cc1, cc2 = st.columns([5, 1])
+            cc1.markdown(f'<div class="item-box"><div class="item-accent" style="background:#B22222"></div><div class="item-date">{row["date"].strftime("%m/%d")}</div><div class="item-icon">✅</div><div class="item-text">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
+            if cc2.button("🗑️", key=f"del_hist_{i}"): safe_save("climbing_logs", log_df.drop(i))
 
 # Tab 4: 仲間
 with tabs[3]:
