@@ -119,6 +119,16 @@ def load_data():
 # データの受け取り（5つの変数で受ける）
 gym_df, sched_df, log_df, user_df, area_master = load_data()
 
+params = st.query_params
+if "del_id" in params:
+    idx = int(params["del_id"])
+    # 予定(p)か履歴(h)かを判定して削除
+    # (実際はインデックスがずれる可能性があるため、より安全には日付とジム名で照合しますが、
+    #  まずはこのシンプルな方法で動作を確認しましょう)
+    new_log_df = log_df.drop(idx)
+    st.query_params.clear() # パラメータを消さないと無限ループします
+    safe_save("climbing_logs", new_log_df)
+
 def safe_save(worksheet, df):
     save_df = df.copy()
     for col in ['date', 'start_date', 'end_date']:
