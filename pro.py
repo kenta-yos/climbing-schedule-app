@@ -191,11 +191,11 @@ with tabs[1]:
                     latest_end = past_sets['end_date'].max()
                     diff = (t_dt - latest_end).days
                     if 0 <= diff <= 7: 
-                        score += 50
+                        score += 80
                         reasons.append(f"🔥 新セット({diff}日前完了)")
                     elif 8 <= diff <= 14: 
-                        score += 30
-                        reasons.append(f"✨ 準新セット")
+                        score += 40
+                        reasons.append(f"✨ 準新セット({diff}日前完了)")
 
             # --- 2. 仲間スコア ---
             others = log_df[(log_df['gym_name'] == name) & (log_df['user'] != st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] == t_dt)] if not log_df.empty else pd.DataFrame()
