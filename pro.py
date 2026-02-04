@@ -22,14 +22,14 @@ st.markdown("""
     .insta-label { font-size: 0.8rem; opacity: 0.9; }
 
     .item-box {
-            display: grid !important;
-            grid-template-columns: 4px 60px 1fr 40px !important; 
-            align-items: center !important;
-            gap: 8px !important;
-            padding: 14px 0 !important;
-            border-bottom: 1px solid #F0F0F0 !important;
-            text-decoration: none !important;
-        }
+        display: grid !important;
+        grid-template-columns: 4px 60px 1fr 40px !important;
+        align-items: center !important;
+        gap: 8px !important;
+        padding: 14px 0 !important;
+        border-bottom: 1px solid #F0F0F0 !important;
+        text-decoration: none !important;
+    }
 
     .set-box {
         display: grid !important;
@@ -247,20 +247,22 @@ with tabs[1]:
 with tabs[2]:
     st.subheader("🗓️ 今後の予定")
     my_plans = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '予定') & (log_df['date'] >= today_ts)].sort_values('date') if not log_df.empty else pd.DataFrame()
-
     for i, row in my_plans.iterrows():
-        container = st.container()
-        with container:
+        # 1. 比率を少し調整（0.85:0.15）
+        c1, c2 = st.columns([0.85, 0.15])
+        with c1:
+            # 2. ジム名を <div> で囲い、CSSの .item-gym クラスを適用（これで改行が効く）
             st.markdown(f'''
                 <div class="item-box">
                     <div class="item-accent" style="background:#4CAF50 !important"></div>
                     <span class="item-date">{row["date"].strftime("%m/%d")}</span>
                     <div class="item-gym">{row["gym_name"]}</div>
-                    <div style="text-align:center; opacity:0.3;">🗑️</div>
                 </div>
             ''', unsafe_allow_html=True)
-            st.markdown('<style>div[data-testid="stVerticalBlock"] > div:has(button[key^="del_"]) { margin-top: -50px; margin-left: auto; width: 40px; }</style>', unsafe_allow_html=True)
-            if st.button(" ", key=f"del_p_{i}", help="削除"):
+        with c2:
+            # 3. ボタンの上の余白を調整（改行時でも位置がズレにくい）
+            st.write("") 
+            if st.button("🗑️", key=f"del_p_{i}"):
                 safe_save("climbing_logs", log_df.drop(i))
     
     st.divider()
