@@ -3,6 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, date, timedelta
 import plotly.express as px
+import pytz
 
 # --- 1. ページ設定 & CSS ---
 st.set_page_config(page_title="Go Bouldering Pro", layout="centered")
@@ -158,7 +159,12 @@ if not st.session_state.get('USER'):
     st.stop()
 
 # ログイン後の時間を固定
-today_ts = pd.Timestamp(date.today()).replace(hour=0, minute=0, second=0, microsecond=0)
+today_ts = pd.Timestamp(today_jp).replace(hour=0, minute=0, second=0, microsecond=0)
+
+# --- 日本時間の定義 ---
+jp_timezone = pytz.timezone('Asia/Tokyo')
+now_jp = datetime.now(jp_timezone)
+today_jp = now_jp.date()  # 日本時間の「今日」の日付
 
 # --- 5. タブ表示 ---
 
@@ -184,7 +190,7 @@ with tabs[0]:
     # フォーム全体を包むことで、送信後の自動リセットを狙います
     with st.form("quick_log_form", clear_on_submit=True):
         # 1. 日付選択
-        q_date = st.date_input("📅 日程", value=date.today())
+        q_date = st.date_input("📅 日程", value=today_jp)
         
         # 2. ジム選択（開閉式に戻します。keyは固定の文字列にします）
         with st.expander("🏢 ジムを選択してください", expanded=False):
@@ -227,7 +233,7 @@ with tabs[1]:
     st.query_params["tab"] = "✨ ジム"
     st.subheader("✨ おすすめ")
     
-    target_date = st.date_input("ターゲット日", value=date.today(), key="tg_date")
+    target_date = st.date_input("ターゲット日", value=today_jp, key="tg_date")
     t_dt = pd.to_datetime(target_date).replace(tzinfo=None)
 
     # エリア選択のラジオボタン
@@ -362,7 +368,7 @@ with tabs[2]:
     st.subheader("📊 登った実績")
     st.divider()
     sc1, sc2 = st.columns(2)
-    ms, me = sc1.date_input("開始", value=date.today().replace(day=1)), sc2.date_input("終了", value=date.today())
+    ms, me = sc1.date_input("開始", value=today_jp.replace(day=1)), sc2.date_input("終了", value=today_jp)
     my_p_res = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '実績') & (log_df['date'].dt.date >= ms) & (log_df['date'].dt.date <= me)] if not log_df.empty else pd.DataFrame()
     
     if not my_p_res.empty:
@@ -416,7 +422,7 @@ with tabs[4]:
         sel_m = st.selectbox("表示月", options=months, index=months.index(cur_m) if cur_m in months else 0)
         
         for _, row in s_df[s_df['month_year'] == sel_m].sort_values('start_date').iterrows():
-            is_past = row['end_date'].date() < date.today()
+            is_past = row['end_date'].date() < today_jp
             d_s = row['start_date'].strftime('%m/%d')
             d_e = row['end_date'].strftime('%m/%d')
             d_disp = d_s if d_s == d_e else f"{d_s}-{d_e}"
