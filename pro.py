@@ -258,10 +258,21 @@ with tabs[4]:
         months = sorted(s_df['month_year'].unique().tolist(), reverse=True)
         cur_m = datetime.now().strftime('%Y年%m月')
         sel_m = st.selectbox("表示月", options=months, index=months.index(cur_m) if cur_m in months else 0)
+        
         for _, row in s_df[s_df['month_year'] == sel_m].sort_values('start_date').iterrows():
             is_past = row['end_date'].date() < date.today()
-            d_disp = row['start_date'].strftime('%m/%d') if row['start_date'] == row['end_date'] else f"{row['start_date'].strftime('%m/%d')}-{row['end_date'].strftime('%m/%d')}"
-            st.markdown(f'<a href="{row["post_url"]}" target="_blank" class="set-box {"past-opacity" if is_past else ""}"><div class="item-accent" style="background:#B22222 !important"></div><span class="item-date">{d_disp}</span><span class="item-gym">{row["gym_name"]}</span></a>', unsafe_allow_html=True)
+            d_s = row['start_date'].strftime('%m/%d')
+            d_e = row['end_date'].strftime('%m/%d')
+            d_disp = d_s if d_s == d_e else f"{d_s}-{d_e}"
+            
+            # <a>タグの中に直接 <div> と <span> を配置（余計な改行が入らないように一行で記述）
+            st.markdown(f'''
+                <a href="{row["post_url"]}" target="_blank" class="set-box {"past-opacity" if is_past else ""}">
+                    <div class="item-accent" style="background:#B22222 !important"></div>
+                    <span class="item-date">{d_disp}</span>
+                    <span class="item-gym">{row["gym_name"]}</span>
+                </a>
+            ''', unsafe_allow_html=True)
 
 # Tab 6: ⚙️ 管理
 with tabs[5]:
