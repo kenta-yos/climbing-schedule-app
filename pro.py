@@ -142,12 +142,11 @@ def safe_save(
         if df_input.empty:
             return
 
-        # --- 1. add モード（読み取りをせず、差分だけを追記） ---
+        # --- 1. add モード（エラーの出ない公式の追記メソッド） ---
         if mode == "add":
             new_rows = []
             for _, row in df_input.iterrows():
                 row = row.copy()
-                # IDと作成日時をここで付与
                 if 'id' not in row or pd.isna(row.get('id')):
                     row['id'] = str(uuid.uuid4())
                 if 'created_at' not in row or pd.isna(row.get('created_at')):
@@ -158,9 +157,10 @@ def safe_save(
             add_df = pd.DataFrame(new_rows)
             add_df = normalize_dates(add_df)
 
-            # 【重要】既存データを読み込まず、新データだけを conn.create で送る
-            # st.connection("gsheets").create は既存シートに対しては「追記」として動きます
-            conn.create(worksheet=worksheet, data=add_df)
+            # 【ここが修正ポイント】
+            # create ではなく append を使うことで「シートがある」エラーを回避
+            # APIリクエストは「書き込み」の1回だけになり、他人のデータも消しません
+            conn.append(worksheet=worksheet, data=add_df)
 
         # --- 2. overwrite モード（削除などの場合） ---
         elif mode == "overwrite":
