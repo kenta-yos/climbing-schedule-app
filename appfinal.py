@@ -261,24 +261,130 @@ with tabs[2]:
     if not my_done.empty:
         st.markdown(f'<div class="insta-card"><div style="display:flex; justify-content:space-around;"><div><div class="insta-val">{len(my_done)}</div><div class="insta-label">Sessions</div></div></div></div>', unsafe_allow_html=True)
 
-# --- Tab 5: 📅 セット ---
+# Tab 5: 📅 セット (Supabase版・レイアウト修正)
 with tabs[4]:
     st.query_params["tab"] = "📅 セット"
+    st.subheader("📅 セットスケジュール")
+    
     if not sched_df.empty:
-        sched_df['m'] = sched_df['start_date'].dt.strftime('%Y年%m月')
-        sel_m = st.selectbox("表示月", options=sorted(sched_df['m'].unique(), reverse=True))
-        for _, row in sched_df[sched_df['m'] == sel_m].sort_values('start_date').iterrows():
-            st.markdown(f'<a href="{row["post_url"]}" target="_blank" class="set-box"><div class="item-accent" style="background:#B22222"></div><span class="item-date">{row["start_date"].strftime("%m/%d")}</span><span class="item-gym">{row["gym_name"]}</span></a>', unsafe_allow_html=True)
+        s_df = sched_df.copy()
+        
+        # 表示用の月リストを作成 (Timestamp型を考慮)
+        s_df['month_year'] = s_df['start_date'].dt.strftime('%Y年%m月')
+        months = sorted(s_df['month_year'].unique().tolist(), reverse=True)
+        
+        # 現在の月をデフォルト選択
+        cur_m = datetime.now().strftime('%Y年%m月')
+        sel_m = st.selectbox("表示月", options=months, index=months.index(cur_m) if cur_m in months else 0)
+        
+        # 選択された月のデータを表示
+        target_month_df = s_df[s_df['month_year'] == sel_m].sort_values('start_date')
+        
+        for _, row in target_month_df.iterrows():
+            # 日付の比較用に date 型に変換
+            is_past = row['end_date'].date() < today_jp
+            
+            # 表示用の日付文字列を作成
+            d_s = row['start_date'].strftime('%m/%d')
+            d_e = row['end_date'].strftime('%m/%d')
+            d_disp = d_s if d_s == d_e else f"{d_s}-{d_e}"
+            
+            # レイアウト崩れ防止：HTML構造を整理
+            st.markdown(f'''
+                <a href="{row["post_url"]}" target="_blank" style="text-decoration: none;">
+                    <div class="set-box {"past-opacity" if is_past else ""}" style="
+                        display: grid;
+                        grid-template-columns: 4px 105px 1fr;
+                        align-items: center;
+                        gap: 12px;
+                        padding: 15px 5px;
+                        border-bottom: 1px solid #F0F0F0;
+                        width: 100%;
+                    ">
+                        <div class="item-accent" style="background:#B22222 !important; width: 4px; height: 1.4rem; border-radius: 2px;"></div>
+                        <span class="item-date" style="color: #B22222; font-weight: 700; font-size: 0.85rem; white-space: nowrap;">{d_disp}</span>
+                        <span class="item-gym" style="color: #1A1A1A; font-weight: 700; font-size: 0.95rem;">{row["gym_name"]}</span>
+                    </div>
+                </a>
+            ''', unsafe_allow_html=True)
+    else:
+        st.info("セットスケジュールが登録されていません。")
 
-# --- Tab 6: ⚙️ 管理 ---
+# Tab 6: ⚙️ 管理 (セット一括登録・完全復活版)
 with tabs[5]:
-    with st.expander("🆕 ジム登録"):
-        with st.form("adm_gym"):
-            n = st.text_input("ジム名"); u = st.text_input("Insta URL"); a = st.text_input("エリアタグ")
-            if st.form_submit_button("登録") and n and a:
-                safe_save("gym_master", pd.DataFrame([{'gym_name':n, 'profile_url':u, 'area_tag':a}]))
+    st.query_params["tab"] = "⚙️ 管理"    
+    st.subheader("⚙️ 管理メニュー")
 
-    if st.button("🚪 ログアウト", use_container_width=True):
+    # --- 🆕 ジム登録 ---
+    with st.expander("🆕 ジムの新規登録"):
+        with st.form("adm_gym", clear_on_submit=True):
+            n = st.text_input("ジム名（例: B-PUMP Ogikubo）")
+            u = st.text_input("Instagram等のURL")
+            a = st.text_input("エリアタグ（例: tokyo）")
+            if st.form_submit_button("登録"):
+                if n and a:
+                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': a}])
+                    safe_save("gym_master", new_gym, mode="add", target_tab="⚙️ 管理")
+                else:
+                    st.warning("ジム名とエリアは必須です")
+
+    # --- 📅 セット一括登録 (復活) ---
+    with st.expander("📅 セット情報の一括登録", expanded=True):
+        st.write("同じURL（インスタの告知など）で複数の日程を登録できます。")
+        
+        # セレクトボックスの選択肢
+        gym_options = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
+        sel_g = st.selectbox(
+            "対象ジム", 
+            options=gym_options, 
+            index=None, 
+            placeholder="ジムを選択...",
+            key="admin_sel_gym"
+        )
+            
+        p_url = st.text_input("告知URL (Instagramなど)", key="admin_post_url")
+        
+        # 追加ボタンなどの状態管理
+        if "rows" not in st.session_state: 
+            st.session_state.rows = 1
+            
+        d_list = []
+        for i in range(st.session_state.rows):
+            c1, c2 = st.columns(2)
+            # st.date_input の返り値は自動的に datetime.date 型になる
+            sd = c1.date_input(f"開始 {i+1}", value=today_jp, key=f"sd_{i}")
+            ed = c2.date_input(f"終了 {i+1}", value=today_jp, key=f"ed_{i}")
+            d_list.append((sd, ed))
+            
+        col_btn1, col_btn2 = st.columns(2)
+        if col_btn1.button("➕ 日程入力欄を増やす"): 
+            st.session_state.rows += 1
+            st.rerun()
+            
+        if col_btn2.button("🚀 Supabaseへ一括登録", use_container_width=True):
+            if sel_g and p_url:
+                # Supabaseに送るためのデータ作成
+                new_s_list = []
+                for d in d_list:
+                    new_s_list.append({
+                        'gym_name': sel_g,
+                        'start_date': d[0].isoformat(), # date型を文字列へ
+                        'end_date': d[1].isoformat(),
+                        'post_url': p_url
+                    })
+                
+                new_s_df = pd.DataFrame(new_s_list)
+                
+                # 入力欄をリセットするための処理
+                st.session_state.rows = 1
+                # safe_save を実行 (table名を set_schedules に合わせています)
+                safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
+            else:
+                st.error("ジムの選択と告知URLの入力は必須です。")
+
+    # --- 🚪 ログアウト ---
+    st.write("")
+    if st.button("🚪 ログアウト", use_container_width=True): 
         st.session_state.USER = None
         st.query_params.clear()
         st.rerun()
