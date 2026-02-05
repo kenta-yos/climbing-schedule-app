@@ -86,6 +86,15 @@ log_df = get_supabase_data("climbing_logs")
 user_df = get_supabase_data("users")
 area_master = get_supabase_data("area_master")
 
+# --- デバッグ用 (後で消してOK) ---
+st.write("デバッグ中...")
+if user_df.empty:
+    st.warning("usersテーブルが空、または読み込めていません")
+else:
+    st.write("取得できた列:", user_df.columns.tolist())
+    st.write("データ件数:", len(user_df))
+# ------------------------------
+
 # --- 3. 保存・削除処理 (Supabase版) ---
 def safe_save(table: str, df_input: pd.DataFrame, mode: str = "add", target_tab: str = None):
     try:
