@@ -122,14 +122,6 @@ def normalize_dates(df):
                         .dt.strftime('%Y-%m-%d 00:00:00')
     return df
 
-
-def has_duplicate(base_df, new_row, unique_cols):
-    """論理キーで重複チェック"""
-    cond = True
-    for c in unique_cols:
-        cond = cond & (base_df[c] == new_row[c])
-    return cond.any()
-
 def safe_save(
     worksheet: str,
     df_input: pd.DataFrame,
