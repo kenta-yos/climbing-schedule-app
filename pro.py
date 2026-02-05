@@ -122,68 +122,85 @@ def normalize_dates(df):
                         .dt.strftime('%Y-%m-%d 00:00:00')
     return df
 
+
+def has_duplicate(base_df, new_row, unique_cols):
+    """論理キーで重複チェック"""
+    cond = True
+    for c in unique_cols:
+        cond = cond & (base_df[c] == new_row[c])
+    return cond.any()
+
 def safe_save(
     worksheet: str,
     df_input: pd.DataFrame,
     *,
-    mode: str = "add",
-    unique_cols: list = None,
+    mode: str = "add",                # "add" | "overwrite"
+    unique_cols: list = None,         # ["date","gym_name","user","type"]
     target_tab: str = None,
     clear_keys: list = None
 ):
+    """
+    GSheets を DB 代わりに使うための安全な保存関数
+    """
+
     try:
         if df_input.empty:
             return
 
-        save_df = df_input.copy()
+        # --- 0. 最新版を取得（競合対策） ---
+        current_df = get_single_sheet(worksheet)
 
-        # --- 共通前処理（今まで通り） ---
-        for idx, row in save_df.iterrows():
-            if 'id' not in row or pd.isna(row.get('id')):
-                save_df.at[idx, 'id'] = str(uuid.uuid4())
-            if 'created_at' not in row or pd.isna(row.get('created_at')):
-                save_df.at[idx, 'created_at'] = datetime.now()
-
-        save_df = normalize_dates(save_df)
-
-        # =========================
-        # add：追記専用（安全）
-        # =========================
+        # --- 1. add モード ---
         if mode == "add":
-            if unique_cols:
-                current_df = get_single_sheet(worksheet)
-                # 日付列の型を揃える
-                for col in unique_cols:
-                    if col in save_df.columns and col in current_df.columns:
-                        save_df[col] = pd.to_datetime(save_df[col], errors='coerce')
-                        current_df[col] = pd.to_datetime(current_df[col], errors='coerce')
-                
-                # 行ごとに重複を判定
-                merged = save_df.merge(current_df[unique_cols], on=unique_cols, how='inner', indicator=True)
-                if not merged.empty:
-                    st.warning("すでに登録済みです")
-                    return
 
-            # ★ ここが核心：append-only
-            conn.append(worksheet=worksheet, data=save_df)
+            rows_to_add = []
 
-        # =========================
-        # overwrite：従来通り
-        # =========================
+            for _, row in df_input.iterrows():
+
+                # id がなければ付与
+                if 'id' not in row or pd.isna(row.get('id')):
+                    row = row.copy()
+                    row['id'] = str(uuid.uuid4())
+
+                # created_at がなければ付与
+                if 'created_at' not in row or pd.isna(row.get('created_at')):
+                    row['created_at'] = datetime.now()
+
+                # 重複チェック
+                if unique_cols and not current_df.empty:
+                    if has_duplicate(current_df, row, unique_cols):
+                        continue
+
+                rows_to_add.append(row)
+
+            if not rows_to_add:
+                st.warning("すでに登録済みです")
+                return
+
+            add_df = pd.DataFrame(rows_to_add)
+            final_df = pd.concat([current_df, add_df], ignore_index=True)
+
+        # --- 2. overwrite モード ---
         elif mode == "overwrite":
-            conn.update(worksheet=worksheet, data=save_df)
+            final_df = df_input.copy()
 
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-        # --- UI 周り（今まで通り） ---
+        # --- 3. 正規化して保存 ---
+        final_df = normalize_dates(final_df)
+        conn.update(worksheet=worksheet, data=final_df)
+
+        # --- 4. 入力フォームのクリア ---
         if clear_keys:
             for k in clear_keys:
                 st.session_state.pop(k, None)
             st.session_state.pop("rows", None)
 
+        # --- 5. キャッシュ更新 ---
         st.session_state.ticks[worksheet] = time.time()
 
+        # --- 6. 画面遷移 ---
         params = {"user": st.session_state.USER}
         if target_tab:
             params["tab"] = target_tab
