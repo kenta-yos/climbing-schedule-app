@@ -293,23 +293,6 @@ with tabs[0]:
             else:
                 st.warning("ジムを選択してください")
 
-# --- 今日・明日の抽出ロジック ---
-today = today_ts
-tomorrow = today_ts + timedelta(days=1)
-
-plans_2days = log_df[
-    (log_df['type'] == '予定') &
-    (log_df['date'].isin([today, tomorrow]))
-]
-
-grouped = (
-    plans_2days
-    .groupby(['date', 'gym_name'])['user']
-    .apply(list)
-    .reset_index()
-    .sort_values(['date', 'gym_name'])
-)
-
     # --- 👥 今日・明日 登るひと ---
     today = today_ts
     tomorrow = today_ts + timedelta(days=1)
