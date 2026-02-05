@@ -129,38 +129,47 @@ def has_duplicate(base_df, new_row, unique_cols):
     return cond.any()
 
 # -- 保存 --
-
 def safe_save(
     worksheet: str,
     df_input: pd.DataFrame,
     *,
-    mode: str = "add",
-    unique_cols: list = None,
+    mode: str = "add",                # "add" | "overwrite"
+    unique_cols: list = None,         # ["date","gym_name","user","type"]
     target_tab: str = None,
     clear_keys: list = None
 ):
+    """
+    GSheets を DB 代わりに使うための安全な保存関数
+    """
+
     try:
         if df_input.empty:
             return
 
-        # --- 1. add モード（API負荷を最小限にする） ---
+        # --- 0. 最新版を取得（競合対策） ---
+        current_df = get_single_sheet(worksheet)
+
+        # --- 1. add モード ---
         if mode == "add":
-            # 【変更】ttl=0 での読み直しをやめ、キャッシュ(ticks管理)に任せる
-            # これでぐるぐる（API制限）が劇的に減ります
-            current_df = get_single_sheet(worksheet)
 
             rows_to_add = []
+
             for _, row in df_input.iterrows():
-                row = row.copy()
+
+                # id がなければ付与
                 if 'id' not in row or pd.isna(row.get('id')):
+                    row = row.copy()
                     row['id'] = str(uuid.uuid4())
+
+                # created_at がなければ付与
                 if 'created_at' not in row or pd.isna(row.get('created_at')):
                     row['created_at'] = datetime.now()
-                
-                # 重複チェックは今のキャッシュに対して行う
+
+                # 重複チェック
                 if unique_cols and not current_df.empty:
                     if has_duplicate(current_df, row, unique_cols):
                         continue
+
                 rows_to_add.append(row)
 
             if not rows_to_add:
@@ -170,39 +179,36 @@ def safe_save(
             add_df = pd.DataFrame(rows_to_add)
             final_df = pd.concat([current_df, add_df], ignore_index=True)
 
-        # --- 2. overwrite モード（削除などはこちら） ---
+        # --- 2. overwrite モード ---
         elif mode == "overwrite":
-            final_df = normalize_dates(df_input.copy())
-            conn.update(worksheet=worksheet, data=final_df)
+            final_df = df_input.copy()
 
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-        # --- 3. 入力フォームのクリア ---
+        # --- 3. 正規化して保存 ---
+        final_df = normalize_dates(final_df)
+        conn.update(worksheet=worksheet, data=final_df)
+
+        # --- 4. 入力フォームのクリア ---
         if clear_keys:
             for k in clear_keys:
                 st.session_state.pop(k, None)
             st.session_state.pop("rows", None)
 
-        # --- 4. キャッシュ更新 ---
-        # 自分の画面を最新にするために ticks を更新
+        # --- 5. キャッシュ更新 ---
         st.session_state.ticks[worksheet] = time.time()
-        
-        # 成功メッセージ（rerun前に出す）
-        st.toast("✅ 成功✌️", icon="🚀")
 
-        # --- 5. 画面遷移 ---
+        # --- 6. 画面遷移 ---
         params = {"user": st.session_state.USER}
         if target_tab:
             params["tab"] = target_tab
         st.query_params.from_dict(params)
-        
-        # 自分の画面をリロード。ここで ticks のお陰で「kenta+maeda」が読み込まれる。
         st.rerun()
 
     except Exception as e:
-        st.error(f"⚠️ 保存に失敗しました。少し時間を置いてお試しください🙇‍♂️\n{e}")
-        
+        st.error(f"⚠️ 保存に失敗しました。少し待って再試行してください。\n{e}")
+
 # --- TOPみんなの予定用１ ---
 def format_users_inline(users, me):
     names = []
