@@ -208,52 +208,8 @@ def safe_save(
         st.rerun()
 
     except Exception as e:
-        st.error(f"⚠️ 保存に失敗しました。少し待って再試行してください。\n{e}")
+        st.error(f"⚠️ 保存に失敗しました。少し待って再試行してください。\n{e}") 
 
-# --- 【旧】3. 保存・削除用関数（超軽量版） ---
-def safe_save_old(worksheet, df_input, mode="add", target_tab=None, clear_keys=None):
-    try:
-        if df_input.empty:
-            return
-
-        # 1. 保存用データの準備（この時点ではリクエスト0）
-        save_df = df_input.copy()
-        for col in ['date', 'start_date', 'end_date']:
-            if col in save_df.columns:
-                save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d 00:00:00')
-
-        # 2. 保存処理
-        if mode == "add":
-            # 【API節約】読み直さず、メモリ上の最新データ(キャッシュ)と合体
-            # get_single_sheet はキャッシュが効いているのでリクエストが飛ばない
-            current_df = get_single_sheet(worksheet) 
-            final_df = pd.concat([current_df, save_df], ignore_index=True).drop_duplicates()
-            conn.update(worksheet=worksheet, data=final_df)
-        else:
-            # 上書きモード（削除など）
-            conn.update(worksheet=worksheet, data=save_df)
-
-        # 3. 成功時のみ入力フォームをクリア（安心感のための処理）
-        if clear_keys:
-            for k in clear_keys:
-                if k in st.session_state:
-                    del st.session_state[k]
-            if "rows" in st.session_state:
-                st.session_state.rows = 1
-
-        # 4. キャッシュ更新（次回読み込み時にスプシを見に行くフラグを立てる）
-        st.session_state.ticks[worksheet] = datetime.now().timestamp()
-                
-        # 5. リロード
-        params = {"user": st.session_state.USER}
-        if target_tab: params["tab"] = target_tab
-        st.query_params.from_dict(params)
-        st.rerun()
-        
-    except Exception as e:
-        # APIエラー（制限）が起きた場合はここで止まる
-        st.error(f"⚠️ API制限またはエラーが発生しました。30秒ほど待ってから再度お試しください。: {e}")
-    
 # --- TOPみんなの予定用１ ---
 def format_users_inline(users, me):
     names = []
