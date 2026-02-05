@@ -143,9 +143,8 @@ def safe_save(
         if df_input.empty:
             return
 
-        # --- 1. add モード（追記方式に完全変更） ---
+        # --- 1. add モード ---
         if mode == "add":
-            # 追記するデータを作成（自分のブラウザ内での重複チェックは諦めるか、読み直しが必要）
             rows_to_add = []
             for _, row in df_input.iterrows():
                 row = row.copy()
@@ -155,13 +154,20 @@ def safe_save(
                     row['created_at'] = datetime.now()
                 rows_to_add.append(row)
 
-            add_df = pd.DataFrame(rows_to_add)
-            add_df = normalize_dates(add_df)
-            
-            # 【重要】裏技の append_rows を使用。これで「上書き」を回避。
-            # リクエストはこれ1回だけ。
-            conn._instance.append_rows(add_df.values.tolist(), table_name=worksheet)
-
+            if rows_to_add:
+                # 正規化（日付を文字列に）
+                add_df = pd.DataFrame(rows_to_add)
+                add_df = normalize_dates(add_df)
+                
+                # --- 【ここを修正】gspread のワークシートに直接アクセス ---
+                # 1. 内部クライアントからスプレッドシートを開く
+                # ※ st.connection の secrets にある spreadsheet URL/名前を使用
+                spreadsheet = conn._instance.client.open_by_key(st.secrets["connections"]["gsheets"]["spreadsheet"])
+                worksheet_obj = spreadsheet.worksheet(worksheet)
+                
+                # 2. 追記を実行
+                worksheet_obj.append_rows(add_df.values.tolist())
+        
         # --- 2. overwrite モード（削除などはこちら） ---
         elif mode == "overwrite":
             final_df = normalize_dates(df_input.copy())
