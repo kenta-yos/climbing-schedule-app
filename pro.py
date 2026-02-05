@@ -166,7 +166,7 @@ def render_inline_list(title, target_date, grouped_df):
     rows = grouped_df[grouped_df['date'] == target_date]
 
     if rows.empty:
-        st.caption("予定はありません")
+        st.caption("誰もいないよ😢のぼろ？")
         return
 
     for _, row in rows.iterrows():
@@ -310,8 +310,8 @@ with tabs[0]:
         .sort_values(['date', 'gym_name'])
     )
 
-    render_inline_list("👥 今日登るひと", today, grouped)
-    render_inline_list("👥 明日登るひと", tomorrow, grouped)
+    render_inline_list("🔥 今日どこ登る？", today, grouped)
+    render_inline_list("👀 明日は誰かいる？", tomorrow, grouped)
 
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
