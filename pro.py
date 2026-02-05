@@ -143,11 +143,11 @@ def safe_save(
         if df_input.empty:
             return
 
-        # --- 1. add モード（標準機能で安全に合体） ---
+        # --- 1. add モード（API負荷を最小限にする） ---
         if mode == "add":
-            # 【重要】保存の瞬間だけ ttl=0 で「本当の最新」をスプシから読み直す
-            # これにより maeda さんの古いキャッシュではなく、kenta さんがいる最新データを取得できます
-            current_df = conn.read(worksheet=worksheet, ttl=0)
+            # 【変更】ttl=0 での読み直しをやめ、キャッシュ(ticks管理)に任せる
+            # これでぐるぐる（API制限）が劇的に減ります
+            current_df = get_single_sheet(worksheet)
 
             rows_to_add = []
             for _, row in df_input.iterrows():
@@ -157,7 +157,7 @@ def safe_save(
                 if 'created_at' not in row or pd.isna(row.get('created_at')):
                     row['created_at'] = datetime.now()
                 
-                # 重複チェック（最新データ current_df に対して行う）
+                # 重複チェックは今のキャッシュに対して行う
                 if unique_cols and not current_df.empty:
                     if has_duplicate(current_df, row, unique_cols):
                         continue
@@ -168,7 +168,6 @@ def safe_save(
                 return
 
             add_df = pd.DataFrame(rows_to_add)
-            # 最新のデータに、新しいデータを合体させる
             final_df = pd.concat([current_df, add_df], ignore_index=True)
 
         # --- 2. overwrite モード（削除などはこちら） ---
