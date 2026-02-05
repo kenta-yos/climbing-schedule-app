@@ -106,48 +106,50 @@ user_df = get_single_sheet("users")
 area_master = get_single_sheet("area_master")
 
 # --- 3. 保存・削除用関数（超軽量版） ---
-def safe_save(worksheet, df_input, mode="add", target_tab=None):
-    """
-    mode="add": 新規追加（スプシの最新に合流させる。増殖を防ぐ）
-    mode="overwrite": 全上書き（削除時や一括更新用）
-    """
+def safe_save(worksheet, df_input, mode="add", target_tab=None, clear_keys=None):
     try:
-        if df_input.empty and mode == "overwrite":
-            # 削除の結果、空になった場合などは許可
-            pass
-        elif df_input.empty:
-            st.error("⚠️ 保存しようとしているデータが空です。")
+        if df_input.empty:
             return
 
-        # 1. モードに応じて保存データを作成
-        if mode == "add":
-            # 追加モード：最新を読み直して合体（重複は削除）
-            latest_df = conn.read(worksheet=worksheet, ttl=0)
-            final_df = pd.concat([latest_df, df_input], ignore_index=True)
-            # 全く同じ行があれば削除（増殖防止の保険）
-            final_df = final_df.drop_duplicates()
-        else:
-            # 上書きモード：渡されたデータをそのまま使う（削除処理用）
-            final_df = df_input
-
-        # 2. 日付フォーマットの調整
+        # 1. 保存用データの準備（この時点ではリクエスト0）
+        save_df = df_input.copy()
         for col in ['date', 'start_date', 'end_date']:
-            if col in final_df.columns:
-                final_df[col] = pd.to_datetime(final_df[col]).dt.strftime('%Y-%m-%d 00:00:00')
+            if col in save_df.columns:
+                save_df[col] = pd.to_datetime(save_df[col]).dt.strftime('%Y-%m-%d 00:00:00')
 
-        # 3. 保存
-        conn.update(worksheet=worksheet, data=final_df)
-        
-        # 4. キャッシュ更新
+        # 2. 保存処理
+        if mode == "add":
+            # 【API節約】読み直さず、メモリ上の最新データ(キャッシュ)と合体
+            # get_single_sheet はキャッシュが効いているのでリクエストが飛ばない
+            current_df = get_single_sheet(worksheet) 
+            final_df = pd.concat([current_df, save_df], ignore_index=True).drop_duplicates()
+            conn.update(worksheet=worksheet, data=final_df)
+        else:
+            # 上書きモード（削除など）
+            conn.update(worksheet=worksheet, data=save_df)
+
+        # 3. 成功時のみ入力フォームをクリア（安心感のための処理）
+        if clear_keys:
+            for k in clear_keys:
+                if k in st.session_state:
+                    del st.session_state[k]
+            if "rows" in st.session_state:
+                st.session_state.rows = 1
+
+        # 4. キャッシュ更新（次回読み込み時にスプシを見に行くフラグを立てる）
         st.session_state.ticks[worksheet] = datetime.now().timestamp()
         
-        # リロード処理
+        # 5. リロード
+        # 成功メッセージを表示してリロード
+        st.success("✅ 成功！")
         params = {"user": st.session_state.USER}
         if target_tab: params["tab"] = target_tab
         st.query_params.from_dict(params)
         st.rerun()
+
     except Exception as e:
-        st.error(f"❌ 保存失敗: {e}")
+        # APIエラー（制限）が起きた場合はここで止まる
+        st.error(f"⚠️ API制限またはエラーが発生しました。30秒ほど待ってから再度お試しください。: {e}")
     
 # ユーザーログイン処理
 saved_user = st.query_params.get("user")
