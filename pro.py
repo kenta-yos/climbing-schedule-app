@@ -143,8 +143,12 @@ def safe_save(
         if df_input.empty:
             return
 
-        # --- 1. add モード ---
+        # --- 1. add モード（標準機能で安全に合体） ---
         if mode == "add":
+            # 【重要】保存の瞬間だけ ttl=0 で「本当の最新」をスプシから読み直す
+            # これにより maeda さんの古いキャッシュではなく、kenta さんがいる最新データを取得できます
+            current_df = conn.read(worksheet=worksheet, ttl=0)
+
             rows_to_add = []
             for _, row in df_input.iterrows():
                 row = row.copy()
@@ -152,22 +156,21 @@ def safe_save(
                     row['id'] = str(uuid.uuid4())
                 if 'created_at' not in row or pd.isna(row.get('created_at')):
                     row['created_at'] = datetime.now()
+                
+                # 重複チェック（最新データ current_df に対して行う）
+                if unique_cols and not current_df.empty:
+                    if has_duplicate(current_df, row, unique_cols):
+                        continue
                 rows_to_add.append(row)
 
-            if rows_to_add:
-                # 正規化（日付を文字列に）
-                add_df = pd.DataFrame(rows_to_add)
-                add_df = normalize_dates(add_df)
-                
-                # --- 【ここを修正】gspread のワークシートに直接アクセス ---
-                # 1. 内部クライアントからスプレッドシートを開く
-                # ※ st.connection の secrets にある spreadsheet URL/名前を使用
-                spreadsheet = conn._instance.client.open_by_key(st.secrets["connections"]["gsheets"]["spreadsheet"])
-                worksheet_obj = spreadsheet.worksheet(worksheet)
-                
-                # 2. 追記を実行
-                worksheet_obj.append_rows(add_df.values.tolist())
-        
+            if not rows_to_add:
+                st.warning("すでに登録済みです")
+                return
+
+            add_df = pd.DataFrame(rows_to_add)
+            # 最新のデータに、新しいデータを合体させる
+            final_df = pd.concat([current_df, add_df], ignore_index=True)
+
         # --- 2. overwrite モード（削除などはこちら） ---
         elif mode == "overwrite":
             final_df = normalize_dates(df_input.copy())
