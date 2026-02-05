@@ -226,58 +226,44 @@ tabs = st.tabs(tab_titles)
 # --- Tab 1: 🏠 Top ---
 with tabs[0]:
     st.query_params["tab"] = "🏠 Top"
-    st.subheader("🚀 クイック登録")
     
-# --- 1. データの事前抽出（NameError防止のための初期化） ---
+    # 1. データの事前抽出（NameError防止のための初期設定）
     today_logs = pd.DataFrame()
     tomorrow_logs = pd.DataFrame()
+    t_0 = pd.Timestamp(today_jp)
+    t_1 = t_0 + timedelta(days=1)
 
     if not log_df.empty:
-        # 今日の日付と明日の日付をTimestamp型で用意
-        t_0 = pd.Timestamp(today_jp)
-        t_1 = t_0 + timedelta(days=1)
-        
         # 予定（type='予定'）だけを抽出
         all_plans = log_df[log_df['type'] == '予定']
-        
         if not all_plans.empty:
-            # 今日と明日を切り出し
             today_logs = all_plans[all_plans['date'] == t_0]
             tomorrow_logs = all_plans[all_plans['date'] == t_1]
-            
-    # --- 優先順位付きジムリストの作成 (復元) ---
+
+    # 2. 優先順位付きジムリストの作成 (復元)
     sorted_gym_names = []
     if not gym_df.empty and not area_master.empty:
         priority_order = ["都内・神奈川", "関東", "全国"]
-        
-        # gym_df と area_master を area_tag で紐付け
-        merged_gyms = pd.merge(
-            gym_df, 
-            area_master[['area_tag', 'major_area']], 
-            on='area_tag', 
-            how='left'
-        )
-        
+        merged_gyms = pd.merge(gym_df, area_master[['area_tag', 'major_area']], on='area_tag', how='left')
         for area in priority_order:
-            # その地域に属するジムを抽出し、名前順に
             subset = merged_gyms[merged_gyms['major_area'] == area]
-            gyms_in_this_area = sorted(subset['gym_name'].unique().tolist()) # unique()で重複ガード
-            
+            gyms_in_this_area = sorted(subset['gym_name'].unique().tolist())
             for g_name in gyms_in_this_area:
                 if g_name not in sorted_gym_names:
                     sorted_gym_names.append(g_name)
         
-        # 最後に、エリア未設定またはその他エリアのジムを末尾に追加
         all_gyms = gym_df['gym_name'].unique().tolist()
         others = sorted([g for g in all_gyms if g not in sorted_gym_names])
         sorted_gym_names.extend(others)
     else:
         sorted_gym_names = sorted(gym_df['gym_name'].unique().tolist()) if not gym_df.empty else []
-    
+
+    # 3. 登録フォーム
+    st.subheader("🚀 クイック登録")
     with st.form("quick_log_form", clear_on_submit=True):
         q_date = st.date_input("📅 日程", value=today_jp)
-        with st.expander("🏢 ジムを選択"):
-            q_gym = st.radio("ジム一覧", options=sorted_gym_names, index=None, label_visibility="collapsed")
+        # ラジオボタンだと場所を取るので、以前のセレクトボックス形式に戻すのがおすすめです
+        q_gym = st.selectbox("🏢 ジムを選択", options=sorted_gym_names, index=None, placeholder="ジム名を選択...")
         
         c1, c2 = st.columns(2)
         if c1.form_submit_button("✋ 登ります", use_container_width=True) and q_gym:
@@ -287,11 +273,36 @@ with tabs[0]:
             new_row = pd.DataFrame([{'date': pd.to_datetime(q_date), 'gym_name': q_gym, 'user': st.session_state.USER, 'type': '実績'}])
             safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
 
+    st.divider()
+
+    # 4. バッジ付きメンバー表示
     # 今日の予定
-    plans_2days = log_df[(log_df['type'] == '予定') & (log_df['date'].dt.date.isin([today_jp, today_jp + timedelta(days=1)]))] if not log_df.empty else pd.DataFrame()
-    grouped = plans_2days.groupby(['date', 'gym_name'])['user'].apply(list).reset_index() if not plans_2days.empty else pd.DataFrame()
-    render_inline_list("🔥 今日どこ登る？", today_ts, grouped)
-    render_inline_list("👀 明日は誰かいる？", today_ts + timedelta(days=1), grouped)
+    st.markdown("🔥 今日どこ登る？")
+    if not today_logs.empty:
+        for gym, group in today_logs.groupby('gym_name'):
+            user_badges = "".join([get_user_badge(u, user_df) for u in group['user']])
+            st.markdown(f'''
+                <div style="margin-bottom:10px; padding:8px; border-left:4px solid #4CAF50; background:#f9f9f9; border-radius:4px;">
+                    <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px;">{gym}</div>
+                    <div>{user_badges}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.caption("誰もいないよ😭")
+
+    # 明日の予定
+    st.markdown("👀 明日は誰かいる？")
+    if not tomorrow_logs.empty:
+        for gym, group in tomorrow_logs.groupby('gym_name'):
+            user_badges = "".join([get_user_badge(u, user_df) for u in group['user']])
+            st.markdown(f'''
+                <div style="margin-bottom:10px; padding:8px; border-left:4px solid #FF9800; background:#f9f9f9; border-radius:4px;">
+                    <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px;">{gym}</div>
+                    <div>{user_badges}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.caption("誰もいないよ😭")
 
 # Tab 2: 🏠 ジム (マスタ連動・高機能スコアリング版)
 with tabs[1]:
