@@ -138,11 +138,8 @@ def safe_save(worksheet, df_input, mode="add", target_tab=None, clear_keys=None)
 
         # 4. キャッシュ更新（次回読み込み時にスプシを見に行くフラグを立てる）
         st.session_state.ticks[worksheet] = datetime.now().timestamp()
-        
-        # 5. 成功フラグを立てる
-        st.toast("成功✌️")
-        
-        # 6. リロード
+                
+        # 5. リロード
         params = {"user": st.session_state.USER}
         if target_tab: params["tab"] = target_tab
         st.query_params.from_dict(params)
