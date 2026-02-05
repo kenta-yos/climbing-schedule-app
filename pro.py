@@ -200,7 +200,10 @@ if not st.session_state.get('USER'):
     st.title("🧗 Go Bouldering")
     if not user_df.empty:
         cols = st.columns(2)
-        sorted_user_df = user_df.sort_values("user")
+        sorted_user_df = user_df.sort_values(
+            "user",
+            key=lambda s: s.str.replace(r'[^\w\s]', '', regex=True).str.lower()
+        )
         for i, (_, row) in enumerate(sorted_user_df.iterrows()):
             with cols[i % 2]:
                 btn_key = f"l_{row['user']}"
