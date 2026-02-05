@@ -500,7 +500,7 @@ with tabs[5]:
 
     # --- 🆕 ジム登録 ---
     with st.expander("🆕 ジム登録"):
-        with st.form("adm_gym"):
+        with st.form("adm_gym", clear_on_submit=True):
             n = st.text_input("ジム名")
             u = st.text_input("Instagram URL")
             a = st.text_input("エリア")
@@ -551,6 +551,10 @@ with tabs[5]:
                     columns=['gym_name', 'start_date', 'end_date', 'post_url']
                 )
                 st.session_state.rows = 1
+                keys_to_clear = ["admin_sel_gym", "admin_post_url"] + [f"sd_{i}" for i in range(20)] + [f"ed_{i}" for i in range(20)]
+                for k in keys_to_clear:
+                    if k in st.session_state:
+                        del st.session_state[k]
                 safe_save("schedules", new_s, mode="add")
             else:
                 st.error("ジムを選択してください")
