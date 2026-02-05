@@ -244,36 +244,50 @@ with tabs[0]:
             safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
 
     st.divider()
+    
+    # 表示用ヘルパー関数：名前を色付き文字にする
+    def get_colored_user_text(user_name, user_df):
+        u_info = user_df[user_df['user_name'] == user_name] if not user_df.empty else pd.DataFrame()
+        if not u_info.empty:
+            color = u_info.iloc[0]['color']
+            icon = u_info.iloc[0]['icon']
+        else:
+            color = "#666"
+            icon = "👤"
+        return f'<span style="color:{color}; font-weight:bold;">{icon}{user_name}</span>'
 
-    # 4. バッジ付きメンバー表示
-    # 今日の予定
-    st.markdown("🔥 今日どこ登る？")
+    st.markdown("### 🔥 今日どこ登る？")
     if not today_logs.empty:
         for gym, group in today_logs.groupby('gym_name'):
-            user_badges = "".join([get_user_badge(u, user_df) for u in group['user']])
+            # ユーザー名を色付きテキストに変換し、「 & 」で結合
+            user_texts = [get_colored_user_text(u, user_df) for u in group['user']]
+            members_html = " & ".join(user_texts)
+            
+            # 1行でシンプルに表示
             st.markdown(f'''
-                <div style="margin-bottom:10px; padding:8px; border-left:4px solid #4CAF50; background:#f9f9f9; border-radius:4px;">
-                    <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px;">{gym}</div>
-                    <div>{user_badges}</div>
+                <div style="font-size:0.95rem; margin-bottom:5px; padding-left:8px; border-left:3px solid #4CAF50;">
+                    <b>{gym}</b>：{members_html}
                 </div>
             ''', unsafe_allow_html=True)
     else:
         st.caption("誰もいないよ😭")
 
-    # 明日の予定
-    st.markdown("👀 明日は誰かいる？")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    st.markdown("### 👀 明日は誰かいる？")
     if not tomorrow_logs.empty:
         for gym, group in tomorrow_logs.groupby('gym_name'):
-            user_badges = "".join([get_user_badge(u, user_df) for u in group['user']])
+            user_texts = [get_colored_user_text(u, user_df) for u in group['user']]
+            members_html = " & ".join(user_texts)
+            
             st.markdown(f'''
-                <div style="margin-bottom:10px; padding:8px; border-left:4px solid #FF9800; background:#f9f9f9; border-radius:4px;">
-                    <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px;">{gym}</div>
-                    <div>{user_badges}</div>
+                <div style="font-size:0.95rem; margin-bottom:5px; padding-left:8px; border-left:3px solid #FF9800;">
+                    <b>{gym}</b>：{members_html}
                 </div>
             ''', unsafe_allow_html=True)
     else:
         st.caption("誰もいないよ😭")
-
+    
 # Tab 2: 🏠 ジム (マスタ連動・高機能スコアリング版)
 with tabs[1]:
     st.query_params["tab"] = "🏠 ジム"
