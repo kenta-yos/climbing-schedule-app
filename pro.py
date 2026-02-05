@@ -105,8 +105,113 @@ log_df = get_single_sheet("climbing_logs")
 user_df = get_single_sheet("users")
 area_master = get_single_sheet("area_master")
 
-# --- 3. 保存・削除用関数（超軽量版） ---
-def safe_save(worksheet, df_input, mode="add", target_tab=None, clear_keys=None):
+import time
+import uuid
+import pandas as pd
+from datetime import datetime
+
+# -------------------------------
+# safe_save（最終形）
+# -------------------------------
+def normalize_dates(df):
+    """GSheets 保存用に日付列を正規化"""
+    df = df.copy()
+    for col in ['date', 'start_date', 'end_date', 'created_at']:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors='coerce') \
+                        .dt.strftime('%Y-%m-%d 00:00:00')
+    return df
+
+
+def has_duplicate(base_df, new_row, unique_cols):
+    """論理キーで重複チェック"""
+    cond = True
+    for c in unique_cols:
+        cond = cond & (base_df[c] == new_row[c])
+    return cond.any()
+
+def safe_save(
+    worksheet: str,
+    df_input: pd.DataFrame,
+    *,
+    mode: str = "add",                # "add" | "overwrite"
+    unique_cols: list = None,         # ["date","gym_name","user","type"]
+    target_tab: str = None,
+    clear_keys: list = None
+):
+    """
+    GSheets を DB 代わりに使うための安全な保存関数
+    """
+
+    try:
+        if df_input.empty:
+            return
+
+        # --- 0. 最新版を取得（競合対策） ---
+        current_df = get_single_sheet(worksheet)
+
+        # --- 1. add モード ---
+        if mode == "add":
+
+            rows_to_add = []
+
+            for _, row in df_input.iterrows():
+
+                # id がなければ付与
+                if 'id' not in row or pd.isna(row.get('id')):
+                    row = row.copy()
+                    row['id'] = str(uuid.uuid4())
+
+                # created_at がなければ付与
+                if 'created_at' not in row or pd.isna(row.get('created_at')):
+                    row['created_at'] = datetime.now()
+
+                # 重複チェック
+                if unique_cols and not current_df.empty:
+                    if has_duplicate(current_df, row, unique_cols):
+                        continue
+
+                rows_to_add.append(row)
+
+            if not rows_to_add:
+                st.warning("すでに登録済みです")
+                return
+
+            add_df = pd.DataFrame(rows_to_add)
+            final_df = pd.concat([current_df, add_df], ignore_index=True)
+
+        # --- 2. overwrite モード ---
+        elif mode == "overwrite":
+            final_df = df_input.copy()
+
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+
+        # --- 3. 正規化して保存 ---
+        final_df = normalize_dates(final_df)
+        conn.update(worksheet=worksheet, data=final_df)
+
+        # --- 4. 入力フォームのクリア ---
+        if clear_keys:
+            for k in clear_keys:
+                st.session_state.pop(k, None)
+            st.session_state.pop("rows", None)
+
+        # --- 5. キャッシュ更新 ---
+        st.session_state.ticks[worksheet] = time.time()
+
+        # --- 6. 画面遷移 ---
+        params = {"user": st.session_state.USER}
+        if target_tab:
+            params["tab"] = target_tab
+        st.query_params.from_dict(params)
+        st.rerun()
+
+    except Exception as e:
+        st.error(f"⚠️ 保存に失敗しました。少し待って再試行してください。\n{e}")
+
+# --- 【旧】3. 保存・削除用関数（超軽量版） ---
+def safe_save_old(worksheet, df_input, mode="add", target_tab=None, clear_keys=None):
     try:
         if df_input.empty:
             return
@@ -293,7 +398,7 @@ with tabs[0]:
                 new_row = pd.DataFrame([[pd.to_datetime(q_date), q_gym, st.session_state.USER, t_type]], 
                                      columns=['date','gym_name','user','type'])
                 # これだけでOK！
-                safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
+                safe_save("climbing_logs", new_row, mode="add", unique_cols=["date", "gym_name", "user", "type"], target_tab="🏠 Top")
             else:
                 st.warning("ジムを選択してください")
 
@@ -453,7 +558,8 @@ with tabs[2]:
 
         if st.button("🗑️ 削除", key=f"del_{i}"):
             # 現在の表示用 log_df から1行消したデータを作成
-            new_log_df = log_df.drop(i)
+            target_id = row["id"]
+            new_log_df = log_df[log_df["id"] != target_id]
             # mode="overwrite" で「これに差し替えて！」と命令する
             safe_save("climbing_logs", new_log_df, mode="overwrite", target_tab="📊 マイページ")
     
@@ -482,7 +588,8 @@ with tabs[2]:
         ''', unsafe_allow_html=True)
         if st.button("🗑️ 削除", key=f"del_{i}"):
             # 現在の表示用 log_df から1行消したデータを作成
-            new_log_df = log_df.drop(i)
+            target_id = row["id"]
+            new_log_df = log_df[log_df["id"] != target_id]
             # mode="overwrite" で「これに差し替えて！」と命令する
             safe_save("climbing_logs", new_log_df, mode="overwrite", target_tab="📊 マイページ")
 
