@@ -63,20 +63,30 @@ if 'USER' not in st.session_state:
 conn = st.connection("supabase", type=SupabaseConnection)
 
 def get_supabase_data(table_name):
-    """キャッシュ付きデータ読み込み"""
-    @st.cache_data(ttl=600) # 10分キャッシュ
+    """詳細なエラー表示付きのデータ読み込み"""
+    @st.cache_data(ttl=10) # テストのため一旦10秒キャッシュに短縮
     def _read(name):
-        res = conn.table(name).select("*").execute()
-        df = pd.DataFrame(res.data)
-        if df.empty:
+        try:
+            # .select("*") の後に .execute() を実行
+            res = conn.table(name).select("*").execute()
+            
+            # デバッグ用にレスポンスの生データを表示（成功したら消します）
+            if not res.data:
+                st.info(f"Supabaseからの返り値が空です (Table: {name})")
+                return pd.DataFrame()
+            
+            df = pd.DataFrame(res.data)
+            
+            # 日付型の列を変換
+            date_cols = ['date', 'start_date', 'end_date', 'created_at']
+            for col in date_cols:
+                if col in df.columns:
+                    df[col] = pd.to_datetime(df[col]).dt.tz_localize(None)
             return df
-        
-        # 日付型の列を変換
-        date_cols = ['date', 'start_date', 'end_date', 'created_at']
-        for col in date_cols:
-            if col in df.columns:
-                df[col] = pd.to_datetime(df[col]).dt.tz_localize(None)
-        return df
+        except Exception as e:
+            st.error(f"テーブル {name} の読み込み中にエラーが発生しました:\n{e}")
+            return pd.DataFrame()
+            
     return _read(table_name)
 
 # データの取得
