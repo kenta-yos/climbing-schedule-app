@@ -97,40 +97,51 @@ user_df = get_supabase_data("users")
 area_master = get_supabase_data("area_master")
 
 # --- 3. 保存・削除処理 (Supabase版) ---
-def safe_save(table: str, df_input: pd.DataFrame, mode: str = "add", target_tab: str = None):
+def safe_save(table: str, data_input, mode: str = "add", target_tab: str = None):
+    """
+    data_input: 
+      - mode="add" の時は pd.DataFrame
+      - mode="delete" の時は id (文字列)
+    """
     try:
-        if df_input.empty and mode == "add":
-            return
-
         if mode == "add":
-            # 辞書形式に変換して一括挿入
-            # IDやcreated_atはSupabase側で自動生成される設定なら不要ですが、念のため付与
-            data_to_insert = df_input.to_dict(orient="records")
+            if data_input.empty:
+                return
+            
+            # 辞書形式に変換
+            data_to_insert = data_input.to_dict(orient="records")
+            
             for d in data_to_insert:
-                if 'id' not in d: d['id'] = str(uuid.uuid4())
-                # dateがdatetimeオブジェクトの場合は文字列にする
-                if 'date' in d and isinstance(d['date'], datetime):
-                    d['date'] = d['date'].isoformat()
+                # 1. IDはSupabase側に任せるのがベスト（もし辞書にあれば消す、なければそのまま）
+                #    ※手動でIDを指定して上書きしたい場合を除き、自動生成に任せます。
+                
+                # 2. 日付・時刻型を文字列に統一
+                for key in ['date', 'start_date', 'end_date']:
+                    if key in d and hasattr(d[key], 'isoformat'):
+                        d[key] = d[key].isoformat()
             
             conn.table(table).insert(data_to_insert).execute()
 
         elif mode == "delete":
-            # IDを指定して1件削除
-            target_id = df_input
-            conn.table(table).delete().eq("id", target_id).execute()
+            # data_input は IDそのもの
+            conn.table(table).delete().eq("id", data_input).execute()
 
-        st.cache_data.clear() # キャッシュを消して最新にする
+        # 共通処理
+        st.cache_data.clear()
         st.toast("✅ 完了しました！", icon="🚀")
         
-        # リダイレクト
+        # リダイレクト設定
         params = {"user": st.session_state.USER}
-        if target_tab: params["tab"] = target_tab
-        st.query_params.from_dict(params)
+        if target_tab: 
+            params["tab"] = target_tab
+        st.query_params.update(params) # from_dictよりupdateの方が柔軟です
+        
+        time.sleep(0.5) # トーストを見せるための微小な待ち時間
         st.rerun()
 
     except Exception as e:
         st.error(f"⚠️ エラー: {e}")
-
+        
 # --- ヘルパー関数 (変更なし) ---
 def format_users_inline(users, me):
     names = []
@@ -223,43 +234,235 @@ with tabs[0]:
     render_inline_list("🔥 今日どこ登る？", today_ts, grouped)
     render_inline_list("👀 明日は誰かいる？", today_ts + timedelta(days=1), grouped)
 
-# --- Tab 2: ✨ ジム ---
+# Tab 2: 🏠 ジム (訪問履歴・未訪問リスト 復活版)
 with tabs[1]:
-    st.query_params["tab"] = "✨ ジム"
-    target_date = st.date_input("ターゲット日", value=today_jp)
-    t_dt = pd.to_datetime(target_date)
-    major_choice = st.radio("表示範囲", ["都内・神奈川", "関東", "全国"], horizontal=True)
+    st.query_params["tab"] = "🏠 ジム"
+    st.subheader("🏠 ホームジム・遠征先")
+    
+    if not gym_df.empty:
+        # 1. ユーザーの全実績ログを取得
+        my_done_logs = log_df[
+            (log_df['user'] == st.session_state.USER) & 
+            (log_df['type'] == '実績')
+        ] if not log_df.empty else pd.DataFrame()
 
-    allowed_tags = area_master[area_master['major_area'] == major_choice]['area_tag'].tolist() if major_choice != "全国" else gym_df['area_tag'].unique().tolist()
+        # 2. ジムごとに「最後に訪問した日」を計算
+        if not my_done_logs.empty:
+            last_visits = my_done_logs.groupby('gym_name')['date'].max().dt.date.to_dict()
+        else:
+            last_visits = {}
 
-    ranked = []
-    for _, gym in gym_df[gym_df['area_tag'].isin(allowed_tags)].iterrows():
-        name, score, reasons = gym['gym_name'], 0, []
-        # スコアロジック (簡略化)
-        others = log_df[(log_df['gym_name'] == name) & (log_df['date'] == t_dt) & (log_df['type'] == '予定')] if not log_df.empty else pd.DataFrame()
-        if not others.empty: score += 50; reasons.append(f"👥 仲間{len(others)}名")
-        ranked.append({"name": name, "score": score, "reasons": reasons, "area": gym['area_tag'], "url": gym['profile_url']})
+        # 3. 訪問済みと未訪問に分ける
+        visited_gyms = []
+        unvisited_gyms = []
+        
+        for _, gym in gym_df.iterrows():
+            g_name = gym['gym_name']
+            if g_name in last_visits:
+                visited_gyms.append({
+                    'name': g_name,
+                    'url': gym['profile_url'],
+                    'last_date': last_visits[g_name]
+                })
+            else:
+                unvisited_gyms.append({
+                    'name': g_name,
+                    'url': gym['profile_url']
+                })
 
-    for g in sorted(ranked, key=lambda x: x['score'], reverse=True)[:6]:
-        tag_html = "".join([f'<span class="tag tag-hot">{r}</span>' for r in g['reasons']])
-        st.markdown(f'<div class="gym-card"><a href="{g["url"]}" target="_blank" style="font-weight:700;">{g["name"]}</a> <small>({g["area"]})</small><div class="tag-container">{tag_html}</div></div>', unsafe_allow_html=True)
+        # --- 表示：訪問済みジム ---
+        st.markdown("##### ✅ 訪問済み")
+        if visited_gyms:
+            # 日付が新しい順にソート
+            visited_gyms.sort(key=lambda x: x['last_date'], reverse=True)
+            for g in visited_gyms:
+                st.markdown(f'''
+                    <a href="{g['url']}" target="_blank" style="text-decoration: none;">
+                        <div class="item-box">
+                            <div class="item-accent" style="background:#4CAF50 !important"></div>
+                            <span class="item-date" style="font-size:0.75rem; color:#666;">Last: {g['last_date'].strftime("%m/%d")}</span>
+                            <div class="item-gym">{g['name']}</div>
+                        </div>
+                    </a>
+                ''', unsafe_allow_html=True)
+        else:
+            st.caption("まだ訪問実績がありません。")
 
-# --- Tab 3: 📊 マイページ ---
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # --- 表示：未訪問ジム ---
+        st.markdown("##### 🚩 未訪問（行ってみたい）")
+        if unvisited_gyms:
+            for g in unvisited_gyms:
+                st.markdown(f'''
+                    <a href="{g['url']}" target="_blank" style="text-decoration: none;">
+                        <div class="item-box">
+                            <div class="item-accent" style="background:#CCC !important"></div>
+                            <span class="item-date" style="font-size:0.75rem; color:#999;">Never</span>
+                            <div class="item-gym" style="color:#666;">{g['name']}</div>
+                        </div>
+                    </a>
+                ''', unsafe_allow_html=True)
+        else:
+            st.caption("すべての登録済みジムを制覇しました！")
+    else:
+        st.info("ジムマスターが空です。管理タブから登録してください。")
+
+# Tab 3: 📊 マイページ (統計・履歴・削除機能 復活版)
 with tabs[2]:
     st.query_params["tab"] = "📊 マイページ"
-    my_logs = log_df[log_df['user'] == st.session_state.USER] if not log_df.empty else pd.DataFrame()
     
-    st.subheader("🗓️ 予定")
-    for i, row in my_logs[my_logs['type']=='予定'].sort_values('date').iterrows():
-        col1, col2 = st.columns([0.8, 0.2])
-        col1.markdown(f'<div class="item-box"><div class="item-accent" style="background:#4CAF50"></div><span class="item-date">{row["date"].strftime("%m/%d")}</span><div class="item-gym">{row["gym_name"]}</div></div>', unsafe_allow_html=True)
-        if col2.button("🗑️", key=f"del_p_{row['id']}"):
-            safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+    # --- 1. 登る予定一覧 ---
+    st.subheader("🗓️ 登る予定")
+    # 今日以降の「予定」を抽出
+    my_plans = log_df[
+        (log_df['user'] == st.session_state.USER) & 
+        (log_df['type'] == '予定') & 
+        (log_df['date'].dt.date >= today_jp)
+    ].sort_values('date') if not log_df.empty else pd.DataFrame()
 
-    st.subheader("📊 実績")
-    my_done = my_logs[my_logs['type']=='実績']
-    if not my_done.empty:
-        st.markdown(f'<div class="insta-card"><div style="display:flex; justify-content:space-around;"><div><div class="insta-val">{len(my_done)}</div><div class="insta-label">Sessions</div></div></div></div>', unsafe_allow_html=True)
+    if my_plans.empty:
+        st.caption("予定はありません。Topタブから登録しよう！")
+    else:
+        for i, row in my_plans.iterrows():
+            col1, col2 = st.columns([0.85, 0.15])
+            col1.markdown(f'''
+                <div class="item-box">
+                    <div class="item-accent" style="background:#4CAF50 !important"></div>
+                    <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                    <div class="item-gym">{row["gym_name"]}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+            # 個別削除機能 (idを指定)
+            if col2.button("🗑️", key=f"del_plan_{row['id']}"):
+                safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+
+    # --- 2. 登った実績 (統計グラフ) ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader("📊 登った実績統計")
+    st.divider()
+    
+    # 期間指定
+    sc1, sc2 = st.columns(2)
+    ms = sc1.date_input("開始", value=today_jp.replace(day=1), key="stat_start")
+    me = sc2.date_input("終了", value=today_jp, key="stat_end")
+    
+    # 期間内の「実績」を抽出
+    my_p_res = log_df[
+        (log_df['user'] == st.session_state.USER) & 
+        (log_df['type'] == '実績') & 
+        (log_df['date'].dt.date >= ms) & 
+        (log_df['date'].dt.date <= me)
+    ] if not log_df.empty else pd.DataFrame()
+    
+    if not my_p_res.empty:
+        # インスタ風カード
+        st.markdown(f'''
+            <div class="insta-card">
+                <div style="display: flex; justify-content: space-around;">
+                    <div><div class="insta-val">{len(my_p_res)}</div><div class="insta-label">Sessions</div></div>
+                    <div><div class="insta-val">{my_p_res["gym_name"].nunique()}</div><div class="insta-label">Gyms</div></div>
+                </div>
+            </div>
+        ''', unsafe_allow_html=True)
+        
+        # ジム別訪問回数グラフ (Plotly)
+        counts = my_p_res['gym_name'].value_counts().reset_index()
+        counts.columns = ['gym_name', 'count']
+        counts = counts.sort_values('count', ascending=True)
+        
+        fig = px.bar(counts, x='count', y='gym_name', orientation='h', text='count', 
+                     color='count', color_continuous_scale='Sunsetdark')
+        fig.update_traces(texttemplate='  <b>%{text}回</b>', textposition='outside', hoverinfo='none')
+        fig.update_layout(
+            showlegend=False, coloraxis_showscale=False, xaxis_visible=False, 
+            yaxis_title=None, margin=dict(t=10, b=10, l=120, r=50), 
+            height=max(150, 45 * len(counts)), paper_bgcolor='rgba(0,0,0,0)', 
+            plot_bgcolor='rgba(0,0,0,0)', dragmode=False
+        )
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+    else:
+        st.info("選択された期間の実績はありません。")
+
+    # --- 3. 実績詳細履歴 ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader("📝 実績履歴")
+    
+    if not my_p_res.empty:
+        # 日付の新しい順に表示
+        for i, row in my_p_res.sort_values('date', ascending=False).iterrows():
+            col1, col2 = st.columns([0.85, 0.15])
+            col1.markdown(f'''
+                <div class="item-box">
+                    <div class="item-accent" style="background:#DD2476 !important"></div>
+                    <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                    <div class="item-gym">{row["gym_name"]}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+            if col2.button("🗑️", key=f"del_done_{row['id']}"):
+                safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+    else:
+        st.caption("履歴はありません。")
+
+# Tab 4: 👥 仲間 (Supabase連動・完全復元版)
+with tabs[3]:
+    st.query_params["tab"] = "👥 仲間"
+    st.subheader("👥 仲間たちの予定 (直近30日)")
+    
+    # 1. 表示オプション
+    include_me = st.checkbox("自分の予定も表示する", value=False, key="check_include_me")
+    
+    # 2. データの抽出
+    if not log_df.empty:
+        # 基本条件：予定であること ＆ 今日以降の予定であること
+        # (SupabaseのdateはTimestamp型なので、today_jpをTimestampに変換して比較)
+        lower_bound = pd.Timestamp(today_jp)
+        upper_bound = lower_bound + timedelta(days=30)
+        
+        condition = (log_df['type'] == '予定') & \
+                    (log_df['date'] >= lower_bound) & \
+                    (log_df['date'] <= upper_bound)
+        
+        # 自分を含めない設定なら除外
+        if not include_me:
+            condition = condition & (log_df['user'] != st.session_state.USER)
+            
+        o_plans = log_df[condition].sort_values('date')
+        
+        # 3. 表示ループ
+        if not o_plans.empty:
+            for _, row in o_plans.iterrows():
+                # ユーザー情報を users テーブルから取得 (user_name で紐付け)
+                u_info = user_df[user_df['user_name'] == row['user']] if not user_df.empty else pd.DataFrame()
+                
+                if not u_info.empty:
+                    u_color = u_info.iloc[0]['color']
+                    u_icon = u_info.iloc[0]['icon']
+                else:
+                    # 万が一ユーザーが見つからない場合のデフォルト
+                    u_color = "#CCC"
+                    u_icon = "👤"
+                
+                # 自分自身の予定には目印をつける
+                is_me = row['user'] == st.session_state.USER
+                display_name = f"{row['user']} (自分)" if is_me else row['user']
+                
+                st.markdown(f'''
+                    <div class="item-box">
+                        <div class="item-accent" style="background:{u_color} !important"></div>
+                        <span class="item-date">{row["date"].strftime("%m/%d")}</span>
+                        <span class="item-gym">
+                            <span style="font-size:1.1rem; margin-right:4px;">{u_icon}</span>
+                            <b style="color:{u_color if is_me else '#1A1A1A'};">{display_name}</b> 
+                            <span style="font-size:0.8rem; color:#666; margin-left:8px;">@{row["gym_name"]}</span>
+                        </span>
+                        <div></div>
+                    </div>
+                ''', unsafe_allow_html=True)
+        else:
+            st.info("期間内に仲間の予定は見つかりませんでした。")
+    else:
+        st.info("データがありません。")
 
 # Tab 5: 📅 セット (Supabase版・レイアウト修正)
 with tabs[4]:
