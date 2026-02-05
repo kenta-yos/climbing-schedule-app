@@ -149,6 +149,46 @@ def safe_save(worksheet, df_input, mode="add", target_tab=None, clear_keys=None)
         # APIエラー（制限）が起きた場合はここで止まる
         st.error(f"⚠️ API制限またはエラーが発生しました。30秒ほど待ってから再度お試しください。: {e}")
     
+# --- TOPみんなの予定用１ ---
+def format_users_inline(users, me):
+    names = []
+    for u in users:
+        if u == me:
+            names.append('<span style="color:#FF512F; font-weight:700;">me</span>')
+        else:
+            names.append(u)
+    return " & ".join(names)
+
+# --- TOPみんなの予定用２ ---
+def render_inline_list(title, target_date, grouped_df):
+    st.subheader(title)
+
+    rows = grouped_df[grouped_df['date'] == target_date]
+
+    if rows.empty:
+        st.caption("予定はありません")
+        return
+
+    for _, row in rows.iterrows():
+        users_html = format_users_inline(row['user'], st.session_state.USER)
+
+        st.markdown(f"""
+            <div style="
+                display: grid;
+                grid-template-columns: 160px 1fr;
+                padding: 6px 0;
+                border-bottom: 1px solid #F0F0F0;
+                font-size: 0.9rem;
+            ">
+                <div style="font-weight:700; color:#222;">
+                    {row['gym_name']}
+                </div>
+                <div style="color:#555;">
+                    {users_html}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
 # ユーザーログイン処理
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
@@ -252,7 +292,44 @@ with tabs[0]:
                 safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
             else:
                 st.warning("ジムを選択してください")
-    
+
+# --- 今日・明日の抽出ロジック ---
+today = today_ts
+tomorrow = today_ts + timedelta(days=1)
+
+plans_2days = log_df[
+    (log_df['type'] == '予定') &
+    (log_df['date'].isin([today, tomorrow]))
+]
+
+grouped = (
+    plans_2days
+    .groupby(['date', 'gym_name'])['user']
+    .apply(list)
+    .reset_index()
+    .sort_values(['date', 'gym_name'])
+)
+
+    # --- 👥 今日・明日 登るひと ---
+    today = today_ts
+    tomorrow = today_ts + timedelta(days=1)
+
+    plans_2days = log_df[
+        (log_df['type'] == '予定') &
+        (log_df['date'].isin([today, tomorrow]))
+    ]
+
+    grouped = (
+        plans_2days
+        .groupby(['date', 'gym_name'])['user']
+        .apply(list)
+        .reset_index()
+        .sort_values(['date', 'gym_name'])
+    )
+
+    render_inline_list("👥 今日登るひと", today, grouped)
+    render_inline_list("👥 明日登るひと", tomorrow, grouped)
+
 # Tab 2: ✨ ジム (マスタ連動・ラジオボタン版)
 with tabs[1]:
     st.query_params["tab"] = "✨ ジム"
