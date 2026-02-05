@@ -140,7 +140,7 @@ def safe_save(worksheet, df_input, mode="add", target_tab=None, clear_keys=None)
         st.session_state.ticks[worksheet] = datetime.now().timestamp()
         
         # 5. 成功フラグを立てる
-        st.session_state["save_success_flag"] = True
+        st.toast("成功✌️")
         
         # 6. リロード
         params = {"user": st.session_state.USER}
@@ -187,11 +187,6 @@ with col_btn:
     if st.button("🔄 最新に更新", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
-
-if st.session_state.get("save_success_flag"):
-    st.success("成功✌️")
-    # 一度表示したら消す（これ重要！）
-    st.session_state["save_success_flag"] = False
 
 # --- 5. タブ表示 ---
 tab_titles = ["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"]
