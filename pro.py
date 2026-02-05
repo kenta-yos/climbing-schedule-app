@@ -139,14 +139,15 @@ def safe_save(worksheet, df_input, mode="add", target_tab=None, clear_keys=None)
         # 4. キャッシュ更新（次回読み込み時にスプシを見に行くフラグを立てる）
         st.session_state.ticks[worksheet] = datetime.now().timestamp()
         
-        # 5. リロード
-        # 成功メッセージを表示してリロード
-        st.success("✅ 成功！")
+        # 5. 成功フラグを立てる
+        st.session_state["save_success_flag"] = True
+        
+        # 6. リロード
         params = {"user": st.session_state.USER}
         if target_tab: params["tab"] = target_tab
         st.query_params.from_dict(params)
         st.rerun()
-
+        
     except Exception as e:
         # APIエラー（制限）が起きた場合はここで止まる
         st.error(f"⚠️ API制限またはエラーが発生しました。30秒ほど待ってから再度お試しください。: {e}")
@@ -186,6 +187,11 @@ with col_btn:
     if st.button("🔄 最新に更新", use_container_width=True):
         st.cache_data.clear()
         st.rerun()
+
+if st.session_state.get("save_success_flag"):
+    st.success("成功✌️")
+    # 一度表示したら消す（これ重要！）
+    del st.session_state["save_success_flag"]
 
 # --- 5. タブ表示 ---
 tab_titles = ["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"]
