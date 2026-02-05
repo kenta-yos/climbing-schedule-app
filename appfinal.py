@@ -329,8 +329,7 @@ with tabs[5]:
                     st.warning("ジム名とエリアは必須です")
 
     # --- 📅 セット一括登録 (復活) ---
-    with st.expander("📅 セット情報の一括登録", expanded=True):
-        st.write("同じURL（インスタの告知など）で複数の日程を登録できます。")
+    with st.expander("📅 セットスケジュール登録", expanded=True):
         
         # セレクトボックスの選択肢
         gym_options = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
@@ -357,13 +356,12 @@ with tabs[5]:
             d_list.append((sd, ed))
             
         col_btn1, col_btn2 = st.columns(2)
-        if col_btn1.button("➕ 日程入力欄を増やす"): 
+        if col_btn1.button("➕ 日程欄を追加"): 
             st.session_state.rows += 1
             st.rerun()
             
         if col_btn2.button("🚀 Supabaseへ一括登録", use_container_width=True):
             if sel_g and p_url:
-                # Supabaseに送るためのデータ作成
                 new_s_list = []
                 for d in d_list:
                     new_s_list.append({
