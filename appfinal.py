@@ -227,7 +227,24 @@ tabs = st.tabs(tab_titles)
 with tabs[0]:
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
+    
+# --- 1. データの事前抽出（NameError防止のための初期化） ---
+    today_logs = pd.DataFrame()
+    tomorrow_logs = pd.DataFrame()
 
+    if not log_df.empty:
+        # 今日の日付と明日の日付をTimestamp型で用意
+        t_0 = pd.Timestamp(today_jp)
+        t_1 = t_0 + timedelta(days=1)
+        
+        # 予定（type='予定'）だけを抽出
+        all_plans = log_df[log_df['type'] == '予定']
+        
+        if not all_plans.empty:
+            # 今日と明日を切り出し
+            today_logs = all_plans[all_plans['date'] == t_0]
+            tomorrow_logs = all_plans[all_plans['date'] == t_1]
+            
     # --- 優先順位付きジムリストの作成 (復元) ---
     sorted_gym_names = []
     if not gym_df.empty and not area_master.empty:
