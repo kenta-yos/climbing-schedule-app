@@ -205,17 +205,35 @@ with tabs[0]:
     st.query_params["tab"] = "🏠 Top"
     st.subheader("🚀 クイック登録")
 
-    # ジムリスト作成
+    # --- 優先順位付きジムリストの作成 (復元) ---
+    sorted_gym_names = []
     if not gym_df.empty and not area_master.empty:
-        merged_gyms = pd.merge(gym_df, area_master[['area_tag', 'major_area']], on='area_tag', how='left')
-        priority = ["都内・神奈川", "関東", "全国"]
-        sorted_gym_names = []
-        for p in priority:
-            subset = merged_gyms[merged_gyms['major_area'] == p].sort_values('gym_name')
-            sorted_gym_names.extend(subset['gym_name'].tolist())
+        priority_order = ["都内・神奈川", "関東", "全国"]
+        
+        # gym_df と area_master を area_tag で紐付け
+        merged_gyms = pd.merge(
+            gym_df, 
+            area_master[['area_tag', 'major_area']], 
+            on='area_tag', 
+            how='left'
+        )
+        
+        for area in priority_order:
+            # その地域に属するジムを抽出し、名前順に
+            subset = merged_gyms[merged_gyms['major_area'] == area]
+            gyms_in_this_area = sorted(subset['gym_name'].unique().tolist()) # unique()で重複ガード
+            
+            for g_name in gyms_in_this_area:
+                if g_name not in sorted_gym_names:
+                    sorted_gym_names.append(g_name)
+        
+        # 最後に、エリア未設定またはその他エリアのジムを末尾に追加
+        all_gyms = gym_df['gym_name'].unique().tolist()
+        others = sorted([g for g in all_gyms if g not in sorted_gym_names])
+        sorted_gym_names.extend(others)
     else:
-        sorted_gym_names = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
-
+        sorted_gym_names = sorted(gym_df['gym_name'].unique().tolist()) if not gym_df.empty else []
+    
     with st.form("quick_log_form", clear_on_submit=True):
         q_date = st.date_input("📅 日程", value=today_jp)
         with st.expander("🏢 ジムを選択"):
