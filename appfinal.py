@@ -314,6 +314,17 @@ with tabs[2]:
     st.query_params["tab"] = "📊 マイページ"
     
 # --- 1. 登る予定一覧 (縦線レイアウト修正版) ---
+    if not log_df.empty:
+        today_ts = pd.Timestamp(today_jp)
+        
+        my_plans = log_df[
+            (log_df['user'] == st.session_state.USER) & 
+            (log_df['type'] == '予定') & 
+            (log_df['date'] >= today_ts)
+        ].sort_values('date')
+    else:
+        my_plans = pd.DataFrame()
+        
     st.subheader("🗓️ 登る予定")
     if my_plans.empty:
         st.caption("予定はありません。Topタブから登録しよう！")
