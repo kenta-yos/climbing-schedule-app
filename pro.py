@@ -134,73 +134,62 @@ def safe_save(
     worksheet: str,
     df_input: pd.DataFrame,
     *,
-    mode: str = "add",                # "add" | "overwrite"
-    unique_cols: list = None,         # ["date","gym_name","user","type"]
+    mode: str = "add",
+    unique_cols: list = None,
     target_tab: str = None,
     clear_keys: list = None
 ):
-    """
-    GSheets を DB 代わりに使うための安全な保存関数
-    """
-
     try:
         if df_input.empty:
             return
 
-        # --- 0. 最新版を取得（競合対策） ---
-        current_df = get_single_sheet(worksheet)
+        save_df = df_input.copy()
 
-        # --- 1. add モード ---
+        # --- 共通前処理（今まで通り） ---
+        for idx, row in save_df.iterrows():
+            if 'id' not in row or pd.isna(row.get('id')):
+                save_df.at[idx, 'id'] = str(uuid.uuid4())
+            if 'created_at' not in row or pd.isna(row.get('created_at')):
+                save_df.at[idx, 'created_at'] = datetime.now()
+
+        save_df = normalize_dates(save_df)
+
+        # =========================
+        # add：追記専用（安全）
+        # =========================
         if mode == "add":
+            if unique_cols:
+                # 表示用キャッシュを使った「軽い重複抑止」
+                current_df = get_single_sheet(worksheet)
+                mask = pd.Series(False, index=save_df.index)
+                for col in unique_cols:
+                    mask |= save_df[col].isin(current_df[col])
+                save_df = save_df[~mask]
 
-            rows_to_add = []
-
-            for _, row in df_input.iterrows():
-
-                # id がなければ付与
-                if 'id' not in row or pd.isna(row.get('id')):
-                    row = row.copy()
-                    row['id'] = str(uuid.uuid4())
-
-                # created_at がなければ付与
-                if 'created_at' not in row or pd.isna(row.get('created_at')):
-                    row['created_at'] = datetime.now()
-
-                # 重複チェック
-                if unique_cols and not current_df.empty:
-                    if has_duplicate(current_df, row, unique_cols):
-                        continue
-
-                rows_to_add.append(row)
-
-            if not rows_to_add:
+            if save_df.empty:
                 st.warning("すでに登録済みです")
                 return
 
-            add_df = pd.DataFrame(rows_to_add)
-            final_df = pd.concat([current_df, add_df], ignore_index=True)
+            # ★ ここが核心：append-only
+            conn.append(worksheet=worksheet, data=save_df)
 
-        # --- 2. overwrite モード ---
+        # =========================
+        # overwrite：従来通り
+        # =========================
         elif mode == "overwrite":
-            final_df = df_input.copy()
+            conn.update(worksheet=worksheet, data=save_df)
 
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-        # --- 3. 正規化して保存 ---
-        final_df = normalize_dates(final_df)
-        conn.update(worksheet=worksheet, data=final_df)
-
-        # --- 4. 入力フォームのクリア ---
+        # --- UI 周り（今まで通り） ---
         if clear_keys:
             for k in clear_keys:
                 st.session_state.pop(k, None)
             st.session_state.pop("rows", None)
 
-        # --- 5. キャッシュ更新 ---
         st.session_state.ticks[worksheet] = time.time()
 
-        # --- 6. 画面遷移 ---
         params = {"user": st.session_state.USER}
         if target_tab:
             params["tab"] = target_tab
