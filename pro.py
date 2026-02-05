@@ -200,7 +200,8 @@ if not st.session_state.get('USER'):
     st.title("🧗 Go Bouldering")
     if not user_df.empty:
         cols = st.columns(2)
-        for i, (_, row) in enumerate(user_df.iterrows()):
+        sorted_user_df = user_df.sort_values("user")
+        for i, (_, row) in enumerate(sorted_user_df.iterrows()):
             with cols[i % 2]:
                 btn_key = f"l_{row['user']}"
                 st.markdown(f"<style>div.stButton > button[key='{btn_key}'] {{ background:{row['color']}; color:white; width:100%; height:4rem; border-radius:15px; font-weight:bold; }}</style>", unsafe_allow_html=True)
