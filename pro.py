@@ -191,7 +191,7 @@ with col_btn:
 if st.session_state.get("save_success_flag"):
     st.success("成功✌️")
     # 一度表示したら消す（これ重要！）
-    del st.session_state["save_success_flag"]
+    st.session_state["save_success_flag"] = False
 
 # --- 5. タブ表示 ---
 tab_titles = ["🏠 Top", "✨ ジム", "📊 マイページ", "👥 仲間", "📅 セット", "⚙️ 管理"]
