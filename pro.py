@@ -151,16 +151,18 @@ def safe_save(
         # =========================
         if mode == "add":
             if unique_cols:
-                # 表示用キャッシュを使った「軽い重複抑止」
                 current_df = get_single_sheet(worksheet)
-                mask = pd.Series(False, index=save_df.index)
+                # 日付列の型を揃える
                 for col in unique_cols:
-                    mask |= save_df[col].isin(current_df[col])
-                save_df = save_df[~mask]
-
-            if save_df.empty:
-                st.warning("すでに登録済みです")
-                return
+                    if col in save_df.columns and col in current_df.columns:
+                        save_df[col] = pd.to_datetime(save_df[col], errors='coerce')
+                        current_df[col] = pd.to_datetime(current_df[col], errors='coerce')
+                
+                # 行ごとに重複を判定
+                merged = save_df.merge(current_df[unique_cols], on=unique_cols, how='inner', indicator=True)
+                if not merged.empty:
+                    st.warning("すでに登録済みです")
+                    return
 
             # ★ ここが核心：append-only
             conn.append(worksheet=worksheet, data=save_df)
