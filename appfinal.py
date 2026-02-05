@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import plotly.express as px
 import pytz
 import uuid
+import time
 from st_supabase_connection import SupabaseConnection
 
 # --- 日本時間の定義 ---
