@@ -154,36 +154,6 @@ def get_user_badge(user_name, user_df):
         icon = "👤"
     return f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; font-size:0.8rem; margin-right:4px; font-weight:bold;">{icon} {user_name}</span>'
 
-# --- 今日どこ登る？の表示部分 ---
-st.markdown("##### 📍 今日どこ登る？")
-if not today_logs.empty:
-    for gym, group in today_logs.groupby('gym_name'):
-        # 参加メンバーのバッジを生成
-        user_badges = "".join([get_user_badge(u, user_df) for u in group['user']])
-        st.markdown(f'''
-            <div style="margin-bottom:10px; padding:8px; border-left:4px solid #4CAF50; background:#f9f9f9; border-radius:4px;">
-                <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px;">{gym}</div>
-                <div>{user_badges}</div>
-            </div>
-        ''', unsafe_allow_html=True)
-else:
-    st.caption("今日の予定はありません")
-
-# --- 明日は誰かいる？の表示部分 ---
-st.markdown("##### 📅 明日は誰かいる？")
-if not tomorrow_logs.empty:
-    for gym, group in tomorrow_logs.groupby('gym_name'):
-        # 参加メンバーのバッジを生成
-        user_badges = "".join([get_user_badge(u, user_df) for u in group['user']])
-        st.markdown(f'''
-            <div style="margin-bottom:10px; padding:8px; border-left:4px solid #FF9800; background:#f9f9f9; border-radius:4px;">
-                <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px;">{gym}</div>
-                <div>{user_badges}</div>
-            </div>
-        ''', unsafe_allow_html=True)
-else:
-    st.caption("明日の予定はありません")
-
 # --- 4. ログイン処理 (変更なし) ---
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
