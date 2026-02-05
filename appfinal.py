@@ -235,8 +235,111 @@ with tabs[0]:
     render_inline_list("🔥 今日どこ登る？", today_ts, grouped)
     render_inline_list("👀 明日は誰かいる？", today_ts + timedelta(days=1), grouped)
 
-# Tab 2: 🏠 ジム (訪問履歴・未訪問リスト 復活版)
+# Tab 2: 🏠 ジム (マスタ連動・高機能スコアリング版)
 with tabs[1]:
+    st.query_params["tab"] = "🏠 ジム"
+    
+    # 1. ターゲット設定
+    st.subheader("✨ おすすめ")
+    c_date1, c_date2 = st.columns([0.6, 0.4])
+    target_date = c_date1.date_input("ターゲット日", value=today_jp, key="tg_date")
+    # 比較用に型を Timestamp に統一
+    t_dt = pd.Timestamp(target_date)
+
+    # 2. エリア選択（ラジオボタン）
+    major_choice = st.radio("表示範囲", ["都内・神奈川", "関東", "全国"], horizontal=True, index=0)
+
+    # 3. マスタから対象エリアタグを抽出
+    if major_choice == "全国":
+        allowed_tags = gym_df['area_tag'].unique().tolist() if not gym_df.empty else []
+    else:
+        # area_master も取得済みであることが前提
+        allowed_tags = area_master[area_master['major_area'] == major_choice]['area_tag'].tolist() if not area_master.empty else []
+
+    # 4. スコアリングロジック
+    ranked_list = []
+    if not gym_df.empty:
+        for _, gym in gym_df.iterrows():
+            # エリアフィルタ
+            if gym['area_tag'] not in allowed_tags:
+                continue
+
+            name, score, reasons = gym['gym_name'], 0, []
+            
+            # --- ① 鮮度スコア（セット終了日基準） ---
+            if not sched_df.empty:
+                # ターゲット日以前の最新セットを確認
+                past_sets = sched_df[(sched_df['gym_name'] == name) & (sched_df['end_date'] <= t_dt)]
+                if not past_sets.empty:
+                    latest_end = past_sets['end_date'].max()
+                    diff = (t_dt - latest_end).days
+                    if 0 <= diff <= 7: 
+                        score += 40
+                        reasons.append(f"🔥 新セット({diff}日前)")
+                    elif 8 <= diff <= 14: 
+                        score += 30
+                        reasons.append(f"✨ 準新セット({diff}日前)")
+
+            # --- ② 仲間スコア ---
+            if not log_df.empty:
+                others = log_df[
+                    (log_df['gym_name'] == name) & 
+                    (log_df['user'] != st.session_state.USER) & 
+                    (log_df['type'] == '予定') & 
+                    (log_df['date'] == t_dt)
+                ]
+                if not others.empty:
+                    score += (50 * len(others))
+                    reasons.append(f"👥 仲間{len(others)}名")
+                
+            # --- ③ 実績スコア ---
+            my_v = log_df[
+                (log_df['gym_name'] == name) & 
+                (log_df['user'] == st.session_state.USER) & 
+                (log_df['type'] == '実績')
+            ] if not log_df.empty else pd.DataFrame()
+
+            if my_v.empty: 
+                score += 10
+                reasons.append("🆕 未訪問")
+            else:
+                last_v_days = (t_dt - my_v['date'].max()).days
+                if last_v_days >= 30: 
+                    score += 20
+                    reasons.append(f"⌛ {last_v_days}日ぶり")
+
+            ranked_list.append({
+                "name": name, "score": score, "reasons": reasons, 
+                "area": gym['area_tag'], "url": gym['profile_url']
+            })
+
+    # 5. スコア上位表示
+    if ranked_list:
+        # スコア上位6件
+        sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
+        for gym in sorted_gyms:
+            # タグ生成（🔥や👥が含まれる場合は強調）
+            tag_html = "".join([
+                f'<span style="background:{"#FFEBEB" if ("🔥" in r or "👥" in r) else "#F0F2F6"}; '
+                f'color:{"#FF4B4B" if ("🔥" in r or "👥" in r) else "#31333F"}; '
+                f'padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; margin-right: 5px; font-weight: bold;">{r}</span>' 
+                for r in gym['reasons']
+            ])
+            
+            st.markdown(f'''
+                <div style="background: white; padding: 12px; border-radius: 10px; border-left: 5px solid #FF4B4B; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <a href="{gym["url"]}" target="_blank" style="color:#1E88E5; font-weight:700; text-decoration:none; font-size: 1rem;">{gym["name"]}</a>
+                        <small style="color: #666; background: #eee; padding: 2px 6px; border-radius: 4px;">{gym["area"]}</small>
+                    </div>
+                    <div style="margin-top: 8px;">{tag_html}</div>
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.info("条件に合うジムが見つかりません。")
+
+    st.divider()
+
     st.query_params["tab"] = "🏠 ジム"
     st.subheader("🏠 ホームジム・遠征先")
     
