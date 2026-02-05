@@ -143,23 +143,46 @@ def safe_save(table: str, data_input, mode: str = "add", target_tab: str = None)
     except Exception as e:
         st.error(f"⚠️ エラー: {e}")
         
-# --- ヘルパー関数 (変更なし) ---
-def format_users_inline(users, me):
-    names = []
-    for u in users:
-        if u == me: names.append('<span style="color:#FF512F; font-weight:700;">me</span>')
-        else: names.append(u)
-    return " & ".join(names)
+# --- ユーザー情報表示用のヘルパー関数 (コードをスッキリさせるため) ---
+def get_user_badge(user_name, user_df):
+    u_info = user_df[user_df['user_name'] == user_name] if not user_df.empty else pd.DataFrame()
+    if not u_info.empty:
+        color = u_info.iloc[0]['color']
+        icon = u_info.iloc[0]['icon']
+    else:
+        color = "#666"
+        icon = "👤"
+    return f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; font-size:0.8rem; margin-right:4px; font-weight:bold;">{icon} {user_name}</span>'
 
-def render_inline_list(title, target_date, grouped_df):
-    st.subheader(title)
-    rows = grouped_df[grouped_df['date'].dt.date == target_date.date()] if not grouped_df.empty else pd.DataFrame()
-    if rows.empty:
-        st.caption("誰もいないよ😢のぼろ？")
-        return
-    for _, row in rows.iterrows():
-        users_html = format_users_inline(row['user'], st.session_state.USER)
-        st.markdown(f'<div style="display: grid; grid-template-columns: 160px 1fr; padding: 6px 0; border-bottom: 1px solid #F0F0F0; font-size: 0.9rem;"><div style="font-weight:700; color:#222;">{row["gym_name"]}</div><div style="color:#555;">{users_html}</div></div>', unsafe_allow_html=True)
+# --- 今日どこ登る？の表示部分 ---
+st.markdown("##### 📍 今日どこ登る？")
+if not today_logs.empty:
+    for gym, group in today_logs.groupby('gym_name'):
+        # 参加メンバーのバッジを生成
+        user_badges = "".join([get_user_badge(u, user_df) for u in group['user']])
+        st.markdown(f'''
+            <div style="margin-bottom:10px; padding:8px; border-left:4px solid #4CAF50; background:#f9f9f9; border-radius:4px;">
+                <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px;">{gym}</div>
+                <div>{user_badges}</div>
+            </div>
+        ''', unsafe_allow_html=True)
+else:
+    st.caption("今日の予定はありません")
+
+# --- 明日は誰かいる？の表示部分 ---
+st.markdown("##### 📅 明日は誰かいる？")
+if not tomorrow_logs.empty:
+    for gym, group in tomorrow_logs.groupby('gym_name'):
+        # 参加メンバーのバッジを生成
+        user_badges = "".join([get_user_badge(u, user_df) for u in group['user']])
+        st.markdown(f'''
+            <div style="margin-bottom:10px; padding:8px; border-left:4px solid #FF9800; background:#f9f9f9; border-radius:4px;">
+                <div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px;">{gym}</div>
+                <div>{user_badges}</div>
+            </div>
+        ''', unsafe_allow_html=True)
+else:
+    st.caption("明日の予定はありません")
 
 # --- 4. ログイン処理 (変更なし) ---
 saved_user = st.query_params.get("user")
