@@ -110,9 +110,7 @@ import uuid
 import pandas as pd
 from datetime import datetime
 
-# -------------------------------
 # safe_save（最終形）
-# -------------------------------
 def normalize_dates(df):
     """GSheets 保存用に日付列を正規化"""
     df = df.copy()
