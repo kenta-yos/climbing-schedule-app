@@ -313,31 +313,40 @@ with tabs[1]:
 with tabs[2]:
     st.query_params["tab"] = "📊 マイページ"
     
-    # --- 1. 登る予定一覧 ---
+# --- 1. 登る予定一覧 (縦線レイアウト修正版) ---
     st.subheader("🗓️ 登る予定")
-    # 今日以降の「予定」を抽出
-    my_plans = log_df[
-        (log_df['user'] == st.session_state.USER) & 
-        (log_df['type'] == '予定') & 
-        (log_df['date'].dt.date >= today_jp)
-    ].sort_values('date') if not log_df.empty else pd.DataFrame()
-
     if my_plans.empty:
         st.caption("予定はありません。Topタブから登録しよう！")
     else:
         for i, row in my_plans.iterrows():
-            col1, col2 = st.columns([0.85, 0.15])
-            col1.markdown(f'''
-                <div class="item-box">
-                    <div class="item-accent" style="background:#4CAF50 !important"></div>
-                    <span class="item-date">{row["date"].strftime("%m/%d")}</span>
-                    <div class="item-gym">{row["gym_name"]}</div>
-                </div>
-            ''', unsafe_allow_html=True)
-            # 個別削除機能 (idを指定)
-            if col2.button("🗑️", key=f"del_plan_{row['id']}"):
-                safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
-
+            # 1行ごとに独立したコンテナを作ることでレイアウト崩れを防ぐ
+            with st.container():
+                col1, col2 = st.columns([0.85, 0.15])
+                with col1:
+                    # インラインスタイルを徹底して、確実に緑の線（4px）を出す
+                    st.markdown(f'''
+                        <div style="
+                            display: grid; 
+                            grid-template-columns: 4px 50px 1fr; 
+                            align-items: center; 
+                            gap: 12px; 
+                            background: white; 
+                            padding: 10px 5px; 
+                            margin-bottom: 5px;
+                            border-bottom: 1px solid #f0f0f0;
+                        ">
+                            <div style="background:#4CAF50; width: 4px; height: 1.2rem; border-radius: 2px;"></div>
+                            <span style="color: #4CAF50; font-weight: 700; font-size: 0.9rem;">{row["date"].strftime("%m/%d")}</span>
+                            <div style="color: #1A1A1A; font-weight: 700; font-size: 0.95rem;">{row["gym_name"]}</div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+                
+                with col2:
+                    # ボタンの高さを微調整して中央に寄せる
+                    st.write("") # 少し隙間
+                    if st.button("🗑️", key=f"del_plan_{row['id']}"):
+                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+                        
     # --- 2. 登った実績 (統計グラフ) ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.subheader("📊 登った実績統計")
