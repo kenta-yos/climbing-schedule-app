@@ -1,3 +1,4 @@
 streamlit
 st-gsheets-connection
 plotly
+st-supabase-connection
