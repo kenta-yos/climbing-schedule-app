@@ -389,44 +389,40 @@ with tabs[0]:
             })
 
     # 5. スコア上位表示
-    if ranked_list:
-        # スコア上位6件
-        sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
-        
-        for gym in sorted_gyms:
-            # --- タグの生成 ---
-            tag_html = ""
-            for r in gym['reasons']:
-                is_special = "🔥" in r or "👥" in r
-                bg = "#fff0f0" if is_special else "#f0f7ff"
-                color = "#ff4b4b" if is_special else "#007bff"
-                border = "#ffdada" if is_special else "#cce5ff"
-                
-                # インラインスタイルで直接記述（f-stringの競合回避）
-                tag_html += f'<span style="background:{bg}; color:{color}; border:1px solid {border}; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; font-weight: 600; display: inline-block; margin-bottom: 4px;">{r}</span>'
+        if ranked_list:
+            # スコア上位6件
+            sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
             
-            # --- カード全体の表示 ---
-            # 外側のdivと内側の変数を分離して視認性を確保
-            st.markdown(f'''
-                <div style="background: white; padding: 12px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                        <a href="{gym["url"]}" target="_blank" style="color:#333; font-weight:700; text-decoration:none; font-size: 0.95rem;">
-                            📸 {gym["name"]}
-                        </a>
-                        <span style="color: #999; font-size: 0.7rem; background: #f8f8f8; padding: 2px 6px; border-radius: 4px;">
-                            📍 {gym["area"]}
-                        </span>
+            for gym in sorted_gyms:
+                # --- タグの生成 ---
+                tag_html = ""
+                for r in gym['reasons']:
+                    is_special = "🔥" in r or "👥" in r
+                    bg = "#fff0f0" if is_special else "#f0f7ff"
+                    color = "#ff4b4b" if is_special else "#007bff"
+                    border = "#ffdada" if is_special else "#cce5ff"
+                    tag_html += f'<span style="background:{bg}; color:{color}; border:1px solid {border}; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; font-weight: 600; display: inline-block; margin-bottom: 4px;">{r}</span>'
+                
+                # --- カード全体の表示 ---
+                # rgbaの波括弧を {{ }} にエスケープしています
+                st.markdown(f'''
+                    <div style="background: white; padding: 12px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <a href="{gym["url"]}" target="_blank" style="color:#333; font-weight:700; text-decoration:none; font-size: 0.95rem;">
+                                📸 {gym["name"]}
+                            </a>
+                            <span style="color: #999; font-size: 0.7rem; background: #f8f8f8; padding: 2px 6px; border-radius: 4px;">
+                                📍 {gym["area"]}
+                            </span>
+                        </div>
+                        <div style="line-height: 1.2;">
+                            {tag_html}
+                        </div>
                     </div>
-                    <div style="line-height: 1.2;">
-                        {tag_html}
-                    </div>
-                </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.info("条件に合うジムが見つかりません。")
-    
-    st.divider()
-
+                ''', unsafe_allow_html=True)
+        else:
+            st.info("条件に合うジムが見つかりません。")
+            
 # Tab 2: 🏠 ジム (マスタ連動・高機能スコアリング版)
 with tabs[1]:
     st.query_params["tab"] = "🏠 ジム"    
