@@ -259,7 +259,7 @@ with tabs[0]:
             f"color: {user_color}; "
             f"font-weight: 800; "
             f"filter: drop-shadow(0.5px 0.5px 0.1px rgba(0,0,0,0,1)); "
-            f"padding": 0.2px; "
+            f"padding: 0.2px; "
         )
         
         return f'<span style="color:{color}; font-weight:bold;">{icon}{user_name}</span>'
