@@ -391,23 +391,30 @@ with tabs[1]:
                 "score": score,
                 "reasons": reasons
             })
-        
+
     # 5. スコア上位表示
     if ranked_list:
         # スコア上位6件
         sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
         
         for gym in sorted_gyms:
-            # タグ生成（シンプル化：背景は淡い青、🔥や👥がある時だけ少し色を強調）
-            tag_html = "".join([
-                f'<span style="background:{"#fff0f0" if ("🔥" in r or "👥" in r) else "#f0f7ff"}; '
-                f'color:{"#ff4b4b" if ("🔥" in r or "👥" in r) else "#007bff"}; '
-                f'padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; '
-                f'border: 1px solid {"#ffdada" if ("🔥" in r or "👥" in r) else "#cce5ff"}; '
-                f'font-weight: 600;">{r}</span>' 
-                for r in gym['reasons']
-            ])
+            # --- ここでタグを個別に生成（競合を避ける） ---
+            tag_list = []
+            for r in gym['reasons']:
+                # 色の判定
+                is_special = "🔥" in r or "👥" in r
+                bg = "#fff0f0" if is_special else "#f0f7ff"
+                color = "#ff4b4b" if is_special else "#007bff"
+                border = "#ffdada" if is_special else "#cce5ff"
+                
+                # スパンを作成
+                t = f'<span style="background:{bg}; color:{color}; border:1px solid {border}; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; font-weight: 600;">{r}</span>'
+                tag_list.append(t)
             
+            # 結合
+            final_tag_html = "".join(tag_list)
+            
+            # --- メインの表示 ---
             st.markdown(f'''
                 <div style="
                     background: white; 
@@ -426,13 +433,13 @@ with tabs[1]:
                         </span>
                     </div>
                     <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 2px;">
-                        {tag_html}
+                        {final_tag_html}
                     </div>
                 </div>
             ''', unsafe_allow_html=True)
     else:
         st.info("条件に合うジムが見つかりません。")
-
+    
     st.divider()
 
     # Tab 2: 🏢 ジム一覧
