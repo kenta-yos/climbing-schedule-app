@@ -154,6 +154,25 @@ def get_user_badge(user_name, user_df):
         icon = "👤"
     return f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; font-size:0.8rem; margin-right:4px; font-weight:bold;">{icon} {user_name}</span>'
 
+def get_colored_user_text(user_name, user_df_input):
+    u_color = "#555555" # デフォルト
+    u_icon = ""
+
+    if user_df_input is not None and not user_df_input.empty:
+        match = user_df_input[user_df_input['user_name'] == user_name]
+        if not match.empty:
+            u_color = match.iloc[0]['color']
+            u_icon = match.iloc[0]['icon']
+
+    # 白背景でもクッキリ見えるように白の縁取り(text-shadow)を付与
+    style = (
+        f"color: {u_color}; "
+        f"font-weight: 800; "
+        f"text-shadow: 1px 1px 0px #fff, -1px -1px 0px #fff, 1px -1px 0px #fff, -1px 1px 0px #fff; "
+        f"padding: 0 2px;"
+    )
+    return f'<span style="{style}">{u_icon}{user_name}</span>'
+
 # --- 4. ログイン処理 (変更なし) ---
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
@@ -245,59 +264,41 @@ with tabs[0]:
 
     st.divider()
     
-    # --- ユーザー名を色付き文字にするヘルパー関数 ---
-    def get_colored_user_text(user_name, user_df):
-        # 関数の内部で完結するように、デフォルト値を設定
-        u_color = "#333333"
-        u_icon = "👤"
-        
-        if user_df is not None and not user_df.empty:
-            # user_name が一致する行を探す
-            match = user_df[user_df['user_name'] == user_name]
-            if not match.empty:
-                u_color = match.iloc[0]['color']
-                u_icon = match.iloc[0]['icon']
-        
-        # スタイルの組み立て
-        style = (
-            f"color: {u_color}; "
-            f"font-weight: 800; "
-            f"filter: drop-shadow(0.5px 0.5px 0.1px rgba(0,0,0,0.1)); "
-            f"padding: 0 2px;"
-        )
-        
-        return f'<span style="{style}">{u_icon}{user_name}</span>'
-    
-    st.markdown("### 🔥 今日どこ登る？")
-    if not today_logs.empty:
-        for gym, group in today_logs.groupby('gym_name'):
-            user_texts = [get_colored_user_text(u, user_df) for u in group['user']]
-            members_html = " & ".join(user_texts)
-            
-            # 1行でシンプルに表示
-            st.markdown(f'''
-                <div style="font-size:0.95rem; margin-bottom:5px; padding-left:8px; border-left:3px solid #4CAF50;">
-                    <b>{gym}</b>：{members_html}
-                </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.caption("誰もいないよ😭")
+    # 3. シンプル1行表示（ここなら NameError にならない）
+    st.markdown("#####  🔥 今日どこ登る？")
+    if not today_logs.empty:
+        grouped_today = today_logs.groupby('gym_name')['user'].apply(list).reset_index()
+        for _, row in grouped_today.iterrows():
+            gym = row['gym_name']
+            unique_users = sorted(list(set(row['user'])))
+            user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
+            members_html = " & ".join(user_htmls)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown(f'''
+                <div style="margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #4CAF50;">
+                    <span style="font-weight: bold; color: #333;">{gym}</span>：{members_html}
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.caption("誰もいないよ😭")
 
-    st.markdown("### 👀 明日は誰かいる？")
-    if not tomorrow_logs.empty:
-        for gym, group in tomorrow_logs.groupby('gym_name'):
-            user_texts = [get_colored_user_text(u, user_df) for u in group['user']]
-            members_html = " & ".join(user_texts)
-            
-            st.markdown(f'''
-                <div style="font-size:0.95rem; margin-bottom:5px; padding-left:8px; border-left:3px solid #FF9800;">
-                    <b>{gym}</b>：{members_html}
-                </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.caption("誰もいないよ😭")
+    st.markdown("#####  👀 明日は誰かいる？")
+    if not tomorrow_logs.empty:
+        grouped_tom = tomorrow_logs.groupby('gym_name')['user'].apply(list).reset_index()
+        for _, row in grouped_tom.iterrows():
+            gym = row['gym_name']
+            unique_users = sorted(list(set(row['user'])))
+            user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
+            members_html = " & ".join(user_htmls)
+
+            st.markdown(f'''
+                <div style="margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #FF9800;">
+                    <span style="font-weight: bold; color: #333;">{gym}</span>：{members_html}
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.caption("誰もいないよ😭") 
+   
     
 # Tab 2: 🏠 ジム (マスタ連動・高機能スコアリング版)
 with tabs[1]:
