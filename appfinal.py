@@ -271,7 +271,7 @@ with tabs[0]:
     st.divider()
     
     # 3. シンプル1行表示
-    st.markdown("##### 🔥 今日どこ登る？")
+    st.markdown("##### 🔥 今日どこいくー？")
     if not today_logs.empty:
         # ジム名でグループ化してユーザーをリストにする
         grouped_today = today_logs.groupby('gym_name')['user'].apply(list).reset_index()
@@ -289,7 +289,7 @@ with tabs[0]:
     else:
         st.caption("誰もいないよ😭")
 
-    st.markdown("##### 👀 明日は誰かいる？")
+    st.markdown("##### 👀 明日どこいくー？")
     if not tomorrow_logs.empty:
         grouped_tom = tomorrow_logs.groupby('gym_name')['user'].apply(list).reset_index()
         for _, row in grouped_tom.iterrows():
