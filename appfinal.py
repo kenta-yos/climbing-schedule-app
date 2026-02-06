@@ -331,8 +331,11 @@ with tabs[0]:
     # 4. ジムのスコアリング
         ranked_list = []
         
-        # 比較用に target_date を date 型に固定
-        check_date = target_date if isinstance(target_date, datetime.date) else target_date.date()
+        # target_dateを確実にdate型に統一
+        try:
+            check_date = pd.to_datetime(target_date).date()
+        except:
+            check_date = target_date
     
         if not gym_df.empty:
             for _, row in gym_df.iterrows():
@@ -345,30 +348,25 @@ with tabs[0]:
                 # --- 自分の最終訪問日 (timestamptz -> date) ---
                 my_last_visit_dt = None
                 if not log_df.empty:
-                    # 該当ジムの訪問実績を抽出
                     my_visits = log_df[
                         (log_df['user'] == st.session_state.USER) & 
                         (log_df['type'] == '実績') & 
                         (log_df['gym_name'] == row['gym_name'])
                     ]
                     if not my_visits.empty:
-                        # pd.to_datetimeで変換後、.dt.date で date型に揃える
                         my_last_visit_dt = pd.to_datetime(my_visits['date']).max().date()
     
-                # --- ジムの新セット日 (date型 -> date型) ---
+                # --- ジムの新セット日 (date型 or 文字列 -> date) ---
                 new_set_dt = None
                 if 'new_set_date' in row and pd.notnull(row['new_set_date']):
-                    # すでにdate型ならそのまま、文字列なら変換
                     new_set_dt = pd.to_datetime(row['new_set_date']).date()
     
-                # --- 加点ロジック ---
-                # A. 新セット加点
-                if new_set_dt is not None:
-                    # 自分がそのセット替えの後に一度でも行ったかどうか
-                    # 両方 date型 なので安全に比較可能
+                # --- 加点判定 ---
+                if new_set_dt:
+                    # ターゲット日との日数差
+                    set_days = (check_date - new_set_dt).days
+                    # 「まだ行ってない」または「セット後に行ってない」
                     if my_last_visit_dt is None or new_set_dt > my_last_visit_dt:
-                        set_days = (check_date - new_set_dt).days
-                        
                         if 0 <= set_days <= 7:
                             score += 70
                             reasons.append("🔥超新セット!")
@@ -376,21 +374,19 @@ with tabs[0]:
                             score += 40
                             reasons.append("✨新セット")
     
-                # B. 仲間加点 (timestamptz の dt.date 変換を利用)
-                others_today = pd.DataFrame()
+                # 仲間判定
+                others_count = 0
                 if not log_df.empty:
-                    others_today = log_df[
+                    others_count = len(log_df[
                         (log_df['user'] != st.session_state.USER) & 
                         (log_df['type'] == '予定') & 
                         (pd.to_datetime(log_df['date']).dt.date == check_date) &
                         (log_df['gym_name'] == row['gym_name'])
-                    ]
-    
-                if not others_today.empty:
+                    ])
+                if others_count > 0:
                     score += 50
-                    reasons.append(f"👥 仲間{len(others_today)}人")
+                    reasons.append(f"👥 仲間{others_count}人")
     
-                # ランク用リストに追加
                 ranked_list.append({
                     "name": row['gym_name'],
                     "area": row['area_tag'],
@@ -398,42 +394,33 @@ with tabs[0]:
                     "score": score,
                     "reasons": reasons
                 })
-            
-    # 5. スコア上位表示
+    
+        # 5. スコア上位表示
         if ranked_list:
-            # スコア上位6件
             sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
             
             for gym in sorted_gyms:
-                # --- タグの生成 ---
+                # タグ生成
                 tag_html = ""
                 for r in gym['reasons']:
-                    is_special = "🔥" in r or "👥" in r
-                    bg = "#fff0f0" if is_special else "#f0f7ff"
-                    color = "#ff4b4b" if is_special else "#007bff"
-                    border = "#ffdada" if is_special else "#cce5ff"
-                    tag_html += f'<span style="background:{bg}; color:{color}; border:1px solid {border}; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; font-weight: 600; display: inline-block; margin-bottom: 4px;">{r}</span>'
+                    is_sp = any(x in r for x in ["🔥", "👥"])
+                    bg, clr, brd = ("#fff0f0", "#ff4b4b", "#ffdada") if is_sp else ("#f0f7ff", "#007bff", "#cce5ff")
+                    tag_html += f'<span style="background:{bg}; color:{clr}; border:1px solid {brd}; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; font-weight: 600; display: inline-block; margin-bottom: 4px;">{r}</span>'
                 
-                # --- カード全体の表示 ---
-                # rgbaの波括弧を {{ }} にエスケープしています
-                st.markdown(f'''
-                    <div style="background: white; padding: 12px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                            <a href="{gym["url"]}" target="_blank" style="color:#333; font-weight:700; text-decoration:none; font-size: 0.95rem;">
-                                📸 {gym["name"]}
-                            </a>
-                            <span style="color: #999; font-size: 0.7rem; background: #f8f8f8; padding: 2px 6px; border-radius: 4px;">
-                                📍 {gym["area"]}
-                            </span>
-                        </div>
-                        <div style="line-height: 1.2;">
-                            {tag_html}
-                        </div>
-                    </div>
-                ''', unsafe_allow_html=True)
+                # カード表示（f-stringの波括弧問題を避けるため分割結合）
+                card_html = (
+                    '<div style="background: white; padding: 12px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">'
+                    '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">'
+                    f'<a href="{gym["url"]}" target="_blank" style="color:#333; font-weight:700; text-decoration:none; font-size: 0.95rem;">📸 {gym["name"]}</a>'
+                    f'<span style="color: #999; font-size: 0.7rem; background: #f8f8f8; padding: 2px 6px; border-radius: 4px;">📍 {gym["area"]}</span>'
+                    '</div>'
+                    f'<div style="line-height: 1.2;">{tag_html}</div>'
+                    '</div>'
+                )
+                st.markdown(card_html, unsafe_allow_html=True)
         else:
             st.info("条件に合うジムが見つかりません。")
-            
+        
 # Tab 2: 🏠 ジム (マスタ連動・高機能スコアリング版)
 with tabs[1]:
     st.query_params["tab"] = "🏠 ジム"    
