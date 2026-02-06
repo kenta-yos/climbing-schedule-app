@@ -268,6 +268,7 @@ with tabs[0]:
         if c2.form_submit_button("✊ 登りました", use_container_width=True) and q_gym:
             new_row = pd.DataFrame([{'date': pd.to_datetime(q_date), 'gym_name': q_gym, 'user': st.session_state.USER, 'type': '実績'}])
             with st.spinner("登録中..."):
+                safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
 
     st.divider()
     
