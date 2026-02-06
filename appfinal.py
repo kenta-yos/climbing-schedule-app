@@ -254,12 +254,19 @@ with tabs[0]:
         else:
             color = "#666"
             icon = "👤"
+        
+        style = (
+            f"color: {user_color}; "
+            f"font-weight: 800; "
+            f"filter: drop-shadow(0.5px 0.5px 0.1px rgba(0,0,0,0,1)); "
+            f"padding": 0.2px; "
+        )
+        
         return f'<span style="color:{color}; font-weight:bold;">{icon}{user_name}</span>'
-
+        
     st.markdown("### 🔥 今日どこ登る？")
     if not today_logs.empty:
         for gym, group in today_logs.groupby('gym_name'):
-            # ユーザー名を色付きテキストに変換し、「 & 」で結合
             user_texts = [get_colored_user_text(u, user_df) for u in group['user']]
             members_html = " & ".join(user_texts)
             
