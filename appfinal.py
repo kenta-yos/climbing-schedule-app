@@ -245,25 +245,29 @@ with tabs[0]:
 
     st.divider()
     
-    # 表示用ヘルパー関数：名前を色付き文字にする
+    # --- ユーザー名を色付き文字にするヘルパー関数 ---
     def get_colored_user_text(user_name, user_df):
-        u_info = user_df[user_df['user_name'] == user_name] if not user_df.empty else pd.DataFrame()
-        if not u_info.empty:
-            color = u_info.iloc[0]['color']
-            icon = u_info.iloc[0]['icon']
-        else:
-            color = "#666"
-            icon = "👤"
+        # 関数の内部で完結するように、デフォルト値を設定
+        u_color = "#333333"
+        u_icon = "👤"
         
+        if user_df is not None and not user_df.empty:
+            # user_name が一致する行を探す
+            match = user_df[user_df['user_name'] == user_name]
+            if not match.empty:
+                u_color = match.iloc[0]['color']
+                u_icon = match.iloc[0]['icon']
+        
+        # スタイルの組み立て
         style = (
-            f"color: {user_color}; "
+            f"color: {u_color}; "
             f"font-weight: 800; "
-            f"filter: drop-shadow(0.5px 0.5px 0.1px rgba(0,0,0,0,1)); "
-            f"padding: 0.2px; "
+            f"filter: drop-shadow(0.5px 0.5px 0.1px rgba(0,0,0,0.1)); "
+            f"padding: 0 2px;"
         )
         
-        return f'<span style="color:{color}; font-weight:bold;">{icon}{user_name}</span>'
-        
+        return f'<span style="{style}">{u_icon}{user_name}</span>'
+    
     st.markdown("### 🔥 今日どこ登る？")
     if not today_logs.empty:
         for gym, group in today_logs.groupby('gym_name'):
