@@ -269,9 +269,9 @@ with tabs[0]:
             st.session_state["new_row"] = pd.DataFrame([{'date': pd.to_datetime(q_date), 'gym_name': q_gym, 'user': st.session_state.USER, 'type': '実績'}])
 
     if st.session_state.get("saving"):
-    with st.spinner("登録中..."):
-        safe_save("climbing_logs", st.session_state["new_row"], mode="add", target_tab="🏠 Top")
-    st.session_state["saving"] = False
+        with st.spinner("登録中..."):
+            safe_save("climbing_logs", st.session_state["new_row"], mode="add", target_tab="🏠 Top")
+        st.session_state["saving"] = False
 
     st.divider()
     
