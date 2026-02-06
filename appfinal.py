@@ -98,6 +98,12 @@ user_df = get_supabase_data("users")
 area_master = get_supabase_data("area_master")
 
 # --- 3. 保存・削除処理 (Supabase版) ---
+FEEDBACK = {
+    "add":    {"msg": "登録したよ", "icon": "🚀"},
+    "delete": {"msg": "削除したよ",   "icon": "🙆‍♂️"},
+    "error":  {"msg": "失敗しちゃった", "icon": "⚠️"}
+}
+
 def safe_save(table: str, data_input, mode: str = "add", target_tab: str = None):
     """
     data_input: 
@@ -129,7 +135,8 @@ def safe_save(table: str, data_input, mode: str = "add", target_tab: str = None)
 
         # 共通処理
         st.cache_data.clear()
-        st.toast("✅ 完了しました！", icon="🚀")
+        fb = FEEDBACK.get(mode, FEEDBACK["add"])
+        st.toast(fb["msg"], icon=fb["icon"])
         
         # リダイレクト設定
         params = {"user": st.session_state.USER}
@@ -251,7 +258,6 @@ with tabs[0]:
     st.subheader("🚀 クイック登録")
     with st.form("quick_log_form", clear_on_submit=True):
         q_date = st.date_input("📅 日程", value=today_jp)
-        # ラジオボタンだと場所を取るので、以前のセレクトボックス形式に戻すのがおすすめです
         q_gym = st.selectbox("🏢 ジムを選択", options=sorted_gym_names, index=None, placeholder="ジム名を選択...")
         
         c1, c2 = st.columns(2)
