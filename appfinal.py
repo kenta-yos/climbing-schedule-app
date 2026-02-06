@@ -311,12 +311,8 @@ with tabs[0]:
     else:
         st.caption("誰もいないよ😭")
     
-# Tab 2: 🏠 ジム (マスタ連動・高機能スコアリング版)
-with tabs[1]:
-    st.query_params["tab"] = "🏠 ジム"
-    
     # 1. ターゲット設定
-    st.subheader("✨ おすすめ")
+    st.subheader("✨ 今日のおすすめジム")
     c_date1, c_date2 = st.columns([0.6, 0.4])
     target_date = c_date1.date_input("ターゲット日", value=today_jp, key="tg_date")
     # 比較用に型を Timestamp に統一
@@ -442,9 +438,9 @@ with tabs[1]:
     
     st.divider()
 
-# Tab 2: 🏢 ジム一覧
-with tabs[2]:
-    st.query_params["tab"] = "🏢 ジム一覧"
+# Tab 2: 🏠 ジム (マスタ連動・高機能スコアリング版)
+with tabs[1]:
+    st.query_params["tab"] = "🏠 ジム"    
     st.subheader("🏢 ジムライブラリ")
 
     if not gym_df.empty:
@@ -538,7 +534,7 @@ with tabs[2]:
         st.info("ジムマスターが空です。管理タブから登録してください。")
     
 # Tab 3: 📊 マイページ
-with tabs[3]:
+with tabs[2]:
     st.query_params["tab"] = "📊 マイページ"
     
     # --- 1. 期間指定（実績の統計用） ---
@@ -666,7 +662,7 @@ with tabs[3]:
                     safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
 
 # Tab 4: 👥 仲間 (Supabase連動・完全復元版)
-with tabs[4]:
+with tabs[3]:
     st.query_params["tab"] = "👥 仲間"
     st.subheader("👥 仲間たちの予定 (直近30日)")
     
@@ -726,7 +722,7 @@ with tabs[4]:
         st.info("データがありません。")
 
 # Tab 5: 📅 セット (Supabase版・レイアウト修正)
-with tabs[5]:
+with tabs[4]:
     st.query_params["tab"] = "📅 セット"
     st.subheader("📅 セットスケジュール")
     
@@ -775,7 +771,7 @@ with tabs[5]:
         st.info("セットスケジュールが登録されていません。")
 
 # Tab 6: ⚙️ 管理 (セット一括登録・完全復活版)
-with tabs[6]:
+with tabs[5]:
     st.query_params["tab"] = "⚙️ 管理"    
     st.subheader("⚙️ 管理メニュー")
 
