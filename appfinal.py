@@ -262,13 +262,11 @@ with tabs[0]:
         
         c1, c2 = st.columns(2)
         if c1.form_submit_button("✋ 登ります", use_container_width=True) and q_gym:
-            new_row = pd.DataFrame([{'date': pd.to_datetime(q_date), 'gym_name': q_gym, 'user': st.session_state.USER, 'type': '予定'}])
-            with st.spinner("登録中..."):
-                safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
+            new_row = pd.DataFrame([{'date': pd.to_datetime(q_date), 'gym_name': q_gym, 'user': st.session_state.USER, 'type': '
+            safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
         if c2.form_submit_button("✊ 登りました", use_container_width=True) and q_gym:
             new_row = pd.DataFrame([{'date': pd.to_datetime(q_date), 'gym_name': q_gym, 'user': st.session_state.USER, 'type': '実績'}])
-            with st.spinner("登録中..."):
-                safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
+            safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
 
     st.divider()
     
@@ -531,8 +529,7 @@ with tabs[2]:
                 with col2:
                     st.write("") # 少し隙間
                     if st.button("🗑️", key=f"del_plan_{row['id']}"):
-                        with st.spinner("削除中..."):
-                            safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
                         
     # --- 2. 登った実績 (統計グラフ) ---
     st.markdown("<br>", unsafe_allow_html=True)
@@ -724,8 +721,7 @@ with tabs[5]:
             if st.form_submit_button("登録"):
                 if n and a:
                     new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': a}])
-                    with st.spinner("登録中..."):
-                        safe_save("gym_master", new_gym, mode="add", target_tab="⚙️ 管理")
+                    safe_save("gym_master", new_gym, mode="add", target_tab="⚙️ 管理")
                 else:
                     st.warning("ジム名とエリアは必須です")
 
@@ -776,8 +772,7 @@ with tabs[5]:
                 
                 # 入力欄をリセットするための処理
                 st.session_state.rows = 1
-                with st.spinner("登録中..."):
-                    safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
+                safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
             else:
                 st.error("ジムの選択と告知URLの入力は必須です。")
 
