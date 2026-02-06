@@ -488,23 +488,22 @@ with tabs[1]:
     else:
         st.info("ジムマスターが空です。管理タブから登録してください。")
 
-# Tab 3: 📊 マイページ (期間連動・コンパクト削除リスト版)
+# Tab 3: 📊 マイページ
 with tabs[2]:
     st.query_params["tab"] = "📊 マイページ"
     
-    # --- 1. 期間指定（これが全ての表示の基準になる） ---
-    st.subheader("📊 統計・履歴管理")
+    # --- 1. 期間指定（実績の統計用） ---
+    st.subheader("📊 統計・実績管理")
     sc1, sc2 = st.columns(2)
     ms = sc1.date_input("開始", value=today_jp.replace(day=1), key="stat_start")
     me = sc2.date_input("終了", value=today_jp, key="stat_end")
     
-    # 選択された期間をTimestampに変換（比較用）
     ms_ts = pd.Timestamp(ms)
     me_ts = pd.Timestamp(me)
 
-    # --- 2. データの抽出（選択期間でフィルタリング） ---
+    # --- 2. データの抽出 ---
     if not log_df.empty:
-        # 指定期間内の自分の実績
+        # 【実績】は期間で絞り込む
         filtered_done = log_df[
             (log_df['user'] == st.session_state.USER) & 
             (log_df['type'] == '実績') & 
@@ -512,18 +511,16 @@ with tabs[2]:
             (log_df['date'] <= me_ts)
         ].sort_values('date', ascending=False)
         
-        # 指定期間内の自分の予定
-        filtered_plans = log_df[
+        # 【予定】は期間に関係なく自分のものを全件出す
+        all_my_plans = log_df[
             (log_df['user'] == st.session_state.USER) & 
-            (log_df['type'] == '予定') & 
-            (log_df['date'] >= ms_ts) & 
-            (log_df['date'] <= me_ts)
-        ].sort_values('date')
+            (log_df['type'] == '予定')
+        ].sort_values('date') # 予定なので日付順
     else:
         filtered_done = pd.DataFrame()
-        filtered_plans = pd.DataFrame()
+        all_my_plans = pd.DataFrame()
 
-    # --- 3. 統計グラフの表示 ---
+    # --- 3. 統計グラフの表示（ここは実績ベース） ---
     if not filtered_done.empty:
         st.markdown(f'''
             <div class="insta-card">
@@ -545,19 +542,35 @@ with tabs[2]:
             showlegend=False, coloraxis_showscale=False, xaxis_visible=False, 
             yaxis_title=None, margin=dict(t=10, b=10, l=120, r=50), 
             height=max(150, 35 * len(counts)), paper_bgcolor='rgba(0,0,0,0)', 
-            plot_bgcolor='rgba(0,0,0,0)', dragmode=False
+            plot_bgcolor='rgba(0,0,0,0)', dragmode=False,            
         )
+        
+        st.markdown('<div style="pointer-events: none;">', unsafe_allow_html=True)
+        st.plotly_chart(
+            fig, 
+            use_container_width=True, 
+            config={
+                'staticPlot': True,        # これが最強：グラフを完全に静止画にする
+                'displayModeBar': False,   # 上のメニューも出さない
+                'scrollZoom': False,
+                'doubleClick': False,
+                'showAxisDragHandles': False
+            }
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+        
         st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
     else:
         st.info("この期間の実績はまだありません。")
 
     st.divider()
 
-    # --- 4. 予定と実績をタブで表示（期間連動リスト） ---
-    st.subheader("📝 履歴管理（期間内のみ）")
-    m_tabs = st.tabs(["📅 予定の管理", "✅ 実績の管理"])
+    # --- 4. 予定と実績をタブで表示 ---
+    st.subheader("📝 履歴管理（削除）")
+    m_tabs = st.tabs(["📅 全ての予定", "✅ 期間内の実績"])
 
-    list_style = """
+    # スタイルは共通
+    st.markdown("""
         <style>
         .compact-row {
             display: grid;
@@ -570,14 +583,13 @@ with tabs[2]:
         .compact-date { font-size: 0.8rem; font-weight: 700; color: #666; }
         .compact-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         </style>
-    """
-    st.markdown(list_style, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-    with m_tabs[0]:
-        if filtered_plans.empty:
-            st.caption(f"{ms.strftime('%m/%d')}〜{me.strftime('%m/%d')} の予定はありません。")
+    with m_tabs[0]: # 予定タブ：全期間
+        if all_my_plans.empty:
+            st.caption("予定はありません。")
         else:
-            for _, row in filtered_plans.iterrows():
+            for _, row in all_my_plans.iterrows():
                 c1, c2 = st.columns([0.85, 0.15])
                 c1.markdown(f'''
                     <div class="compact-row">
@@ -589,7 +601,7 @@ with tabs[2]:
                 if c2.button("🗑️", key=f"del_p_{row['id']}"):
                     safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
 
-    with m_tabs[1]:
+    with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
             st.caption(f"{ms.strftime('%m/%d')}〜{me.strftime('%m/%d')} の実績はありません。")
         else:
