@@ -394,42 +394,31 @@ with tabs[0]:
         sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
         
         for gym in sorted_gyms:
-            # --- ここでタグを個別に生成（競合を避ける） ---
-            tag_list = []
+            # --- タグの生成 ---
+            tag_html = ""
             for r in gym['reasons']:
-                # 色の判定
                 is_special = "🔥" in r or "👥" in r
                 bg = "#fff0f0" if is_special else "#f0f7ff"
                 color = "#ff4b4b" if is_special else "#007bff"
                 border = "#ffdada" if is_special else "#cce5ff"
                 
-                # スパンを作成
-                t = f'<span style="background:{bg}; color:{color}; border:1px solid {border}; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; font-weight: 600;">{r}</span>'
-                tag_list.append(t)
+                # インラインスタイルで直接記述（f-stringの競合回避）
+                tag_html += f'<span style="background:{bg}; color:{color}; border:1px solid {border}; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; font-weight: 600; display: inline-block; margin-bottom: 4px;">{r}</span>'
             
-            # 結合
-            final_tag_html = "".join(tag_list)
-            
-            # --- メインの表示 ---
+            # --- カード全体の表示 ---
+            # 外側のdivと内側の変数を分離して視認性を確保
             st.markdown(f'''
-                <div style="
-                    background: white; 
-                    padding: 10px 14px; 
-                    border-radius: 10px; 
-                    border: 1px solid #f0f0f0; 
-                    margin-bottom: 8px; 
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                ">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <a href="{gym["url"]}" target="_blank" style="color:#333; font-weight:700; text-decoration:none; font-size: 0.9rem;">
+                <div style="background: white; padding: 12px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                        <a href="{gym["url"]}" target="_blank" style="color:#333; font-weight:700; text-decoration:none; font-size: 0.95rem;">
                             📸 {gym["name"]}
                         </a>
                         <span style="color: #999; font-size: 0.7rem; background: #f8f8f8; padding: 2px 6px; border-radius: 4px;">
                             📍 {gym["area"]}
                         </span>
                     </div>
-                    <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 2px;">
-                        {final_tag_html}
+                    <div style="line-height: 1.2;">
+                        {tag_html}
                     </div>
                 </div>
             ''', unsafe_allow_html=True)
