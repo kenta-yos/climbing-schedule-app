@@ -268,14 +268,14 @@ with tabs[0]:
             st.session_state["quick_save"] = {"type": "実績", "date": q_date, "gym": q_gym}
 
     if st.session_state.get("quick_save"):
-    data = st.session_state.pop("quick_save")  # 一度取り出して消す
-    new_row = pd.DataFrame([{
-        'date': data["date"],
-        'gym_name': data["gym"],
-        'user': st.session_state.USER,
-        'type': data["type"]
-    }])
-    safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
+        data = st.session_state.pop("quick_save")  # 一度取り出して消す
+        new_row = pd.DataFrame([{
+            'date': data["date"],
+            'gym_name': data["gym"],
+            'user': st.session_state.USER,
+            'type': data["type"]
+        }])
+        safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
 
     st.divider()
     
