@@ -329,65 +329,70 @@ with tabs[0]:
         allowed_tags = area_master[area_master['major_area'] == major_choice]['area_tag'].tolist() if not area_master.empty else []
 
     # 4. ジムのスコアリング
-    ranked_list = []
-    if not gym_df.empty:
-        for _, row in gym_df.iterrows():
-            if row['area_tag'] not in allowed_tags:
-                continue
-
-            score = 0
-            reasons = []
-            
-            # --- 1. データの準備（ここで変数を確実に定義する） ---
-            # 自分の最終訪問日
-            my_last_visit = log_df[
-                (log_df['user'] == st.session_state.USER) & 
-                (log_df['type'] == '実績') & 
-                (log_df['gym_name'] == row['gym_name'])
-            ]['date'].max() if not log_df.empty else None
-
-            # ジムの新セット日（ここで確実に定義）
-            new_set_dt = None
-            if 'new_set_date' in row and pd.notnull(row['new_set_date']):
-                try:
-                    new_set_dt = pd.to_datetime(row['new_set_date'])
-                except:
-                    new_set_dt = None
-
-            # --- 2. 加点ロジック：刺激が訪問より後か？ ---
-            # A. 新セット加点
-            if new_set_dt is not None:
-                # 自分がそのセット替えの後に一度でも行ったかどうか
-                if my_last_visit is None or new_set_dt > my_last_visit:
-                    set_days = (t_dt - new_set_dt).days
-                    
-                    if 0 <= set_days <= 7:
-                        score += 70
-                        reasons.append("🔥超新セット!")
-                    elif 7 < set_days <= 14:
-                        score += 40
-                        reasons.append("✨新セット")
-
-            # B. 仲間加点
-            others_today = log_df[
-                (log_df['user'] != st.session_state.USER) & 
-                (log_df['type'] == '予定') & 
-                (log_df['date'].dt.date == target_date) &
-                (log_df['gym_name'] == row['gym_name'])
-            ] if not log_df.empty else pd.DataFrame()
-
-            if not others_today.empty:
-                score += 50
-                reasons.append("👥 仲間あり")
-
-            ranked_list.append({
-                "name": row['gym_name'],
-                "area": row['area_tag'],
-                "url": row.get('instagram_url', '#'),
-                "score": score,
-                "reasons": reasons
-            })
-
+        ranked_list = []
+        
+        # 比較用に target_date を確実に Timestamp 型へ変換しておく
+        t_dt_start = pd.Timestamp(target_date).normalize()
+    
+        if not gym_df.empty:
+            for _, row in gym_df.iterrows():
+                if row['area_tag'] not in allowed_tags:
+                    continue
+    
+                score = 0
+                reasons = []
+                
+                # --- 1. データの準備 ---
+                # 自分の最終訪問日
+                my_last_visit = log_df[
+                    (log_df['user'] == st.session_state.USER) & 
+                    (log_df['type'] == '実績') & 
+                    (log_df['gym_name'] == row['gym_name'])
+                ]['date'].max() if not log_df.empty else None
+    
+                # ジムの新セット日
+                new_set_dt = None
+                if 'new_set_date' in row and pd.notnull(row['new_set_date']):
+                    new_set_dt = pd.to_datetime(row['new_set_date']).normalize()
+    
+                # --- 2. 加点ロジック ---
+                # A. 新セット加点
+                if new_set_dt is not None:
+                    # 自分がそのセット替えの後に一度でも行ったかどうか
+                    if my_last_visit is None or new_set_dt > pd.to_datetime(my_last_visit).normalize():
+                        # t_dt（ターゲット日）とセット日の差
+                        set_days = (pd.Timestamp(target_date) - new_set_dt).days
+                        
+                        if 0 <= set_days <= 7:
+                            score += 70
+                            reasons.append("🔥超新セット!")
+                        elif 7 < set_days <= 14:
+                            score += 40
+                            reasons.append("✨新セット")
+    
+                # B. 仲間加点
+                # ここが修正ポイント：dt.date と target_date を比較
+                others_today = log_df[
+                    (log_df['user'] != st.session_state.USER) & 
+                    (log_df['type'] == '予定') & 
+                    (log_df['date'].dt.date == target_date) &  # dateオブジェクト同士で比較
+                    (log_df['gym_name'] == row['gym_name'])
+                ] if not log_df.empty else pd.DataFrame()
+    
+                if not others_today.empty:
+                    score += 50
+                    reasons.append("👥 仲間あり")
+    
+                # ranked_listへの追加（ここも修正：instagram_url or profile_url）
+                ranked_list.append({
+                    "name": row['gym_name'],
+                    "area": row['area_tag'],
+                    # テーブル定義に合わせて 'profile_url' になっているか確認
+                    "url": row.get('profile_url', row.get('instagram_url', '#')),
+                    "score": score,
+                    "reasons": reasons
+                })
+                
     # 5. スコア上位表示
         if ranked_list:
             # スコア上位6件
