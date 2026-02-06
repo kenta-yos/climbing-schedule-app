@@ -1,4 +1,4 @@
-import streamlit as st
+simport streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import plotly.express as px
@@ -333,77 +333,65 @@ with tabs[1]:
         allowed_tags = area_master[area_master['major_area'] == major_choice]['area_tag'].tolist() if not area_master.empty else []
 
     # 4. ジムのスコアリング
-        ranked_list = []
-        if not gym_df.empty:
-            for _, row in gym_df.iterrows():
-                if row['area_tag'] not in allowed_tags:
-                    continue
-    
-                score = 0  # 0点からスタート
-                reasons = []
-                
-                # --- 1. 訪問データの取得 ---
-                my_last_visit = log_df[
-                    (log_df['user'] == st.session_state.USER) & 
-                    (log_df['type'] == '実績') & 
-                    (log_df['gym_name'] == row['gym_name'])
-                ]['date'].max() if not log_df.empty else None
-    
-                days_since = (t_dt - my_last_visit).days if my_last_visit else 999
-    
-                # --- 2. 加点ロジック ---
-                
-                
-                # A. 新セット加点
-                if new_set_dt:
-                    # 判定の核心：「新セット日」が「自分の最終訪問」よりも後であること
-                    # つまり、そのセットが新しくなってから、まだ自分は行っていない場合のみ加点
-                    if my_last_visit is None or new_set_dt > my_last_visit:
-                        set_days = (t_dt - new_set_dt).days
-                        
-                        if 0 <= set_days <= 7:
-                            score += 70
-                            reasons.append("🔥超新セット!")
-                        elif 7 < set_days <= 14:
-                            score += 40
-                            reasons.append("✨新セット")
-                    # else: 
-                    # すでに訪問済み（new_set_dt <= my_last_visit）なら、
-                    # たとえセットから14日以内でも加点しない
-    
-                # B. 仲間加点 (訪問日に関わらず加算)
-                others_today = log_df[
-                    (log_df['user'] != st.session_state.USER) & 
-                    (log_df['type'] == '予定') & 
-                    (log_df['date'].dt.date == target_date) &
-                    (log_df['gym_name'] == row['gym_name'])
-                ]
-                if not others_today.empty:
-                    score += 40
-                    reasons.append("👥 仲間あり")
-    
-                # C. 久しぶり・初訪問ボーナス (直近でなければ加点)
-                if days_since > 30:
-                    score += 10
-                    reasons.append("✅久しぶり")
-                elif my_last_visit is None:
-                    score += 20
-                    reasons.append("🆕初訪問！")
-    
-                # --- 3. 直近訪問によるトータルスコアへのペナルティ ---
-                # 7日以内なら、上記の加点があっても強制的にスコアを低くする
-                if days_since <= 7:
-                    score -= 60  # 他の加点があってもほぼマイナスかゼロになる
-                    # ここで reasons.append はしない（減点理由を表示しないため）
-    
-                ranked_list.append({
-                    "name": row['gym_name'],
-                    "area": row['area_tag'],
-                    "url": row.get('instagram_url', '#'),
-                    "score": score,
-                    "reasons": reasons
-                })
+    ranked_list = []
+    if not gym_df.empty:
+        for _, row in gym_df.iterrows():
+            if row['area_tag'] not in allowed_tags:
+                continue
 
+            score = 0
+            reasons = []
+            
+            # --- 1. データの準備（ここで変数を確実に定義する） ---
+            # 自分の最終訪問日
+            my_last_visit = log_df[
+                (log_df['user'] == st.session_state.USER) & 
+                (log_df['type'] == '実績') & 
+                (log_df['gym_name'] == row['gym_name'])
+            ]['date'].max() if not log_df.empty else None
+
+            # ジムの新セット日（ここで確実に定義）
+            new_set_dt = None
+            if 'new_set_date' in row and pd.notnull(row['new_set_date']):
+                try:
+                    new_set_dt = pd.to_datetime(row['new_set_date'])
+                except:
+                    new_set_dt = None
+
+            # --- 2. 加点ロジック：刺激が訪問より後か？ ---
+            # A. 新セット加点
+            if new_set_dt is not None:
+                # 自分がそのセット替えの後に一度でも行ったかどうか
+                if my_last_visit is None or new_set_dt > my_last_visit:
+                    set_days = (t_dt - new_set_dt).days
+                    
+                    if 0 <= set_days <= 7:
+                        score += 70
+                        reasons.append("🔥超新セット!")
+                    elif 7 < set_days <= 14:
+                        score += 40
+                        reasons.append("✨新セット")
+
+            # B. 仲間加点
+            others_today = log_df[
+                (log_df['user'] != st.session_state.USER) & 
+                (log_df['type'] == '予定') & 
+                (log_df['date'].dt.date == target_date) &
+                (log_df['gym_name'] == row['gym_name'])
+            ] if not log_df.empty else pd.DataFrame()
+
+            if not others_today.empty:
+                score += 50
+                reasons.append("👥 仲間あり")
+
+            ranked_list.append({
+                "name": row['gym_name'],
+                "area": row['area_tag'],
+                "url": row.get('instagram_url', '#'),
+                "score": score,
+                "reasons": reasons
+            })
+        
     # 5. スコア上位表示
     if ranked_list:
         # スコア上位6件
