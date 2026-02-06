@@ -416,78 +416,97 @@ with tabs[1]:
 
     st.divider()
 
-    st.query_params["tab"] = "🏠 ジム"
-    st.subheader("🏠 ホームジム・遠征先")
+    # Tab 2: 🏢 ジム一覧
+    with tabs[1]:
+        st.query_params["tab"] = "🏢 ジム一覧"
+        st.subheader("🏢 ジムライブラリ")
     
-    if not gym_df.empty:
-        # 1. ユーザーの全実績ログを取得
-        my_done_logs = log_df[
-            (log_df['user'] == st.session_state.USER) & 
-            (log_df['type'] == '実績')
-        ] if not log_df.empty else pd.DataFrame()
-
-        # 2. ジムごとに「最後に訪問した日」を計算
-        if not my_done_logs.empty:
-            last_visits = my_done_logs.groupby('gym_name')['date'].max().dt.date.to_dict()
+        if not gym_df.empty:
+            # --- 1. データの準備（最新訪問日の算出） ---
+            my_done_logs = log_df[(log_df['user'] == st.session_state.USER) & (log_df['type'] == '実績')] if not log_df.empty else pd.DataFrame()
+    
+            # ジムごとに最新訪問日を辞書化
+            last_visit_dict = {}
+            if not my_done_logs.empty:
+                last_visit_dict = my_done_logs.groupby('gym_name')['date'].max().to_dict()
+    
+            # 訪問済みと未訪問に分ける
+            visited_list = []
+            unvisited_list = []
+    
+            for _, row in gym_df.iterrows():
+                gym_name = row['gym_name']
+                # --- ここでリンク先をインスタURLに設定 ---
+                insta_url = row.get('profile_url', '#') 
+                
+                gym_data = {
+                    "name": gym_name,
+                    "area": row['area_tag'],
+                    "url": insta_url,
+                    "last_date": last_visit_dict.get(gym_name)
+                }
+                if gym_name in last_visit_dict:
+                    visited_list.append(gym_data)
+                else:
+                    unvisited_list.append(gym_data)
+    
+            # --- 2. 訪問済みを日付順にソート ---
+            visited_list.sort(key=lambda x: x['last_date'], reverse=True)
+    
+            # --- 3. UI表示 ---
+            g_tabs = st.tabs(["✅ 訪問済", "🔍 未訪問"])
+    
+            # スタイル定義（リンクの色味を少し調整）
+            st.markdown("""
+                <style>
+                .gym-row { 
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: center; 
+                    padding: 12px 0; 
+                    border-bottom: 1px solid #f9f9f9; 
+                    text-decoration: none !important; 
+                }
+                .gym-row:active { background-color: #fafafa; }
+                .gym-info { display: flex; flex-direction: column; }
+                .gym-n { font-size: 0.9rem; font-weight: 600; color: #1DA1F2; } /* リンクと分かるよう少し青めに */
+                .gym-a { font-size: 0.7rem; color: #999; }
+                .gym-d { font-size: 0.75rem; font-weight: 700; color: #4CAF50; background: #e8f5e9; padding: 2px 8px; border-radius: 4px; }
+                </style>
+            """, unsafe_allow_html=True)
+    
+            with g_tabs[0]: # 訪問済
+                if not visited_list:
+                    st.caption("まだ訪問実績がありません。")
+                else:
+                    for g in visited_list:
+                        st.markdown(f'''
+                            <a href="{g['url']}" target="_blank" class="gym-row">
+                                <div class="gym-info">
+                                    <span class="gym-n">📸 {g['name']}</span>
+                                    <span class="gym-a">{g['area']}</span>
+                                </div>
+                                <span class="gym-d">{g['last_date'].strftime("%m/%d")}</span>
+                            </a>
+                        ''', unsafe_allow_html=True)
+    
+            with g_tabs[1]: # 未訪問
+                if not unvisited_list:
+                    st.caption("すべてのジムを制覇しました！")
+                else:
+                    for g in unvisited_list:
+                        st.markdown(f'''
+                            <a href="{g['url']}" target="_blank" class="gym-row">
+                                <div class="gym-info">
+                                    <span class="gym-n">⬜ {g['name']}</span>
+                                    <span class="gym-a">{g['area']}</span>
+                                </div>
+                                <span style="font-size: 0.7rem; color: #ccc;">未踏</span>
+                            </a>
+                        ''', unsafe_allow_html=True)
         else:
-            last_visits = {}
-
-        # 3. 訪問済みと未訪問に分ける
-        visited_gyms = []
-        unvisited_gyms = []
-        
-        for _, gym in gym_df.iterrows():
-            g_name = gym['gym_name']
-            if g_name in last_visits:
-                visited_gyms.append({
-                    'name': g_name,
-                    'url': gym['profile_url'],
-                    'last_date': last_visits[g_name]
-                })
-            else:
-                unvisited_gyms.append({
-                    'name': g_name,
-                    'url': gym['profile_url']
-                })
-
-        # --- 表示：訪問済みジム ---
-        st.markdown("##### ✅ 訪問済み")
-        if visited_gyms:
-            # 日付が新しい順にソート
-            visited_gyms.sort(key=lambda x: x['last_date'], reverse=True)
-            for g in visited_gyms:
-                st.markdown(f'''
-                    <a href="{g['url']}" target="_blank" style="text-decoration: none;">
-                        <div class="item-box">
-                            <div class="item-accent" style="background:#4CAF50 !important"></div>
-                            <span class="item-date" style="font-size:0.75rem; color:#666;">Last: {g['last_date'].strftime("%m/%d")}</span>
-                            <div class="item-gym">{g['name']}</div>
-                        </div>
-                    </a>
-                ''', unsafe_allow_html=True)
-        else:
-            st.caption("まだ訪問実績がありません。")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # --- 表示：未訪問ジム ---
-        st.markdown("##### 🚩 未訪問（行ってみたい）")
-        if unvisited_gyms:
-            for g in unvisited_gyms:
-                st.markdown(f'''
-                    <a href="{g['url']}" target="_blank" style="text-decoration: none;">
-                        <div class="item-box">
-                            <div class="item-accent" style="background:#CCC !important"></div>
-                            <span class="item-date" style="font-size:0.75rem; color:#999;">Never</span>
-                            <div class="item-gym" style="color:#666;">{g['name']}</div>
-                        </div>
-                    </a>
-                ''', unsafe_allow_html=True)
-        else:
-            st.caption("すべての登録済みジムを制覇しました！")
-    else:
-        st.info("ジムマスターが空です。管理タブから登録してください。")
-
+            st.info("ジムマスターが空です。管理タブから登録してください。")
+    
 # Tab 3: 📊 マイページ
 with tabs[2]:
     st.query_params["tab"] = "📊 マイページ"
