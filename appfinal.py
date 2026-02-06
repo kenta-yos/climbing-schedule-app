@@ -155,7 +155,7 @@ def get_user_badge(user_name, user_df):
     return f'<span style="background:{color}; color:white; padding:2px 8px; border-radius:12px; font-size:0.8rem; margin-right:4px; font-weight:bold;">{icon} {user_name}</span>'
 
 def get_colored_user_text(user_name, user_df_input):
-    u_color = "#555555" # デフォルト
+    u_color = "#555555"
     u_icon = ""
 
     if user_df_input is not None and not user_df_input.empty:
