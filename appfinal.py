@@ -144,7 +144,6 @@ def safe_save(table: str, data_input, mode: str = "add", target_tab: str = None)
             params["tab"] = target_tab
         st.query_params.update(params) # from_dictよりupdateの方が柔軟です
         
-        time.sleep(0.5) # トーストを見せるための微小な待ち時間
         st.rerun()
 
     except Exception as e:
