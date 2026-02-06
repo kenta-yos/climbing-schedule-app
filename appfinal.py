@@ -476,23 +476,23 @@ with tabs[1]:
             """, unsafe_allow_html=True)
     
             with g_tabs[0]: # 訪問済
-            if not visited_list:
-                st.caption("まだ訪問実績がありません。")
-            else:
-                for g in visited_list:
-                    # ラベルを付けて、最後に行った日であることを強調
-                    st.markdown(f'''
-                        <a href="{g['url']}" target="_blank" class="gym-row">
-                            <div class="gym-info">
-                                <span class="gym-n">📸 {g['name']}</span>
-                                <span class="gym-a">{g['area']}</span>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 0.6rem; color: #888; margin-bottom: -2px;">Last visit</div>
-                                <span class="gym-d">{g['last_date'].strftime("%m/%d")}</span>
-                            </div>
-                        </a>
-                    ''', unsafe_allow_html=True)
+                if not visited_list:
+                    st.caption("まだ訪問実績がありません。")
+                else:
+                    for g in visited_list:
+                        # ラベルを付けて、最後に行った日であることを強調
+                        st.markdown(f'''
+                            <a href="{g['url']}" target="_blank" class="gym-row">
+                                <div class="gym-info">
+                                    <span class="gym-n">📸 {g['name']}</span>
+                                    <span class="gym-a">{g['area']}</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 0.6rem; color: #888; margin-bottom: -2px;">Last visit</div>
+                                    <span class="gym-d">{g['last_date'].strftime("%m/%d")}</span>
+                                </div>
+                            </a>
+                        ''', unsafe_allow_html=True)
                 
             with g_tabs[1]: # 未訪問
                 if not unvisited_list:
