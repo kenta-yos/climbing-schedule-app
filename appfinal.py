@@ -488,65 +488,19 @@ with tabs[1]:
     else:
         st.info("ジムマスターが空です。管理タブから登録してください。")
 
-# Tab 3: 📊 マイページ (統計・履歴・削除機能 復活版)
+# Tab 3: 📊 マイページ (統計トップ・コンパクト削除リスト版)
 with tabs[2]:
     st.query_params["tab"] = "📊 マイページ"
     
-# --- 1. 登る予定一覧 (縦線レイアウト修正版) ---
-    if not log_df.empty:
-        today_ts = pd.Timestamp(today_jp)
-        
-        my_plans = log_df[
-            (log_df['user'] == st.session_state.USER) & 
-            (log_df['type'] == '予定') & 
-            (log_df['date'] >= today_ts)
-        ].sort_values('date')
-    else:
-        my_plans = pd.DataFrame()
-        
-    st.subheader("🗓️ 登る予定")
-    if my_plans.empty:
-        st.caption("予定はありません。Topタブから登録しよう！")
-    else:
-        for i, row in my_plans.iterrows():
-            # 1行ごとに独立したコンテナを作ることでレイアウト崩れを防ぐ
-            with st.container():
-                col1, col2 = st.columns([0.85, 0.15])
-                with col1:
-                    # インラインスタイルを徹底して、確実に緑の線（4px）を出す
-                    st.markdown(f'''
-                        <div style="
-                            display: grid; 
-                            grid-template-columns: 4px 50px 1fr; 
-                            align-items: center; 
-                            gap: 12px; 
-                            background: white; 
-                            padding: 10px 5px; 
-                            margin-bottom: 5px;
-                            border-bottom: 1px solid #f0f0f0;
-                        ">
-                            <div style="background:#4CAF50; width: 4px; height: 1.2rem; border-radius: 2px;"></div>
-                            <span style="color: #4CAF50; font-weight: 700; font-size: 0.9rem;">{row["date"].strftime("%m/%d")}</span>
-                            <div style="color: #1A1A1A; font-weight: 700; font-size: 0.95rem;">{row["gym_name"]}</div>
-                        </div>
-                    ''', unsafe_allow_html=True)
-                
-                with col2:
-                    st.write("") # 少し隙間
-                    if st.button("🗑️", key=f"del_plan_{row['id']}"):
-                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
-                        
-    # --- 2. 登った実績 (統計グラフ) ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("📊 登った実績統計")
-    st.divider()
+    # --- 1. 統計グラフを一番冒頭に配置 ---
+    st.subheader("📊 ダッシュボード")
     
-    # 期間指定
+    # 期間指定（デフォルトは今月1日から今日まで）
     sc1, sc2 = st.columns(2)
     ms = sc1.date_input("開始", value=today_jp.replace(day=1), key="stat_start")
     me = sc2.date_input("終了", value=today_jp, key="stat_end")
     
-    # 期間内の「実績」を抽出
+    # 実績データの抽出
     my_p_res = log_df[
         (log_df['user'] == st.session_state.USER) & 
         (log_df['type'] == '実績') & 
@@ -555,7 +509,7 @@ with tabs[2]:
     ] if not log_df.empty else pd.DataFrame()
     
     if not my_p_res.empty:
-        # インスタ風カード
+        # インスタ風サマリーカード
         st.markdown(f'''
             <div class="insta-card">
                 <div style="display: flex; justify-content: space-around;">
@@ -565,43 +519,93 @@ with tabs[2]:
             </div>
         ''', unsafe_allow_html=True)
         
-        # ジム別訪問回数グラフ (Plotly)
+        # 横棒グラフ
         counts = my_p_res['gym_name'].value_counts().reset_index()
         counts.columns = ['gym_name', 'count']
         counts = counts.sort_values('count', ascending=True)
         
         fig = px.bar(counts, x='count', y='gym_name', orientation='h', text='count', 
                      color='count', color_continuous_scale='Sunsetdark')
-        fig.update_traces(texttemplate='  <b>%{text}回</b>', textposition='outside', hoverinfo='none')
+        fig.update_traces(texttemplate='  <b>%{text}回</b>', textposition='outside')
         fig.update_layout(
             showlegend=False, coloraxis_showscale=False, xaxis_visible=False, 
             yaxis_title=None, margin=dict(t=10, b=10, l=120, r=50), 
-            height=max(150, 45 * len(counts)), paper_bgcolor='rgba(0,0,0,0)', 
+            height=max(150, 35 * len(counts)), paper_bgcolor='rgba(0,0,0,0)', 
             plot_bgcolor='rgba(0,0,0,0)', dragmode=False
         )
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False, 'staticPlot': True})
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
     else:
-        st.info("選択された期間の実績はありません。")
+        st.info("この期間の実績はありません。")
 
-    # --- 3. 実績詳細履歴 ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("📝 実績履歴")
-    
-    if not my_p_res.empty:
-        # 日付の新しい順に表示
-        for i, row in my_p_res.sort_values('date', ascending=False).iterrows():
-            col1, col2 = st.columns([0.85, 0.15])
-            col1.markdown(f'''
-                <div class="item-box">
-                    <div class="item-accent" style="background:#DD2476 !important"></div>
-                    <span class="item-date">{row["date"].strftime("%m/%d")}</span>
-                    <div class="item-gym">{row["gym_name"]}</div>
-                </div>
-            ''', unsafe_allow_html=True)
-            if col2.button("🗑️", key=f"del_done_{row['id']}"):
-                safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
-    else:
-        st.caption("履歴はありません。")
+    st.divider()
+
+    # --- 2. 予定と実績をタブで分けて表示（削除用） ---
+    st.subheader("📝 履歴管理")
+    m_tabs = st.tabs(["📅 予定", "✅ 実績"])
+
+    # --- 共通のリスト表示スタイル (さらにコンパクトに) ---
+    list_style = """
+        <style>
+        .compact-row {
+            display: grid;
+            grid-template-columns: 4px 45px 1fr;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .compact-date { font-size: 0.8rem; font-weight: 700; color: #666; }
+        .compact-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        </style>
+    """
+    st.markdown(list_style, unsafe_allow_html=True)
+
+    # --- タブ1: 予定の管理 ---
+    with m_tabs[0]:
+        today_ts = pd.Timestamp(today_jp)
+        my_plans = log_df[
+            (log_df['user'] == st.session_state.USER) & 
+            (log_df['type'] == '予定') & 
+            (log_df['date'] >= today_ts)
+        ].sort_values('date') if not log_df.empty else pd.DataFrame()
+
+        if my_plans.empty:
+            st.caption("予定がないよ")
+        else:
+            for _, row in my_plans.iterrows():
+                c1, c2 = st.columns([0.85, 0.15])
+                c1.markdown(f'''
+                    <div class="compact-row">
+                        <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
+                        <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
+                        <div class="compact-gym">{row["gym_name"]}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
+                if c2.button("🗑️", key=f"del_p_{row['id']}"):
+                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+
+    # --- タブ2: 実績の管理 ---
+    with m_tabs[1]:
+        # 実績は全履歴（新しい順）
+        my_all_done = log_df[
+            (log_df['user'] == st.session_state.USER) & 
+            (log_df['type'] == '実績')
+        ].sort_values('date', ascending=False) if not log_df.empty else pd.DataFrame()
+
+        if my_all_done.empty:
+            st.caption("登ってないよ")
+        else:
+            for _, row in my_all_done.iterrows():
+                c1, c2 = st.columns([0.85, 0.15])
+                c1.markdown(f'''
+                    <div class="compact-row">
+                        <div style="background:#DD2476; width:4px; height:1rem; border-radius:2px;"></div>
+                        <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
+                        <div class="compact-gym">{row["gym_name"]}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
+                if c2.button("🗑️", key=f"del_d_{row['id']}"):
+                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
 
 # Tab 4: 👥 仲間 (Supabase連動・完全復元版)
 with tabs[3]:
