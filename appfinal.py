@@ -489,7 +489,7 @@ with tabs[1]:
                                 </div>
                                 <div style="text-align: right;">
                                     <div style="font-size: 0.6rem; color: #888; margin-bottom: -2px;">Last visit</div>
-                                    <span class="gym-d">{g['last_date'].strftime("%m/%d")}</span>
+                                    <span class="gym-d">{g['last_date'].strftime("%Y/%m/%d")}</span>
                                 </div>
                             </a>
                         ''', unsafe_allow_html=True)
