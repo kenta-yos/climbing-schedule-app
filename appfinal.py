@@ -135,8 +135,10 @@ def safe_save(table: str, data_input, mode: str = "add", target_tab: str = None)
 
         # 共通処理
         st.cache_data.clear()
+        
+        # リロード後の画面で表示するためにセッションに保存
         fb = FEEDBACK.get(mode, FEEDBACK["add"])
-        st.toast(fb["msg"])
+        st.session_state.toast_msg = fb["msg"]
         
         # リダイレクト設定
         params = {"user": st.session_state.USER}
@@ -204,6 +206,10 @@ if not st.session_state.get('USER'):
     st.stop()
 
 # --- 5. メイン画面 ---
+if "toast_msg" in st.session_state:
+    st.toast(st.session_state.toast_msg)
+    del st.session_state.toast_msg  # 1回出したら消す
+
 today_ts = pd.Timestamp(today_jp)
 
 col_title, col_btn = st.columns([0.7, 0.3])
