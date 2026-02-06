@@ -393,22 +393,38 @@ with tabs[1]:
     if ranked_list:
         # スコア上位6件
         sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
+        
         for gym in sorted_gyms:
-            # タグ生成（🔥や👥が含まれる場合は強調）
+            # タグ生成（シンプル化：背景は淡い青、🔥や👥がある時だけ少し色を強調）
             tag_html = "".join([
-                f'<span style="background:{"#FFEBEB" if ("🔥" in r or "👥" in r) else "#F0F2F6"}; '
-                f'color:{"#FF4B4B" if ("🔥" in r or "👥" in r) else "#31333F"}; '
-                f'padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; margin-right: 5px; font-weight: bold;">{r}</span>' 
+                f'<span style="background:{"#fff0f0" if ("🔥" in r or "👥" in r) else "#f0f7ff"}; '
+                f'color:{"#ff4b4b" if ("🔥" in r or "👥" in r) else "#007bff"}; '
+                f'padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; margin-right: 4px; '
+                f'border: 1px solid {"#ffdada" if ("🔥" in r or "👥" in r) else "#cce5ff"}; '
+                f'font-weight: 600;">{r}</span>' 
                 for r in gym['reasons']
             ])
             
             st.markdown(f'''
-                <div style="background: white; padding: 12px; border-radius: 10px; border-left: 5px solid #FF4B4B; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <a href="{gym["url"]}" target="_blank" style="color:#1E88E5; font-weight:700; text-decoration:none; font-size: 1rem;">{gym["name"]}</a>
-                        <small style="color: #666; background: #eee; padding: 2px 6px; border-radius: 4px;">{gym["area"]}</small>
+                <div style="
+                    background: white; 
+                    padding: 10px 14px; 
+                    border-radius: 10px; 
+                    border: 1px solid #f0f0f0; 
+                    margin-bottom: 8px; 
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <a href="{gym["url"]}" target="_blank" style="color:#333; font-weight:700; text-decoration:none; font-size: 0.9rem;">
+                            📸 {gym["name"]}
+                        </a>
+                        <span style="color: #999; font-size: 0.7rem; background: #f8f8f8; padding: 2px 6px; border-radius: 4px;">
+                            📍 {gym["area"]}
+                        </span>
                     </div>
-                    <div style="margin-top: 8px;">{tag_html}</div>
+                    <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 2px;">
+                        {tag_html}
+                    </div>
                 </div>
             ''', unsafe_allow_html=True)
     else:
