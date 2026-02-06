@@ -331,8 +331,8 @@ with tabs[0]:
     # 4. ジムのスコアリング
         ranked_list = []
         
-        # 比較用に target_date を確実に Timestamp 型へ変換しておく
-        t_dt_start = pd.Timestamp(target_date).normalize()
+        # 比較用に target_date を date 型に固定
+        check_date = target_date if isinstance(target_date, datetime.date) else target_date.date()
     
         if not gym_df.empty:
             for _, row in gym_df.iterrows():
@@ -342,26 +342,32 @@ with tabs[0]:
                 score = 0
                 reasons = []
                 
-                # --- 1. データの準備 ---
-                # 自分の最終訪問日
-                my_last_visit = log_df[
-                    (log_df['user'] == st.session_state.USER) & 
-                    (log_df['type'] == '実績') & 
-                    (log_df['gym_name'] == row['gym_name'])
-                ]['date'].max() if not log_df.empty else None
+                # --- 自分の最終訪問日 (timestamptz -> date) ---
+                my_last_visit_dt = None
+                if not log_df.empty:
+                    # 該当ジムの訪問実績を抽出
+                    my_visits = log_df[
+                        (log_df['user'] == st.session_state.USER) & 
+                        (log_df['type'] == '実績') & 
+                        (log_df['gym_name'] == row['gym_name'])
+                    ]
+                    if not my_visits.empty:
+                        # pd.to_datetimeで変換後、.dt.date で date型に揃える
+                        my_last_visit_dt = pd.to_datetime(my_visits['date']).max().date()
     
-                # ジムの新セット日
+                # --- ジムの新セット日 (date型 -> date型) ---
                 new_set_dt = None
                 if 'new_set_date' in row and pd.notnull(row['new_set_date']):
-                    new_set_dt = pd.to_datetime(row['new_set_date']).normalize()
+                    # すでにdate型ならそのまま、文字列なら変換
+                    new_set_dt = pd.to_datetime(row['new_set_date']).date()
     
-                # --- 2. 加点ロジック ---
+                # --- 加点ロジック ---
                 # A. 新セット加点
                 if new_set_dt is not None:
                     # 自分がそのセット替えの後に一度でも行ったかどうか
-                    if my_last_visit is None or new_set_dt > pd.to_datetime(my_last_visit).normalize():
-                        # t_dt（ターゲット日）とセット日の差
-                        set_days = (pd.Timestamp(target_date) - new_set_dt).days
+                    # 両方 date型 なので安全に比較可能
+                    if my_last_visit_dt is None or new_set_dt > my_last_visit_dt:
+                        set_days = (check_date - new_set_dt).days
                         
                         if 0 <= set_days <= 7:
                             score += 70
@@ -370,29 +376,29 @@ with tabs[0]:
                             score += 40
                             reasons.append("✨新セット")
     
-                # B. 仲間加点
-                # ここが修正ポイント：dt.date と target_date を比較
-                others_today = log_df[
-                    (log_df['user'] != st.session_state.USER) & 
-                    (log_df['type'] == '予定') & 
-                    (log_df['date'].dt.date == target_date) &  # dateオブジェクト同士で比較
-                    (log_df['gym_name'] == row['gym_name'])
-                ] if not log_df.empty else pd.DataFrame()
+                # B. 仲間加点 (timestamptz の dt.date 変換を利用)
+                others_today = pd.DataFrame()
+                if not log_df.empty:
+                    others_today = log_df[
+                        (log_df['user'] != st.session_state.USER) & 
+                        (log_df['type'] == '予定') & 
+                        (pd.to_datetime(log_df['date']).dt.date == check_date) &
+                        (log_df['gym_name'] == row['gym_name'])
+                    ]
     
                 if not others_today.empty:
                     score += 50
-                    reasons.append("👥 仲間あり")
+                    reasons.append(f"👥 仲間{len(others_today)}人")
     
-                # ranked_listへの追加（ここも修正：instagram_url or profile_url）
+                # ランク用リストに追加
                 ranked_list.append({
                     "name": row['gym_name'],
                     "area": row['area_tag'],
-                    # テーブル定義に合わせて 'profile_url' になっているか確認
                     "url": row.get('profile_url', row.get('instagram_url', '#')),
                     "score": score,
                     "reasons": reasons
                 })
-                
+            
     # 5. スコア上位表示
         if ranked_list:
             # スコア上位6件
