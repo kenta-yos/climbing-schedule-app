@@ -907,6 +907,11 @@ with tabs[5]:
                     
     # --- 📅 2. セットスケジュール登録 ---
     with st.expander("📅 セットスケジュール登録", expanded=True):
+
+        # 💡 重要：ここで初期化！これで NameError を防げます
+        sel_g = None
+        p_url = ""
+        
         with st.form("admin_schedule_form", clear_on_submit=True):
             st.write("### 1. 対象ジムを選択")
             
