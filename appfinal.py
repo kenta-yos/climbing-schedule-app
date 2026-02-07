@@ -896,31 +896,34 @@ with tabs[5]:
     with st.expander("📅 セットスケジュール登録", expanded=True):
         # A. ジム選択（TOPタブの「エリア別ラジオボタン」を移植）
         st.write("1. 対象ジムを選択")
-        if not gym_df.empty and not area_master.empty:
-            # gym_df と area_master をマージしてエリア情報を付与
-            m_gyms = pd.merge(gym_df, area_master, on='area_tag', how='left')
-            m_gyms['major_area'] = m_gyms['area_tag'] # 分類ルールに合わせる
-            all_a = sorted(m_gyms['major_area'].dropna().unique().tolist())
-            
-            # 変数名衝突防止のため「set_tabs」にする
-            set_tabs = st.tabs(all_a)
-            sel_g = None
-            
-            for i, area in enumerate(all_a):
-                with set_tabs[i]:
-                    area_gyms = sorted(m_gyms[m_gyms['major_area'] == area]['gym_name'].unique().tolist())
-                    if area_gyms:
-                        res = st.radio(
-                            f"{area}のジムを選択",
-                            options=area_gyms,
-                            index=None,
-                            key=f"radio_set_{area}",
-                            label_visibility="collapsed"
-                        )
-                        if res:
-                            sel_g = res
+        custom_order = ["都内・神奈川", "関東", "関西", "全国"]
         
-        if sel_g:
+        if not merged_gyms.empty:
+            actual_areas = [a for a in merged_gyms['major_area'].unique() if pd.notna(a)]
+            all_areas = [a for a in custom_order if a in actual_areas]
+            all_areas += [a for a in actual_areas if a not in custom_order]
+        else:
+            all_areas = ["未設定"]
+            
+        set_tabs = st.tabs(all_areas)
+        selected_gym = None
+            
+        for i, area in enumerate(all_areas):
+            with area_tabs[i]:
+                area_gyms = sorted(merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique().tolist())
+                
+                if len(area_gyms) > 0:
+                    res = st.radio(
+                        f"{area}のジムを選択", # 文字列自体は内部的に必要ですが
+                        options=area_gyms,
+                        index=None,
+                        key=f"radio_top_{area}",
+                        label_visibility="collapsed" # ← これを追加！
+                    )
+                    if res:
+                        selected_gym = res
+        
+        if selected_gym:
             st.success(f"選択中: {sel_g}")
         
         st.divider()
