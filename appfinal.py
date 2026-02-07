@@ -15,6 +15,38 @@ today_jp = now_jp.date()
 # --- 1. ページ設定 & CSS (変更なし) ---
 st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered")
 
+# --- キーボード出現対策 ---
+st.markdown("""
+    <style>
+    /* 1. selectboxの入力欄をタップしてもキーボードを出さない（読み取り専用化） */
+    div[data-testid="stSelectbox"] input {
+        inputmode: none;
+        caret-color: transparent;
+    }
+
+    /* 2. date_inputの入力欄をタップしてもキーボードを出さない */
+    div[data-testid="stDateInput"] input {
+        inputmode: none;
+        caret-color: transparent;
+    }
+
+    /* 3. モバイルでのフォーカス時の青い枠線を消す（任意） */
+    input:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    </style>
+
+    <script>
+    // ブラウザ側で「input要素をすべてReadOnlyにする」魔法
+    // これにより、クリック（選択）はできるがキーボードは出なくなる
+    const inputs = window.parent.document.querySelectorAll('div[data-testid="stSelectbox"] input, div[data-testid="stDateInput"] input');
+    inputs.forEach(input => {
+        input.setAttribute('readonly', 'true');
+    });
+    </script>
+""", unsafe_allow_html=True)
+
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
