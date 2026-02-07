@@ -917,7 +917,7 @@ with tabs[5]:
                         f"{area}のジムを選択", # 文字列自体は内部的に必要ですが
                         options=area_gyms,
                         index=None,
-                        key=f"radio_top_{area}",
+                        key=f"radio_set_{area}",
                         label_visibility="collapsed" # ← これを追加！
                     )
                     if res:
