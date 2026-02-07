@@ -323,11 +323,7 @@ with tabs[0]:
             if c_plus.button("1日 ➡️", use_container_width=True, key="btn_plus"):
                 st.session_state.q_date_val += pd.Timedelta(days=1)
                 st.rerun(scope="fragment")
-        
-            # 4. 現在の選択値をデカデカと表示（ボタンのすぐ下に見やすく）
-                current_date_str = st.session_state.q_date_val.strftime('%Y/%m/%d (%a)')
-                st.info(f"📅 選択中: **{current_date_str}**")
-       
+               
         # 実行
         fast_date_selector()
                                 
