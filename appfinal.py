@@ -943,53 +943,43 @@ with tabs[5]:
         st.write("### 2. セット日程とURLを入力")
         p_url = st.text_input("告知URL (Instagramなど)", key="admin_post_url")
         
-        # 追加ボタンなどの状態管理
+        # 日程入力（ここはフォーム内なので、そのまま並べる）
         if "rows" not in st.session_state: 
             st.session_state.rows = 1
             
         d_list = []
         for i in range(st.session_state.rows):
             c1, c2 = st.columns(2)
-            # st.date_input の返り値は自動的に datetime.date 型になる
             sd = c1.date_input(f"開始 {i+1}", value=today_jp, key=f"sd_{i}")
             ed = c2.date_input(f"終了 {i+1}", value=today_jp, key=f"ed_{i}")
             d_list.append((sd, ed))
-            
-        col_btn1, col_btn2 = st.columns(2)
-        if col_btn1.button("➕ 日程欄を追加"): 
-            st.session_state.rows += 1
-            st.rerun()
-            
-        if col_btn2.button("登録", use_container_width=True):
+
+        # フォーム内のボタンは「st.form_submit_button」を使う
+        submit_button = st.form_submit_button("登録", use_container_width=True)
+        
+        if submit_button:
             if sel_g and p_url:
                 new_s_list = []
                 for d in d_list:
                     new_s_list.append({
                         'gym_name': sel_g,
-                        'start_date': d[0].isoformat(), # date型を文字列へ
+                        'start_date': d[0].isoformat(),
                         'end_date': d[1].isoformat(),
                         'post_url': p_url
                     })
                 
                 new_s_df = pd.DataFrame(new_s_list)
                 
-                # --- ここからリセット処理：safe_saveの『前』に実行 ---
-                # 1. 個別の入力を初期化（keyを指定して上書き）
-                st.session_state["admin_sel_gym"] = None
-                st.session_state["admin_post_url"] = ""
-                
-                # 2. 日付欄も初期化（ループして作成したkeyをすべて掃除）
-                for i in range(st.session_state.rows):
-                    st.session_state[f"sd_{i}"] = today_jp
-                    st.session_state[f"ed_{i}"] = today_jp
-                
-                # 3. 行数を1に戻す
+                # フォームが自動で消してくれるので、行数だけ戻して保存！
                 st.session_state.rows = 1
-                
-                # 4. 保存実行（この中のrerunで、上記のリセットが反映される）
                 safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
             else:
-                st.error("ジムの選択とインスタURLの入力は必須です。")
+                st.error("ジムの選択と告知URLの入力は必須です。")
+
+    # 「追加ボタン」はフォームの外に置く（フォーム内だとクリックのたびに送信されるため）
+    if st.button("➕ 日程欄を追加"): 
+        st.session_state.rows += 1
+        st.rerun()
 
     # --- 🚪 3. ログアウト ---
     st.divider()
