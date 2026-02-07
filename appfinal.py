@@ -337,20 +337,40 @@ with tabs[0]:
                 continue
 
             name, score, reasons = gym['gym_name'], 0, []
-            
-            # --- ① 鮮度スコア（セット終了日基準） ---
+
+            # --- 🆕 追加：既訪フィルタ (セット後に訪問済みなら非表示) ---
+            # 1. このジムの最新セット日を取得
+            latest_set_date = None
             if not sched_df.empty:
-                # ターゲット日以前の最新セットを確認
-                past_sets = sched_df[(sched_df['gym_name'] == name) & (sched_df['end_date'] <= t_dt)]
-                if not past_sets.empty:
-                    latest_end = past_sets['end_date'].max()
-                    diff = (t_dt - latest_end).days
-                    if 0 <= diff <= 7: 
-                        score += 40
-                        reasons.append(f"🔥 新セット({diff}日前)")
-                    elif 8 <= diff <= 14: 
-                        score += 30
-                        reasons.append(f"✨ 準新セット({diff}日前)")
+                gym_sets = sched_df[(sched_df['gym_name'] == name) & (sched_df['end_date'] <= t_dt)]
+                if not gym_sets.empty:
+                    latest_set_date = gym_sets['end_date'].max().date()
+
+            # 2. 自分のこのジムへの最新訪問日を取得
+            latest_visit_date = None
+            if not log_df.empty:
+                my_visits = log_df[
+                    (log_df['gym_name'] == name) & 
+                    (log_df['user'] == st.session_state.USER) & 
+                    (log_df['type'] == '実績')
+                ]
+                if not my_visits.empty:
+                    latest_visit_date = my_visits['date'].max().date()
+
+            # 3. 判定：最新セット日よりも後に訪問していたらスキップ
+            if latest_set_date and latest_visit_date:
+                if latest_visit_date >= latest_set_date:
+                    continue  # すでに登り済みなのでおすすめに出さない
+
+            # --- ① 鮮度スコア（セット終了日基準） ---
+            if latest_set_date:
+                diff = (t_dt.date() - latest_set_date).days
+                if 0 <= diff <= 7: 
+                    score += 40
+                    reasons.append(f"🔥 新セット({diff}日前)")
+                elif 8 <= diff <= 14: 
+                    score += 30
+                    reasons.append(f"✨ 準新セット({diff}日前)")
 
             # --- ② 仲間スコア ---
             if not log_df.empty:
@@ -365,27 +385,21 @@ with tabs[0]:
                     reasons.append(f"👥 仲間{len(others)}名")
                 
             # --- ③ 実績スコア ---
-            my_v = log_df[
-                (log_df['gym_name'] == name) & 
-                (log_df['user'] == st.session_state.USER) & 
-                (log_df['type'] == '実績')
-            ] if not log_df.empty else pd.DataFrame()
-
-            if my_v.empty: 
+            if not latest_visit_date:
                 score += 10
                 reasons.append("🆕 未訪問")
             else:
-                last_v_days = (t_dt - my_v['date'].max()).days
+                last_v_days = (t_dt.date() - latest_visit_date).days
                 if last_v_days >= 30: 
                     score += 20
                     reasons.append(f"⌛ {last_v_days}日ぶり")
 
-            ranked_list.append({
-                "name": name, "score": score, "reasons": reasons, 
-                "area": gym['area_tag'], "url": gym['profile_url']
-            })
-
-        
+            if reasons:
+                ranked_list.append({
+                    "name": name, "score": score, "reasons": reasons, 
+                    "area": gym['area_tag'], "url": gym['profile_url']
+                })
+                
         # 5. スコア上位表示
         if ranked_list:
             sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
