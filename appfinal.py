@@ -882,26 +882,29 @@ with tabs[5]:
         m_gyms_admin = pd.DataFrame()
         all_areas_admin = []
 
-    # --- 🆕 1. ジムの新規登録 ---
+    # --- 🆕 ジム登録 ---
     with st.expander("🆕 ジムの新規登録"):
         with st.form("adm_gym", clear_on_submit=True):
             n = st.text_input("ジム名（例: B-PUMP Ogikubo）")
             u = st.text_input("Instagram等のURL")
             
-            # エリアタグの選択
+            # --- エリア選択（area_masterから動的に取得） ---
             if not area_master.empty:
+                # area_tagの一覧を取得（重複排除してソート）
                 area_tags = sorted(area_master['area_tag'].unique().tolist())
-                selected_tag = st.selectbox("エリアタグを選択", options=area_tags)
+                a = st.radio("エリア選択", options=area_tags, horizontal=True)
             else:
-                selected_tag = st.text_input("エリアタグ（手入力）")
+                # area_masterが読み込めていない場合のフォールバック
+                a = st.text_input("エリアタグ（手入力）")
+                st.caption("⚠️ area_masterからデータを読み込めませんでした")
 
-            if st.form_submit_button("ジムを登録"):
-                if n and selected_tag:
-                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': selected_tag}])
+            if st.form_submit_button("登録"):
+                if n and a:
+                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': a}])
                     safe_save("gym_master", new_gym, mode="add", target_tab="⚙️ 管理")
                 else:
                     st.warning("ジム名とエリアは必須です")
-
+                    
     # --- 📅 2. セットスケジュール登録 ---
     with st.expander("📅 セットスケジュール登録", expanded=True):
         st.write("### 1. 対象ジムを選択")
