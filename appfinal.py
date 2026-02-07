@@ -869,30 +869,25 @@ with tabs[5]:
     st.query_params["tab"] = "⚙️ 管理"    
     st.subheader("⚙️ 管理メニュー")
 
-    # --- 🆕 1. ジムの新規登録 (エリア選択をラジオボタン式に) ---
+    # --- 🆕 ジム登録 ---
     with st.expander("🆕 ジムの新規登録"):
         with st.form("adm_gym", clear_on_submit=True):
             n = st.text_input("ジム名（例: B-PUMP Ogikubo）")
             u = st.text_input("Instagram等のURL")
             
-            # TOPタブと同じエリア選択UI
+            # --- エリア選択（area_masterから動的に取得） ---
             if not area_master.empty:
-                all_areas = sorted(area_master['area_tag'].unique().tolist())
-                # エリア選択用のサブタブを作成
-                area_tabs = st.tabs(all_areas) 
-                selected_area = all_areas[0] # デフォルト
-                
-                for i, area in enumerate(all_areas):
-                    with area_tabs[i]:
-                        # ラジオボタンでエリアを確定させる（TOPと同じロジック）
-                        if st.radio(f"{area}を選択", ["このエリアに登録"], key=f"reg_area_{area}", label_visibility="collapsed"):
-                            selected_area = area
+                # area_tagの一覧を取得（重複排除してソート）
+                area_tags = sorted(area_master['area_tag'].unique().tolist())
+                a = st.radio("エリア選択", options=area_tags, horizontal=True)
             else:
-                selected_area = st.text_input("エリアタグ（手入力）")
+                # area_masterが読み込めていない場合のフォールバック
+                a = st.text_input("エリアタグ（手入力）")
+                st.caption("⚠️ area_masterからデータを読み込めませんでした")
 
-            if st.form_submit_button("ジムを登録"):
-                if n and selected_area:
-                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': selected_area}])
+            if st.form_submit_button("登録"):
+                if n and a:
+                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': a}])
                     safe_save("gym_master", new_gym, mode="add", target_tab="⚙️ 管理")
                 else:
                     st.warning("ジム名とエリアは必須です")
