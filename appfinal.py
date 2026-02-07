@@ -276,6 +276,7 @@ with tabs[0]:
     st.divider()
     
     # 3. シンプル1行表示
+    st.subheader("👋 一緒にのぼろー")
     st.markdown("##### 🔥 今日どこいくー？")
     if not today_logs.empty:
         # ジム名でグループ化してユーザーをリストにする
@@ -294,7 +295,6 @@ with tabs[0]:
     else:
         st.caption("誰もいないよ😭")
 
-    st.subheader("👋 一緒にのぼろー")
     st.markdown("##### 👀 明日どこいくー？")
     if not tomorrow_logs.empty:
         grouped_tom = tomorrow_logs.groupby('gym_name')['user'].apply(list).reset_index()
