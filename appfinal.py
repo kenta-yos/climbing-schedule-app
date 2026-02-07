@@ -276,43 +276,45 @@ with tabs[0]:
     st.divider()
     
     # 3. シンプル1行表示
-    with st.container(border=True):
-        st.markdown("##### 🔥 今日どこいくー？")
-        if not today_logs.empty:
-            # ジム名でグループ化してユーザーをリストにする
-            grouped_today = today_logs.groupby('gym_name')['user'].apply(list).reset_index()
-            for _, row in grouped_today.iterrows():
-                gym = row['gym_name']
-                unique_users = sorted(list(set(row['user'])))
-                user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
-                members_html = " & ".join(user_htmls)
-    
-                st.markdown(f'''
-                    <div style="margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #4CAF50;">
-                        <span style="font-weight: bold; color: #333;">{gym}</span>：{members_html}
-                    </div>
-                ''', unsafe_allow_html=True)
-        else:
-            st.caption("誰もいないよ😭")
-    
-        st.markdown("##### 👀 明日どこいくー？")
-        if not tomorrow_logs.empty:
-            grouped_tom = tomorrow_logs.groupby('gym_name')['user'].apply(list).reset_index()
-            for _, row in grouped_tom.iterrows():
-                gym = row['gym_name']
-                unique_users = sorted(list(set(row['user'])))
-                user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
-                members_html = " & ".join(user_htmls)
-    
-                st.markdown(f'''
-                    <div style="margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #FF9800;">
-                        <span style="font-weight: bold; color: #333;">{gym}</span>：{members_html}
-                    </div>
-                ''', unsafe_allow_html=True)
-        else:
-            st.caption("誰もいないよ😭")
+    st.markdown("##### 🔥 今日どこいくー？")
+    if not today_logs.empty:
+        # ジム名でグループ化してユーザーをリストにする
+        grouped_today = today_logs.groupby('gym_name')['user'].apply(list).reset_index()
+        for _, row in grouped_today.iterrows():
+            gym = row['gym_name']
+            unique_users = sorted(list(set(row['user'])))
+            user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
+            members_html = " & ".join(user_htmls)
 
-    st.subheader("✨ 今日のおすすめジム")    
+            st.markdown(f'''
+                <div style="margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #4CAF50;">
+                    <span style="font-weight: bold; color: #333;">{gym}</span>：{members_html}
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.caption("誰もいないよ😭")
+
+    st.subheader("👋 一緒にのぼろー")
+    st.markdown("##### 👀 明日どこいくー？")
+    if not tomorrow_logs.empty:
+        grouped_tom = tomorrow_logs.groupby('gym_name')['user'].apply(list).reset_index()
+        for _, row in grouped_tom.iterrows():
+            gym = row['gym_name']
+            unique_users = sorted(list(set(row['user'])))
+            user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
+            members_html = " & ".join(user_htmls)
+
+            st.markdown(f'''
+                <div style="margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #FF9800;">
+                    <span style="font-weight: bold; color: #333;">{gym}</span>：{members_html}
+                </div>
+            ''', unsafe_allow_html=True)
+    else:
+        st.caption("誰もいないよ😭")
+
+    st.divider()
+    
+    st.subheader("✨ 今日のおすすめジム")
     # 1. ターゲット設定
     c_date1, c_date2 = st.columns([0.6, 0.4])
     target_date = c_date1.date_input("ターゲット日", value=today_jp, key="tg_date")
