@@ -292,7 +292,30 @@ with tabs[0]:
                         selected_gym = res
                         
         # 2. 日付選択
-        q_date = st.date_input("📅 日程を選択", value=today_jp, key="q_date_one_shot")
+        st.divider()
+        st.markdown("##### 📅 いつ？")
+        
+        # クイック選択ボタンを3つ並べる
+        c1, c2, c3 = st.columns(3)
+        
+        # ボタンが押されたら、セッション状態に日付を保存する
+        if c1.button("今日", use_container_width=True):
+            st.session_state.q_date_one_shot = today_jp
+        if c2.button("明日", use_container_width=True):
+            st.session_state.q_date_one_shot = today_jp + pd.Timedelta(days=1)
+        if c3.button("昨日", use_container_width=True):
+            st.session_state.q_date_one_shot = today_jp - pd.Timedelta(days=1)
+
+        # カレンダー入力（ボタンで変更された st.session_state.q_date_one_shot が自動反映される）
+        q_date = st.date_input(
+            "日付を微調整", 
+            value=today_jp, 
+            key="q_date_one_shot", 
+            label_visibility="collapsed"
+        )
+        
+        # 今どの日付が選ばれているか、視認性を上げる
+        st.info(f"選択中: **{q_date.strftime('%Y/%m/%d (%a)')}**")
     
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
@@ -313,7 +336,7 @@ with tabs[0]:
             else:
                 st.warning("ジムを選んでからボタンを押してね！")
     
-        if col2.button("✊ 登った）", use_container_width=True, type="primary"):
+        if col2.button("✊ 登った", use_container_width=True, type="primary"):
             if selected_gym:
                 new_row = pd.DataFrame([{
                     'date': pd.to_datetime(q_date),
