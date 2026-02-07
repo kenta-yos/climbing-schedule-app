@@ -292,7 +292,6 @@ with tabs[0]:
                         selected_gym = res
                         
         # 2. 日付選択
-        # --- 2. 日付選択（＋１ / ー１ スライド方式） ---
         st.divider()
         st.markdown("##### 📅 いつ？")
 
@@ -300,22 +299,14 @@ with tabs[0]:
         if "q_date_one_shot" not in st.session_state:
             st.session_state.q_date_one_shot = today_jp
 
-        # カレンダー（ここもボタンと連動する。直接変更も可能）
-        q_date = st.date_input(
-            "カレンダーで選択", 
-            value=st.session_state.q_date_one_shot, 
-            key="q_date_one_shot", # keyをvalueと同じ名前にすることで双方向連動
-            label_visibility="collapsed"
-        )
-
         # ボタンを配置（[ -1 ]  [ 日付表示 ]  [ +1 ] のイメージ）
         c_minus, c_display, c_plus = st.columns([1, 2, 1])
 
-        if c_minus.button("- 1日", use_container_width=True):
+        if c_minus.button("ー 1日", use_container_width=True):
             st.session_state.q_date_one_shot -= pd.Timedelta(days=1)
             # st.rerun() は不要（ボタン押下で再描画されるため）
 
-        if c_plus.button("+ 1日", use_container_width=True):
+        if c_plus.button("＋ 1日", use_container_width=True):
             st.session_state.q_date_one_shot += pd.Timedelta(days=1)
 
         # 真ん中のカラムに現在の日付をデカデカと表示（確認用）
@@ -324,6 +315,14 @@ with tabs[0]:
             unsafe_allow_html=True
         )
 
+        # カレンダー（ここもボタンと連動する。直接変更も可能）
+        q_date = st.date_input(
+            "カレンダーで選択", 
+            value=st.session_state.q_date_one_shot, 
+            key="q_date_one_shot", # keyをvalueと同じ名前にすることで双方向連動
+            label_visibility="collapsed"
+        )
+        
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
         
