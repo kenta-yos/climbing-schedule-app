@@ -827,10 +827,12 @@ with tabs[5]:
                 else:
                     st.warning("ジム名とエリアは必須です")
                     
-    # --- 📅 セット一括登録 (復活) ---
-    with st.expander("📅 セットスケジュール登録", expanded=True):
+# --- 📅 セット一括登録 (修正版) ---
+with st.expander("📅 セットスケジュール登録", expanded=True):
+    # ここでフォームを開始！ clear_on_submit=True が重要
+    with st.form("admin_schedule_form", clear_on_submit=True):
         
-        # セレクトボックスの選択肢
+        # セレクトボックス
         gym_options = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
         sel_g = st.selectbox(
             "対象ジム", 
@@ -842,50 +844,43 @@ with tabs[5]:
             
         p_url = st.text_input("告知URL (Instagramなど)", key="admin_post_url")
         
-        # 追加ボタンなどの状態管理
+        # 日程入力（ここはフォーム内なので、そのまま並べる）
         if "rows" not in st.session_state: 
             st.session_state.rows = 1
             
         d_list = []
         for i in range(st.session_state.rows):
             c1, c2 = st.columns(2)
-            # st.date_input の返り値は自動的に datetime.date 型になる
             sd = c1.date_input(f"開始 {i+1}", value=today_jp, key=f"sd_{i}")
             ed = c2.date_input(f"終了 {i+1}", value=today_jp, key=f"ed_{i}")
             d_list.append((sd, ed))
-            
-        col_btn1, col_btn2 = st.columns(2)
-        if col_btn1.button("➕ 日程欄を追加"): 
-            st.session_state.rows += 1
-            st.rerun()
-            
-        if col_btn2.button("登録", use_container_width=True):
+
+        # フォーム内のボタンは「st.form_submit_button」を使う
+        submit_button = st.form_submit_button("登録", use_container_width=True)
+        
+        if submit_button:
             if sel_g and p_url:
                 new_s_list = []
                 for d in d_list:
                     new_s_list.append({
                         'gym_name': sel_g,
-                        'start_date': d[0].isoformat(), # date型を文字列へ
+                        'start_date': d[0].isoformat(),
                         'end_date': d[1].isoformat(),
                         'post_url': p_url
                     })
                 
                 new_s_df = pd.DataFrame(new_s_list)
-
-                # --- 安全なリセット処理 ---
-                # 1. 直接代入せず、行数だけを戻す
+                
+                # フォームが自動で消してくれるので、行数だけ戻して保存！
                 st.session_state.rows = 1
-                
-                # 2. Form外であれば、del を使うことでリセットが可能です
-                # （もしForm内なら del もエラーになるので、その場合は clear_on_submit に頼ります）
-                for k in ["admin_sel_gym", "admin_post_url"]:
-                    if k in st.session_state:
-                        del st.session_state[k]
-                
-                # 3. 保存とリロードを実行
                 safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
             else:
                 st.error("ジムの選択と告知URLの入力は必須です。")
+
+    # 「追加ボタン」はフォームの外に置く（フォーム内だとクリックのたびに送信されるため）
+    if st.button("➕ 日程欄を追加"): 
+        st.session_state.rows += 1
+        st.rerun()
                 
     # --- 🚪 ログアウト ---
     st.write("")
