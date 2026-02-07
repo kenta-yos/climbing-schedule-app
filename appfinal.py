@@ -344,24 +344,19 @@ with tabs[0]:
             score = 0
             reasons = []
             
-            # --- 新セット判定 (シンプル版) ---
-            new_set_dt = None
-            if 'new_set_date' in row and pd.notnull(row['new_set_date']):
-                # 確実に日付型に変換
-                new_set_dt = pd.to_datetime(row['new_set_date']).date()
-
-            if new_set_dt:
-                # ターゲット日(選択した日)からセット日を引く
-                set_days = (check_date - new_set_dt).days
-                
-                # 0日（当日）〜7日以内
-                if 0 <= set_days <= 7:
-                    score += 70
-                    reasons.append("🔥新セット!")
-                # 8日〜14日以内
-                elif 8 <= set_days <= 14:
-                    score += 40
-                    reasons.append("✨準新セット")
+            # --- 新セット判定 ---
+            if not sched_df.empty:
+                # ターゲット日以前の最新セットを確認
+                past_sets = sched_df[(sched_df['gym_name'] == name) & (sched_df['end_date'] <= t_dt)]
+                if not past_sets.empty:
+                    latest_end = past_sets['end_date'].max()
+                    diff = (t_dt - latest_end).days
+                    if 0 <= diff <= 7: 
+                        score += 40
+                        reasons.append(f"🔥 新セット({diff}日前)")
+                    elif 8 <= diff <= 14: 
+                        score += 30
+                        reasons.append(f"✨ 準新セット({diff}日前)")
             
             # --- 2. 仲間判定 ---
             others_count = 0
