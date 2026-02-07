@@ -300,7 +300,7 @@ with tabs[0]:
                     
                     for g_name in raw_area_gyms:
                         if g_name in recent_gyms:
-                            label = f"⭐ {g_name} (最近)"
+                            label = f"⭐ {g_name}"
                         else:
                             label = f"　 {g_name}" # ズレ防止の全角スペース
                         display_options.append(label)
@@ -930,27 +930,49 @@ with tabs[5]:
                 else:
                     st.warning("ジム名とエリアは必須です")
                     
-    # --- 📅 2. セットスケジュール登録 (UX改善版) ---
+    # --- 📅 2. セットスケジュール登録 ---
     with st.expander("📅 セットスケジュール登録", expanded=False):
         
-        selected_gym_set = None
-        
+        # 💡 【追加】直近1ヶ月の訪問実績を特定（管理画面用）
+        recent_gyms_admin = []
+        if not log_df.empty:
+            one_month_ago = pd.Timestamp(today_jp) - timedelta(days=30)
+            recent_gyms_admin = log_df[
+                (log_df['user'] == st.session_state.USER) & 
+                (log_df['type'] == '実績') & 
+                (log_df['date'] >= one_month_ago)
+            ]['gym_name'].unique().tolist()
+
         st.write("### 1. 対象ジムを選択")
         if not m_gyms_admin.empty:
             admin_set_tabs = st.tabs(all_areas_admin)
+            
             for i, area in enumerate(all_areas_admin):
                 with admin_set_tabs[i]:
-                    area_gyms = sorted(m_gyms_admin[m_gyms_admin['major_area'] == area]['gym_name'].unique().tolist())
-                    if area_gyms:
-                        res = st.radio(
+                    raw_area_gyms = sorted(m_gyms_admin[m_gyms_admin['major_area'] == area]['gym_name'].unique().tolist())
+                    
+                    if raw_area_gyms:
+                        # 💡 表示用ラベルの作成
+                        display_options_admin = []
+                        label_map_admin = {}
+                        
+                        for g_name in raw_area_gyms:
+                            if g_name in recent_gyms_admin:
+                                label = f"🌟 {g_name}"
+                            else:
+                                label = f"　 {g_name}"
+                            display_options_admin.append(label)
+                            label_map_admin[label] = g_name
+
+                        st.radio(
                             f"{area}のジムを選択",
-                            options=area_gyms,
+                            options=display_options_admin,
                             index=None,
                             key=f"radio_admin_set_{area}",
                             label_visibility="collapsed"
                         )
-                        if res:
-                            selected_gym_set = res
+        else:
+            st.error("ジムデータが読み込めません。")
         
         st.divider()
         st.write("### 2. セット日程とURLを入力")
