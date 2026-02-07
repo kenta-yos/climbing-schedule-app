@@ -912,7 +912,13 @@ with tabs[5]:
         sel_g = None
         p_url = ""
         
-        with st.form("admin_schedule_form", clear_on_submit=True):
+        # 💡 clear_on_submit を False に変更します
+        with st.form("admin_schedule_form", clear_on_submit=False):
+            
+            gym_options = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
+            sel_g = st.selectbox("対象ジム", options=gym_options, index=None, key="admin_sel_gym")
+            p_url = st.text_input("告知URL (Instagramなど)", key="admin_post_url")
+            
             st.write("### 1. 対象ジムを選択")
             
             selected_gym_set = None
@@ -975,13 +981,11 @@ with tabs[5]:
                         })
                     
                     new_s_df = pd.DataFrame(new_s_list)
-                    
-                    # フォームが自動で消してくれるので、行数だけ戻して保存！
-                    st.session_state.rows = 1
+                    # 保存処理（この中で st.rerun が走れば、結果的にフォームはリセットされます）
                     safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
                 else:
                     st.error("ジムの選択と告知URLの入力は必須です。")
-    
+                        
         # 「追加ボタン」はフォームの外に置く（フォーム内だとクリックのたびに送信されるため）
         if st.button("➕ 日程欄を追加"): 
             st.session_state.rows += 1
