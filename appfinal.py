@@ -515,77 +515,53 @@ with tabs[1]:
     st.subheader("📝 履歴一覧")
     m_tabs = st.tabs(["📅 全ての予定", "✅ 期間内の実績"])
 
-    # 【上書き】新しいスタイル定義（以前の .compact-row 設定は消してOK）
+    # スタイルは共通
     st.markdown("""
         <style>
-        .log-container {
-            display: flex;
-            justify-content: space-between;
+        .compact-row {
+            display: grid;
+            grid-template-columns: 4px 45px 1fr;
             align-items: center;
-            width: 100%;
-            padding: 4px 0;
+            gap: 10px;
+            padding: 8px 0;
             border-bottom: 1px solid #f0f0f0;
         }
-        .log-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            overflow: hidden;
-        }
-        .log-bar { width: 4px; height: 1.1rem; border-radius: 2px; flex-shrink: 0; }
-        .log-date { font-size: 0.8rem; font-weight: 700; color: #666; white-space: nowrap; flex-shrink: 0; }
-        .log-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
-        /* ボタンの位置を右端に強制 */
-        div[data-testid="column"] {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-        }
+        .compact-date { font-size: 0.8rem; font-weight: 700; color: #666; }
+        .compact-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         </style>
     """, unsafe_allow_html=True)
 
-    with m_tabs[0]: # 予定タブ
+    with m_tabs[0]: # 予定タブ：全期間
         if all_my_plans.empty:
             st.caption("予定はありません。")
         else:
             for _, row in all_my_plans.iterrows():
-                # ここも新しく書き換え
-                c1, c2 = st.columns([0.88, 0.12]) 
-                with c1:
-                    st.markdown(f'''
-                        <div class="log-container">
-                            <div class="log-left">
-                                <div class="log-bar" style="background:#4CAF50;"></div>
-                                <span class="log-date">{row["date"].strftime("%m/%d")}</span>
-                                <div class="log-gym">{row["gym_name"]}</div>
-                            </div>
-                        </div>
-                    ''', unsafe_allow_html=True)
-                with c2:
-                    if st.button("🗑️", key=f"del_p_{row['id']}"):
-                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+                c1, c2 = st.columns([0.85, 0.15])
+                c1.markdown(f'''
+                    <div class="compact-row">
+                        <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
+                        <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
+                        <div class="compact-gym">{row["gym_name"]}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
+                if c2.button("🗑️", key=f"del_p_{row['id']}"):
+                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
 
-    with m_tabs[1]: # 実績タブ
+    with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
             st.caption(f"{ms.strftime('%m/%d')}〜{me.strftime('%m/%d')} の実績はありません。")
         else:
             for _, row in filtered_done.iterrows():
-                # ここも新しく書き換え
-                c1, c2 = st.columns([0.88, 0.12])
-                with c1:
-                    st.markdown(f'''
-                        <div class="log-container">
-                            <div class="log-left">
-                                <div class="log-bar" style="background:#DD2476;"></div>
-                                <span class="log-date">{row["date"].strftime("%m/%d")}</span>
-                                <div class="log-gym">{row["gym_name"]}</div>
-                            </div>
-                        </div>
-                    ''', unsafe_allow_html=True)
-                with c2:
-                    if st.button("🗑️", key=f"del_d_{row['id']}"):
-                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+                c1, c2 = st.columns([0.85, 0.15])
+                c1.markdown(f'''
+                    <div class="compact-row">
+                        <div style="background:#DD2476; width:4px; height:1rem; border-radius:2px;"></div>
+                        <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
+                        <div class="compact-gym">{row["gym_name"]}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
+                if c2.button("🗑️", key=f"del_d_{row['id']}"):
+                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
                     
 # Tab 3: 🏠 ジム (マスタ連動・高機能スコアリング版)
 with tabs[2]:
