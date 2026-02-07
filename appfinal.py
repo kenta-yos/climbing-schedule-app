@@ -292,39 +292,40 @@ with tabs[0]:
                         selected_gym = res
                         
         # 2. 日付選択
-        st.divider()
-        
-        # セッション状態の初期化
-        if "q_date_one_shot" not in st.session_state:
-            st.session_state.q_date_one_shot = today_jp
+        # 初期値の設定（初回のみ）
+        if "q_date_val" not in st.session_state:
+            st.session_state.q_date_val = today_jp
 
-        # ① 選択中表示（一番上に大きく表示）
-        # .strftime('%m/%d (%a)') で「02/07 (Sat)」のような表記になります
-        current_date_str = st.session_state.q_date_one_shot.strftime('%Y/%m/%d (%a)')
+        # ① 選択中表示
+        current_date_str = st.session_state.q_date_val.strftime('%Y/%m/%d (%a)')
         st.info(f"📅 選択中: **{current_date_str}**")
 
-        # ② カレンダー（ここで直接選ぶことも可能）
-        # key を指定することで session_state と同期させます
+        # ② カレンダー（keyを直接計算に使わない名前に変更）
+        # valueにsession_stateを使い、変化を検知したら反映させる
         q_date = st.date_input(
             "カレンダーで選択", 
-            value=st.session_state.q_date_one_shot, 
-            key="q_date_one_shot", 
+            value=st.session_state.q_date_val, 
             label_visibility="collapsed"
         )
+        # カレンダーが直接触られたら、値を更新
+        if q_date != st.session_state.q_date_val:
+            st.session_state.q_date_val = q_date
+            st.rerun()
 
-        # ③ －1日 / ＋1日 ボタン（カレンダーのすぐ下に配置）
+        # ③ －1日 / ＋1日 ボタン
         c_minus, c_plus = st.columns(2)
 
         with c_minus:
-            if st.button("⬅️ － 1日", use_container_width=True):
-                st.session_state.q_date_one_shot -= pd.Timedelta(days=1)
+            if st.button("⬅️ 1日", use_container_width=True):
+                # ここで直接代入しても、keyと被っていなければエラーになりません
+                st.session_state.q_date_val -= pd.Timedelta(days=1)
                 st.rerun()
 
         with c_plus:
-            if st.button("＋ 1日 ➡️", use_container_width=True):
-                st.session_state.q_date_one_shot += pd.Timedelta(days=1)
-                st.rerun()        
-        
+            if st.button("1日 ➡️", use_container_width=True):
+                st.session_state.q_date_val += pd.Timedelta(days=1)
+                st.rerun()
+                
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
         
