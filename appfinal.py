@@ -291,6 +291,8 @@ with tabs[0]:
                     if res:
                         selected_gym = res
                         
+        st.divider()
+
         # 2. 日付選択
         # 初期値の設定（初回のみ）
         if "q_date_val" not in st.session_state:
@@ -326,6 +328,8 @@ with tabs[0]:
                 st.session_state.q_date_val += pd.Timedelta(days=1)
                 st.rerun()
                 
+        st.divider()
+         
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
         
