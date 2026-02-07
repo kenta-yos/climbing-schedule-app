@@ -293,32 +293,37 @@ with tabs[0]:
                         
         # 2. 日付選択
         st.divider()
-        st.markdown("##### 📅 いつ？")
-
-        # セッション状態に日付がない、あるいは型が違う場合の初期化
+        
+        # セッション状態の初期化
         if "q_date_one_shot" not in st.session_state:
             st.session_state.q_date_one_shot = today_jp
 
-        # ボタンを配置（[ -1 ]  [ 日付表示 ]  [ +1 ] のイメージ）
-        c_minus, c_display, c_plus = st.columns([1, 2, 1])
+        # ① 選択中表示（一番上に大きく表示）
+        # .strftime('%m/%d (%a)') で「02/07 (Sat)」のような表記になります
+        current_date_str = st.session_state.q_date_one_shot.strftime('%Y/%m/%d (%a)')
+        st.info(f"📅 選択中: **{current_date_str}**")
 
-        if c_minus.button("ー 1日", use_container_width=True):
-            st.session_state.q_date_one_shot -= pd.Timedelta(days=1)
-            # st.rerun() は不要（ボタン押下で再描画されるため）
-
-        if c_plus.button("＋ 1日", use_container_width=True):
-            st.session_state.q_date_one_shot += pd.Timedelta(days=1)
-
-        # カレンダー（ここもボタンと連動する。直接変更も可能）
+        # ② カレンダー（ここで直接選ぶことも可能）
+        # key を指定することで session_state と同期させます
         q_date = st.date_input(
             "カレンダーで選択", 
             value=st.session_state.q_date_one_shot, 
-            key="q_date_one_shot", # keyをvalueと同じ名前にすることで双方向連動
+            key="q_date_one_shot", 
             label_visibility="collapsed"
         )
-        
-        # 今どの日付が選ばれているか、視認性を上げる
-        st.info(f"選択中: **{q_date.strftime('%Y/%m/%d (%a)')}**")
+
+        # ③ －1日 / ＋1日 ボタン（カレンダーのすぐ下に配置）
+        c_minus, c_plus = st.columns(2)
+
+        with c_minus:
+            if st.button("⬅️ － 1日", use_container_width=True):
+                st.session_state.q_date_one_shot -= pd.Timedelta(days=1)
+                st.rerun()
+
+        with c_plus:
+            if st.button("＋ 1日 ➡️", use_container_width=True):
+                st.session_state.q_date_one_shot += pd.Timedelta(days=1)
+                st.rerun()        
         
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
