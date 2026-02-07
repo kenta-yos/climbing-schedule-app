@@ -260,20 +260,77 @@ with tabs[0]:
         sorted_gym_names = sorted(gym_df['gym_name'].unique().tolist()) if not gym_df.empty else []
 
     # 3. 登録フォーム
-    st.subheader("🚀 予定登録")
+    # --- 🏠 予定登録セクション (改善版) ---
+st.subheader("🚀 予定登録")
+
+with st.expander("📅 予定・実績を入力する", expanded=False):
+    # 1. エリアごとにタブを分ける
+    # major_master（または merged_gyms['major_area']）からエリア取得
+    major_areas = ["都内・神奈川", "関東", "全国"]
+    tabs = st.tabs(major_areas)
     
-    # 1. 選択されたジムの名前を表示する場所
-    selected_gym = st.session_state.get("q_gym", None)
+    # 選択されたジムを保持する変数
+    selected_gym = None
+
+    for i, area in enumerate(major_areas):
+        with tabs[i]:
+            # そのエリアのジムリストを取得
+            area_gyms = merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique()
+            
+            if len(area_gyms) > 0:
+                # ラジオボタンにすることで、選択しても即座にリロードされない
+                # label_visibility="collapsed" でラベルを隠してスッキリさせる
+                res = st.radio(
+                    f"{area}のジムを選択",
+                    options=area_gyms,
+                    index=None,
+                    key=f"radio_{area}",
+                    label_visibility="visible"
+                )
+                if res:
+                    selected_gym = res
+
+    st.divider()
+
+    # 2. 日付選択 (ジム選択と同じ画面に配置)
+    q_date = st.date_input("📅 日程を選択", value=today_jp, key="q_date_one_shot")
+
+    # 3. 登録ボタン
+    col1, col2 = st.columns(2)
     
-    # 2. ジム選択用の「ボタン」を並べる（セレクトボックスの代わり）
-    # これにより input タグが消えるため、キーボードは絶対に出ません
-    with st.expander(f"🏢 ジムを選択: {selected_gym if selected_gym else '未選択'}", expanded=not selected_gym):
-        # エリアごとにタブで分けて、ボタンをタップしやすくする
-        major_areas = ["都内・神奈川", "関東", "全国"]
-        area_tabs = st.tabs(major_areas)
-        
-        for i, area in enumerate(major_areas):
-            with area_tabs[i]:
+    # 保存処理
+    if col1.button("✋ 登ります", use_container_width=True, type="secondary"):
+        if selected_gym:
+            new_row = pd.DataFrame([{
+                'date': pd.to_datetime(q_date),
+                'gym_name': selected_gym,
+                'user': st.session_state.get('USER', 'Unknown'),
+                'type': '予定'
+            }])
+            # フォームをクリアするために session_state を掃除
+            for area in major_areas:
+                if f"radio_{area}" in st.session_state:
+                    st.session_state[f"radio_{area}"] = None
+            
+            safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
+        else:
+            st.error("ジムを選択してください")
+
+    if col2.button("✊ 登りました", use_container_width=True, type="primary"):
+        if selected_gym:
+            new_row = pd.DataFrame([{
+                'date': pd.to_datetime(q_date),
+                'gym_name': selected_gym,
+                'user': st.session_state.get('USER', 'Unknown'),
+                'type': '実績'
+            }])
+            # フォームをクリア
+            for area in major_areas:
+                if f"radio_{area}" in st.session_state:
+                    st.session_state[f"radio_{area}"] = None
+            
+            safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
+            
                 # そのエリアのジムだけを表示
                 target_gyms = merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique()
                 cols = st.columns(2) # 2列で押しやすい大きなボタンにする
@@ -281,28 +338,6 @@ with tabs[0]:
                     if cols[j % 2].button(g_name, key=f"btn_{g_name}", use_container_width=True):
                         st.session_state.q_gym = g_name
                         st.rerun()
-    
-    # 3. 日付と登録ボタン（ジムが選択されている時だけ表示）
-    if st.session_state.get("q_gym"):
-        st.success(f"📍 選択中: **{st.session_state.q_gym}**")
-        
-        # 日付は標準のものを使う（ここもキーボードが出るなら st.radio に変えるのも手です）
-        q_date = st.date_input("📅 日程", value=today_jp)
-        
-        col1, col2 = st.columns(2)
-        if col1.button("✋ 登ります", use_container_width=True):
-            new_row = pd.DataFrame([{'date': pd.to_datetime(q_date), 'gym_name': st.session_state.q_gym, 'user': st.session_state.USER, 'type': '予定'}])
-            st.session_state.q_gym = None # 保存後にリセット
-            safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
-            
-        if col2.button("✊ 登りました", use_container_width=True):
-            new_row = pd.DataFrame([{'date': pd.to_datetime(q_date), 'gym_name': st.session_state.q_gym, 'user': st.session_state.USER, 'type': '実績'}])
-            st.session_state.q_gym = None # 保存後にリセット
-            safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
-        
-        if st.button("❌ 選択をやり直す", use_container_width=True):
-            st.session_state.q_gym = None
-            st.rerun()
 
     st.divider()
     
