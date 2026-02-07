@@ -309,12 +309,6 @@ with tabs[0]:
         if c_plus.button("＋ 1日", use_container_width=True):
             st.session_state.q_date_one_shot += pd.Timedelta(days=1)
 
-        # 真ん中のカラムに現在の日付をデカデカと表示（確認用）
-        c_display.markdown(
-            f"<div style='text-align: center; background-color: #f0f2f6; padding: 5px; border-radius: 5px; font-weight: bold;'>{st.session_state.q_date_one_shot.strftime('%m/%d (%a)')}</div>", 
-            unsafe_allow_html=True
-        )
-
         # カレンダー（ここもボタンと連動する。直接変更も可能）
         q_date = st.date_input(
             "カレンダーで選択", 
@@ -322,6 +316,9 @@ with tabs[0]:
             key="q_date_one_shot", # keyをvalueと同じ名前にすることで双方向連動
             label_visibility="collapsed"
         )
+        
+        # 今どの日付が選ばれているか、視認性を上げる
+        st.info(f"選択中: **{q_date.strftime('%Y/%m/%d (%a)')}**")
         
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
