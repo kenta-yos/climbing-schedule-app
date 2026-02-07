@@ -332,41 +332,37 @@ with tabs[0]:
          
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
-        
-        if col1.button("✋ 登るよ", use_container_width=True):
-            if selected_gym:
+
+        # 💡 ボタンが押されたときに「どのタブで選んだか」を特定するロジック
+        btn_plan = col1.button("✋ 登るよ", use_container_width=True)
+        btn_done = col2.button("✊ 登った", use_container_width=True, type="primary")
+
+        if btn_plan or btn_done:
+            # 💡 全タブをスキャンして、選ばれているジムを探す
+            final_selected_gym = None
+            for area in all_areas:
+                k = f"radio_top_{area}"
+                if k in st.session_state and st.session_state[k] is not None:
+                    final_selected_gym = st.session_state[k]
+                    # ※ もし複数タブで選んでいたら、あとのタブの選択肢が優先されます
+
+            if final_selected_gym:
+                reg_type = '予定' if btn_plan else '実績'
                 new_row = pd.DataFrame([{
                     'date': pd.to_datetime(q_date),
-                    'gym_name': selected_gym,
+                    'gym_name': final_selected_gym,
                     'user': st.session_state.get('USER', 'Unknown'),
-                    'type': '予定'
+                    'type': reg_type
                 }])
-                # 【ここも重要】すべてのエリアのラジオボタンを掃除
+                
+                # ラジオボタンをすべてリセット
                 for area in all_areas:
                     if f"radio_top_{area}" in st.session_state:
                         del st.session_state[f"radio_top_{area}"]
                 
                 safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
             else:
-                st.warning("ジムを選んでからボタンを押してね！")
-    
-        if col2.button("✊ 登った", use_container_width=True, type="primary"):
-            if selected_gym:
-                new_row = pd.DataFrame([{
-                    'date': pd.to_datetime(q_date),
-                    'gym_name': selected_gym,
-                    'user': st.session_state.get('USER', 'Unknown'),
-                    'type': '実績'
-                }])
-                # すべてのエリアのラジオボタンを掃除
-                for area in all_areas:
-                    if f"radio_top_{area}" in st.session_state:
-                        del st.session_state[f"radio_top_{area}"]
-                    
-                safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
-            else:
-                st.warning("ジムを選んでからボタンを押してね！")
-            
+                st.warning("ジムを選んでからボタンを押してね！")            
     st.divider()
     
     # 3. シンプル1行表示
