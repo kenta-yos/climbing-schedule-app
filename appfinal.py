@@ -871,21 +871,18 @@ with tabs[5]:
                     })
                 
                 new_s_df = pd.DataFrame(new_s_list)
-                
-                # --- ここからリセット処理：safe_saveの『前』に実行 ---
-                # 1. 個別の入力を初期化（keyを指定して上書き）
-                st.session_state["admin_sel_gym"] = None
-                st.session_state["admin_post_url"] = ""
-                
-                # 2. 日付欄も初期化（ループして作成したkeyをすべて掃除）
-                for i in range(st.session_state.rows):
-                    st.session_state[f"sd_{i}"] = today_jp
-                    st.session_state[f"ed_{i}"] = today_jp
-                
-                # 3. 行数を1に戻す
+
+                # --- 安全なリセット処理 ---
+                # 1. 直接代入せず、行数だけを戻す
                 st.session_state.rows = 1
                 
-                # 4. 保存実行（この中のrerunで、上記のリセットが反映される）
+                # 2. Form外であれば、del を使うことでリセットが可能です
+                # （もしForm内なら del もエラーになるので、その場合は clear_on_submit に頼ります）
+                for k in ["admin_sel_gym", "admin_post_url"]:
+                    if k in st.session_state:
+                        del st.session_state[k]
+                
+                # 3. 保存とリロードを実行
                 safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
             else:
                 st.error("ジムの選択と告知URLの入力は必須です。")
