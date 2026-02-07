@@ -869,85 +869,99 @@ with tabs[5]:
     st.query_params["tab"] = "⚙️ 管理"    
     st.subheader("⚙️ 管理メニュー")
 
-    # --- 🆕 ジム登録 ---
+    # --- 🆕 1. ジムの新規登録 (エリア選択をラジオボタン式に) ---
     with st.expander("🆕 ジムの新規登録"):
         with st.form("adm_gym", clear_on_submit=True):
             n = st.text_input("ジム名（例: B-PUMP Ogikubo）")
             u = st.text_input("Instagram等のURL")
             
-            # --- エリア選択（area_masterから動的に取得） ---
+            # TOPタブと同じエリア選択UI
             if not area_master.empty:
-                # area_tagの一覧を取得（重複排除してソート）
-                area_tags = sorted(area_master['area_tag'].unique().tolist())
-                a = st.radio("エリア選択", options=area_tags, horizontal=True)
+                all_areas = sorted(area_master['area_tag'].unique().tolist())
+                # エリア選択用のサブタブを作成
+                area_tabs = st.tabs(all_areas) 
+                selected_area = all_areas[0] # デフォルト
+                
+                for i, area in enumerate(all_areas):
+                    with area_tabs[i]:
+                        # ラジオボタンでエリアを確定させる（TOPと同じロジック）
+                        if st.radio(f"{area}を選択", ["このエリアに登録"], key=f"reg_area_{area}", label_visibility="collapsed"):
+                            selected_area = area
             else:
-                # area_masterが読み込めていない場合のフォールバック
-                a = st.text_input("エリアタグ（手入力）")
-                st.caption("⚠️ area_masterからデータを読み込めませんでした")
+                selected_area = st.text_input("エリアタグ（手入力）")
 
-            if st.form_submit_button("登録"):
-                if n and a:
-                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': a}])
+            if st.form_submit_button("ジムを登録"):
+                if n and selected_area:
+                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': selected_area}])
                     safe_save("gym_master", new_gym, mode="add", target_tab="⚙️ 管理")
                 else:
                     st.warning("ジム名とエリアは必須です")
-                    
-    # --- 📅 セット一括登録 (修正版) ---
+
+    # --- 📅 2. セットスケジュール登録 (エリア別ジム選択 & ＋ーボタン日程) ---
     with st.expander("📅 セットスケジュール登録", expanded=True):
-        # ここでフォームを開始！ clear_on_submit=True が重要
-        with st.form("admin_schedule_form", clear_on_submit=True):
+        # A. ジム選択（TOPタブの「エリア別ラジオボタン」を移植）
+        st.write("1. 対象ジムを選択")
+        if not gym_df.empty and not area_master.empty:
+            # gym_df と area_master をマージしてエリア情報を付与
+            m_gyms = pd.merge(gym_df, area_master, on='area_tag', how='left')
+            m_gyms['major_area'] = m_gyms['area_tag'] # 分類ルールに合わせる
+            all_a = sorted(m_gyms['major_area'].dropna().unique().tolist())
             
-            # セレクトボックス
-            gym_options = sorted(gym_df['gym_name'].tolist()) if not gym_df.empty else []
-            sel_g = st.selectbox(
-                "対象ジム", 
-                options=gym_options, 
-                index=None, 
-                placeholder="ジムを選択...",
-                key="admin_sel_gym"
-            )
-                
-            p_url = st.text_input("告知URL (Instagramなど)", key="admin_post_url")
+            # 変数名衝突防止のため「set_tabs」にする
+            set_tabs = st.tabs(all_a)
+            sel_g = None
             
-            # 日程入力（ここはフォーム内なので、そのまま並べる）
-            if "rows" not in st.session_state: 
-                st.session_state.rows = 1
-                
-            d_list = []
-            for i in range(st.session_state.rows):
-                c1, c2 = st.columns(2)
-                sd = c1.date_input(f"開始 {i+1}", value=today_jp, key=f"sd_{i}")
-                ed = c2.date_input(f"終了 {i+1}", value=today_jp, key=f"ed_{i}")
-                d_list.append((sd, ed))
-    
-            # フォーム内のボタンは「st.form_submit_button」を使う
-            submit_button = st.form_submit_button("登録", use_container_width=True)
-            
-            if submit_button:
-                if sel_g and p_url:
-                    new_s_list = []
-                    for d in d_list:
-                        new_s_list.append({
-                            'gym_name': sel_g,
-                            'start_date': d[0].isoformat(),
-                            'end_date': d[1].isoformat(),
-                            'post_url': p_url
-                        })
-                    
-                    new_s_df = pd.DataFrame(new_s_list)
-                    
-                    # フォームが自動で消してくれるので、行数だけ戻して保存！
-                    st.session_state.rows = 1
-                    safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
-                else:
-                    st.error("ジムの選択と告知URLの入力は必須です。")
-    
-        # 「追加ボタン」はフォームの外に置く（フォーム内だとクリックのたびに送信されるため）
-        if st.button("➕ 日程欄を追加"): 
+            for i, area in enumerate(all_a):
+                with set_tabs[i]:
+                    area_gyms = sorted(m_gyms[m_gyms['major_area'] == area]['gym_name'].unique().tolist())
+                    if area_gyms:
+                        res = st.radio(
+                            f"{area}のジムを選択",
+                            options=area_gyms,
+                            index=None,
+                            key=f"radio_set_{area}",
+                            label_visibility="collapsed"
+                        )
+                        if res:
+                            sel_g = res
+        
+        if sel_g:
+            st.success(f"選択中: {sel_g}")
+        
+        st.divider()
+
+        # B. 日程選択（＋ーボタン方式）
+        st.write("2. セット日程を入力")
+        p_url = st.text_input("告知URL (Instagramなど)", key="admin_post_url")
+        
+        # ＋ーボタンの制御
+        c_btn1, c_btn2, _ = st.columns([0.1, 0.1, 0.8])
+        if c_btn1.button("➕"):
             st.session_state.rows += 1
             st.rerun()
-                
-    # --- 🚪 ログアウト ---
+        if c_btn2.button("➖") and st.session_state.rows > 1:
+            st.session_state.rows -= 1
+            st.rerun()
+
+        # 入力フォーム
+        with st.form("admin_schedule_form", clear_on_submit=True):
+            d_list = []
+            for i in range(st.session_state.session_state.get('rows', 1)):
+                col1, col2 = st.columns(2)
+                sd = col1.date_input(f"開始 {i+1}", value=today_jp, key=f"set_sd_{i}")
+                ed = col2.date_input(f"終了 {i+1}", value=today_jp, key=f"set_ed_{i}")
+                d_list.append((sd, ed))
+
+            if st.form_submit_button("この内容で一括登録"):
+                if sel_g and p_url:
+                    new_s_list = [{'gym_name': sel_g, 'start_date': d[0].isoformat(), 
+                                   'end_date': d[1].isoformat(), 'post_url': p_url} for d in d_list]
+                    safe_save("set_schedules", pd.DataFrame(new_s_list), mode="add", target_tab="📅 セット")
+                    st.session_state.rows = 1 # 登録後は1行に戻す
+                else:
+                    st.error("ジム選択とURLは必須です。")
+
+    # --- 🚪 3. ログアウト ---
     st.write("")
     if st.button("🚪 ログアウト", use_container_width=True): 
         st.session_state.USER = None
