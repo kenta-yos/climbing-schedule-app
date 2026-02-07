@@ -260,26 +260,21 @@ with tabs[0]:
         sorted_gym_names = sorted(gym_df['gym_name'].unique().tolist()) if not gym_df.empty else []
 
     # 3. 登録フォーム
-    # --- 🏠 予定登録セクション ---
     st.subheader("🚀 予定登録")
     
     with st.expander("📅 予定・実績を入力する", expanded=False):
-        # 【ここを修正】データにあるエリアを重複なく取得
+        custom_order = ["都内・神奈川", "関東", "関西", "その他"]
         if not merged_gyms.empty:
-            # nanを除去し、重複を消してリスト化
             all_areas = sorted([a for a in merged_gyms['major_area'].unique() if pd.notna(a)])
         else:
             all_areas = ["未設定"]
     
-        # 自動取得したエリアでタブを作成
         tabs = st.tabs(all_areas)
         
         selected_gym = None
     
-        # major_areas の代わりに all_areas でループを回す
         for i, area in enumerate(all_areas):
             with tabs[i]:
-                # インデントに注意（スペース12個）
                 area_gyms = merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique()
                 
                 if len(area_gyms) > 0:
@@ -300,7 +295,7 @@ with tabs[0]:
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
         
-        if col1.button("✋ 予定（登る！）", use_container_width=True):
+        if col1.button("✋ 登るよ", use_container_width=True):
             if selected_gym:
                 new_row = pd.DataFrame([{
                     'date': pd.to_datetime(q_date),
@@ -316,7 +311,7 @@ with tabs[0]:
             else:
                 st.warning("ジムを選んでからボタンを押してね！")
     
-        if col2.button("✊ 実績（登った！）", use_container_width=True, type="primary"):
+        if col2.button("✊ 登った）", use_container_width=True, type="primary"):
             if selected_gym:
                 new_row = pd.DataFrame([{
                     'date': pd.to_datetime(q_date),
