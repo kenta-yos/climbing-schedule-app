@@ -328,23 +328,17 @@ with tabs[0]:
         # area_master も取得済みであることが前提
         allowed_tags = area_master[area_master['major_area'] == major_choice]['area_tag'].tolist() if not area_master.empty else []
 
-    # 4. ジムのスコアリング
+    # 4. スコアリングロジック
     ranked_list = []
-    
-    try:
-        check_date = pd.to_datetime(target_date).date()
-    except:
-        check_date = target_date
-
     if not gym_df.empty:
-        for _, row in gym_df.iterrows():
-            if row['area_tag'] not in allowed_tags:
+        for _, gym in gym_df.iterrows():
+            # エリアフィルタ
+            if gym['area_tag'] not in allowed_tags:
                 continue
 
-            score = 0
-            reasons = []
+            name, score, reasons = gym['gym_name'], 0, []
             
-            # --- 新セット判定 ---
+            # --- ① 鮮度スコア（セット終了日基準） ---
             if not sched_df.empty:
                 # ターゲット日以前の最新セットを確認
                 past_sets = sched_df[(sched_df['gym_name'] == name) & (sched_df['end_date'] <= t_dt)]
@@ -352,53 +346,45 @@ with tabs[0]:
                     latest_end = past_sets['end_date'].max()
                     diff = (t_dt - latest_end).days
                     if 0 <= diff <= 7: 
-                        score += 60
+                        score += 40
                         reasons.append(f"🔥 新セット({diff}日前)")
                     elif 8 <= diff <= 14: 
                         score += 30
                         reasons.append(f"✨ 準新セット({diff}日前)")
-            
-            # --- 2. 仲間判定 ---
-            others_count = 0
+
+            # --- ② 仲間スコア ---
             if not log_df.empty:
-                others_count = len(log_df[
+                others = log_df[
+                    (log_df['gym_name'] == name) & 
                     (log_df['user'] != st.session_state.USER) & 
                     (log_df['type'] == '予定') & 
-                    (pd.to_datetime(log_df['date']).dt.date == check_date) &
-                    (log_df['gym_name'] == row['gym_name'])
-                ])
-            if others_count > 0:
-                score += 50
-                reasons.append(f"👥 仲間{others_count}人あり")
-
-            # --- 3. 30日以上未訪問の加点 ---
-            if not log_df.empty:
-                my_visits = log_df[
-                    (log_df['user'] == st.session_state.USER) & 
-                    (log_df['type'] == '実績') & 
-                    (log_df['gym_name'] == row['gym_name'])
+                    (log_df['date'] == t_dt)
                 ]
-                if not my_visits.empty:
-                    last_visit = pd.to_datetime(my_visits['date']).max().date()
-                    days_since_last = (check_date - last_visit).days
-                    if days_since_last >= 30:
-                        score += 30
-                        reasons.append(f"⏳ {days_since_last}日ぶり")
-                else:
-                    # 一度も行ったことがないジムも「ご無沙汰」扱いで加点する場合
-                    score += 15
-                    reasons.append("🆕 初訪問かも？")
+                if not others.empty:
+                    score += (50 * len(others))
+                    reasons.append(f"👥 仲間{len(others)}名")
+                
+            # --- ③ 実績スコア ---
+            my_v = log_df[
+                (log_df['gym_name'] == name) & 
+                (log_df['user'] == st.session_state.USER) & 
+                (log_df['type'] == '実績')
+            ] if not log_df.empty else pd.DataFrame()
 
-            # --- 4. フィルタリング判定 ---
-            # 「新セット」「仲間」「ご無沙汰」のいずれかがあれば表示
-            if reasons:
-                ranked_list.append({
-                    "name": row['gym_name'],
-                    "area": row['area_tag'],
-                    "url": row.get('profile_url', row.get('instagram_url', '#')),
-                    "score": score,
-                    "reasons": reasons
-                })
+            if my_v.empty: 
+                score += 10
+                reasons.append("🆕 未訪問")
+            else:
+                last_v_days = (t_dt - my_v['date'].max()).days
+                if last_v_days >= 30: 
+                    score += 20
+                    reasons.append(f"⌛ {last_v_days}日ぶり")
+
+            ranked_list.append({
+                "name": name, "score": score, "reasons": reasons, 
+                "area": gym['area_tag'], "url": gym['profile_url']
+            })
+
         
         # 5. スコア上位表示
         if ranked_list:
