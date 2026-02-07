@@ -264,36 +264,40 @@ with tabs[0]:
     st.subheader("🚀 予定登録")
     
     with st.expander("📅 予定・実績を入力する", expanded=False):
-        # エリアの定義
-        major_areas = ["都内・神奈川", "関東", "全国"]
-        tabs = st.tabs(major_areas)
+        # 【ここを修正】データにあるエリアを重複なく取得
+        if not merged_gyms.empty:
+            # nanを除去し、重複を消してリスト化
+            all_areas = sorted([a for a in merged_gyms['major_area'].unique() if pd.notna(a)])
+        else:
+            all_areas = ["未設定"]
+    
+        # 自動取得したエリアでタブを作成
+        tabs = st.tabs(all_areas)
         
-        # 選択内容を保持する変数
         selected_gym = None
     
-        for i, area in enumerate(major_areas):
+        # major_areas の代わりに all_areas でループを回す
+        for i, area in enumerate(all_areas):
             with tabs[i]:
-                # ここがエラーの箇所。字下げをきっちり揃えました
+                # インデントに注意（スペース12個）
                 area_gyms = merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique()
                 
                 if len(area_gyms) > 0:
-                    # ラジオボタン：選んでもリロードされない
                     res = st.radio(
                         f"{area}のジムを選択",
                         options=area_gyms,
                         index=None,
                         key=f"radio_top_{area}"
                     )
-                    # いずれかのタブで選択されたら、それを採用
                     if res:
                         selected_gym = res
     
         st.divider()
     
-        # 2. 日付選択 (ジム選択と同じ画面。ボタンを押すまで確定しない)
+        # 2. 日付選択
         q_date = st.date_input("📅 日程を選択", value=today_jp, key="q_date_one_shot")
     
-        # 3. 登録ボタン（ここで初めて rerun / safe_save が走る）
+        # 3. 登録ボタン
         col1, col2 = st.columns(2)
         
         if col1.button("✋ 予定（登る！）", use_container_width=True):
@@ -304,8 +308,8 @@ with tabs[0]:
                     'user': st.session_state.get('USER', 'Unknown'),
                     'type': '予定'
                 }])
-                # 登録成功時にラジオボタンの状態をリセット
-                for area in major_areas:
+                # 【ここも重要】すべてのエリアのラジオボタンを掃除
+                for area in all_areas:
                     st.session_state[f"radio_top_{area}"] = None
                 
                 safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
@@ -320,14 +324,14 @@ with tabs[0]:
                     'user': st.session_state.get('USER', 'Unknown'),
                     'type': '実績'
                 }])
-                # 登録成功時にラジオボタンの状態をリセット
-                for area in major_areas:
+                # すべてのエリアのラジオボタンを掃除
+                for area in all_areas:
                     st.session_state[f"radio_top_{area}"] = None
                     
                 safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
             else:
                 st.warning("ジムを選んでからボタンを押してね！")
-
+            
     st.divider()
     
     # 3. シンプル1行表示
