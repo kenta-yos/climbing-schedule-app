@@ -631,7 +631,7 @@ with tabs[2]:
                 st.caption("まだ訪問実績がありません。")
             else:
                 for g in visited_list:
-                    warn_html = '<span class="warn-tag">⚠️セット予定未登録</span>' if g['no_sched'] else ''
+                    warn_html = '<span class="warn-tag">⚠️セット未登録</span>' if g['no_sched'] else ''
                     st.markdown(f'''
                         <a href="{g['url']}" target="_blank" class="gym-row">
                             <div class="gym-info">
