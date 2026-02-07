@@ -943,41 +943,53 @@ with tabs[5]:
         st.write("### 2. セット日程とURLを入力")
         p_url = st.text_input("告知URL (Instagramなど)", key="admin_post_url")
         
-        # ＋ーボタンの制御
-        if "rows" not in st.session_state:
+        # 追加ボタンなどの状態管理
+        if "rows" not in st.session_state: 
             st.session_state.rows = 1
             
-        c_btn1, c_btn2, _ = st.columns([0.1, 0.1, 0.8])
-        if c_btn1.button("➕"):
+        d_list = []
+        for i in range(st.session_state.rows):
+            c1, c2 = st.columns(2)
+            # st.date_input の返り値は自動的に datetime.date 型になる
+            sd = c1.date_input(f"開始 {i+1}", value=today_jp, key=f"sd_{i}")
+            ed = c2.date_input(f"終了 {i+1}", value=today_jp, key=f"ed_{i}")
+            d_list.append((sd, ed))
+            
+        col_btn1, col_btn2 = st.columns(2)
+        if col_btn1.button("➕ 日程欄を追加"): 
             st.session_state.rows += 1
             st.rerun()
-        if c_btn2.button("➖") and st.session_state.rows > 1:
-            st.session_state.rows -= 1
-            st.rerun()
-
-        # 入力フォーム
-        with st.form("admin_schedule_form", clear_on_submit=True):
-            d_list = []
-            for i in range(st.session_state.rows):
-                col1, col2 = st.columns(2)
-                sd = col1.date_input(f"開始 {i+1}", value=today_jp, key=f"set_sd_{i}")
-                ed = col2.date_input(f"終了 {i+1}", value=today_jp, key=f"set_ed_{i}")
-                d_list.append((sd, ed))
-
-            if st.form_submit_button("この内容で一括登録"):
-                if selected_gym_set and p_url:
-                    new_s_list = []
-                    for d in d_list:
-                        new_s_list.append({
-                            'gym_name': selected_gym_set, 
-                            'start_date': d[0].isoformat(), 
-                            'end_date': d[1].isoformat(), 
-                            'post_url': p_url
-                        })
-                    safe_save("set_schedules", pd.DataFrame(new_s_list), mode="add", target_tab="⚙️ 管理")
-                    st.session_state.rows = 1 # 登録後はリセット
-                else:
-                    st.error("ジムの選択とURLの入力は必須です！")
+            
+        if col_btn2.button("登録", use_container_width=True):
+            if sel_g and p_url:
+                new_s_list = []
+                for d in d_list:
+                    new_s_list.append({
+                        'gym_name': sel_g,
+                        'start_date': d[0].isoformat(), # date型を文字列へ
+                        'end_date': d[1].isoformat(),
+                        'post_url': p_url
+                    })
+                
+                new_s_df = pd.DataFrame(new_s_list)
+                
+                # --- ここからリセット処理：safe_saveの『前』に実行 ---
+                # 1. 個別の入力を初期化（keyを指定して上書き）
+                st.session_state["admin_sel_gym"] = None
+                st.session_state["admin_post_url"] = ""
+                
+                # 2. 日付欄も初期化（ループして作成したkeyをすべて掃除）
+                for i in range(st.session_state.rows):
+                    st.session_state[f"sd_{i}"] = today_jp
+                    st.session_state[f"ed_{i}"] = today_jp
+                
+                # 3. 行数を1に戻す
+                st.session_state.rows = 1
+                
+                # 4. 保存実行（この中のrerunで、上記のリセットが反映される）
+                safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
+            else:
+                st.error("ジムの選択とインスタURLの入力は必須です。")
 
     # --- 🚪 3. ログアウト ---
     st.divider()
