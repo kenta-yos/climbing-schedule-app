@@ -260,7 +260,7 @@ with tabs[0]:
         sorted_gym_names = sorted(gym_df['gym_name'].unique().tolist()) if not gym_df.empty else []
 
     # 3. 登録フォーム
-    st.subheader("🚀 クイック登録")
+    st.subheader("🚀 予定登録")
     with st.form("quick_log_form", clear_on_submit=True):
         q_date = st.date_input("📅 日程", value=today_jp)
         q_gym = st.selectbox("🏢 ジムを選択", options=sorted_gym_names, index=None, placeholder="ジム名を選択...")
@@ -440,7 +440,7 @@ with tabs[1]:
     st.query_params["tab"] = "📊 マイページ"
     
     # --- 1. 期間指定（実績の統計用） ---
-    st.subheader("📊 統計・実績管理")
+    st.subheader("📊 ダッシュボード")
     sc1, sc2 = st.columns(2)
     ms = sc1.date_input("開始", value=today_jp.replace(day=1), key="stat_start")
     me = sc2.date_input("終了", value=today_jp, key="stat_end")
