@@ -425,7 +425,7 @@ with tabs[0]:
                 card_html = (
                     '<div style="background: white; padding: 12px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">'
                     '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">'
-                    f'<a href="{gym["url"]}" target="_blank" style="color:#333; font-weight:700; text-decoration:none; font-size: 0.95rem;">📸 {gym["name"]}</a>'
+                    f'<a href="{gym["url"]}" target="_blank" style="color:#333; font-weight:700; text-decoration:none; font-size: 0.95rem;">🔹 {gym["name"]}</a>'
                     f'<span style="color: #999; font-size: 0.7rem; background: #f8f8f8; padding: 2px 6px; border-radius: 4px;">📍 {gym["area"]}</span>'
                     '</div>'
                     f'<div style="line-height: 1.2;">{tag_html}</div>'
@@ -631,7 +631,7 @@ with tabs[2]:
                     st.markdown(f'''
                         <a href="{g['url']}" target="_blank" class="gym-row">
                             <div class="gym-info">
-                                <span class="gym-n">📸 {g['name']}</span>
+                                <span class="gym-n">🔹 {g['name']}</span>
                                 <span class="gym-a">{g['area']}</span>
                             </div>
                             <div style="text-align: right;">
