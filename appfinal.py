@@ -941,7 +941,7 @@ with tabs[5]:
         # 入力フォーム
         with st.form("admin_schedule_form", clear_on_submit=True):
             d_list = []
-            for i in range(st.session_state.session_state.get('rows', 1)):
+            for i in range(st.session_state.get('rows', 1)):
                 col1, col2 = st.columns(2)
                 sd = col1.date_input(f"開始 {i+1}", value=today_jp, key=f"set_sd_{i}")
                 ed = col2.date_input(f"終了 {i+1}", value=today_jp, key=f"set_ed_{i}")
