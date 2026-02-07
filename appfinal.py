@@ -397,7 +397,7 @@ with tabs[0]:
                 ranked_list.append({
                     "name": name, "score": score, "reasons": reasons, 
                     "area": gym['area_tag'], "url": gym['profile_url'],
-                    "latest_set_date": latest_set_date if latest_set_date else datetime.date(2000, 1, 1)
+                    "latest_set_date": latest_set_date if latest_set_date else past_date
                 })
                 
         # 5. スコア上位表示
