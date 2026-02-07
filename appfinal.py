@@ -14,13 +14,6 @@ today_jp = now_jp.date()
 
 # --- 1. ページ設定 & CSS (変更なし) ---
 st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered")
-st.markdown(
-    """
-    <link rel="apple-touch-icon" href="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f9d7.png">
-    <link rel="icon" sizes="192x192" href="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/1f9d7.png">
-    """,
-    unsafe_allow_html=True
-)
 
 st.markdown("""
     <style>
