@@ -347,17 +347,29 @@ with tabs[0]:
             # --- 1. 新セット判定 (14日以内) ---
             new_set_dt = None
             if 'new_set_date' in row and pd.notnull(row['new_set_date']):
-                new_set_dt = pd.to_datetime(row['new_set_date']).date()
+                try:
+                    # どんな形式（文字列/Timestamp）でも確実に date型へ
+                    new_set_dt = pd.to_datetime(row['new_set_date']).date()
+                except:
+                    new_set_dt = None
 
             if new_set_dt:
-                set_days = (check_date - new_set_dt).days
-                if 0 <= set_days <= 7:
-                    score += 70
-                    reasons.append("🔥超新セット!")
-                elif 8 <= set_days <= 14:
-                    score += 40
-                    reasons.append("✨新セット")
-
+                # ターゲット日(check_date) と セット日(new_set_dt) を比較
+                # check_date より後のセット日は、引き算すると負（マイナス）になる
+                delta = check_date - new_set_dt
+                set_days = delta.days
+                
+                # 1. まず、ターゲット日時点で「すでにセット済み（当日含む）」かチェック
+                if set_days >= 0:
+                    # 2. その上で、14日以内の「鮮度」を判定
+                    if set_days <= 7:
+                        score += 70
+                        reasons.append("🔥超新セット!")
+                    elif set_days <= 14:
+                        score += 40
+                        reasons.append("✨新セット")
+                # 負の値（未来の予定）の場合は、何もせずスルー（あなたの意図通り）
+            
             # --- 2. 仲間判定 ---
             others_count = 0
             if not log_df.empty:
