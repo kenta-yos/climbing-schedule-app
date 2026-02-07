@@ -381,7 +381,6 @@ with tabs[0]:
                     (log_df['date'] == t_dt)
                 ]
                 if not others.empty:
-                    score += (50 * len(others))
                     reasons.append(f"👥 仲間{len(others)}名")
                 
             # --- ③ 実績スコア ---
