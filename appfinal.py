@@ -261,83 +261,83 @@ with tabs[0]:
 
     # 3. 登録フォーム
     # --- 🏠 予定登録セクション (改善版) ---
-st.subheader("🚀 予定登録")
-
-with st.expander("📅 予定・実績を入力する", expanded=False):
-    # 1. エリアごとにタブを分ける
-    # major_master（または merged_gyms['major_area']）からエリア取得
-    major_areas = ["都内・神奈川", "関東", "全国"]
-    tabs = st.tabs(major_areas)
+    st.subheader("🚀 予定登録")
     
-    # 選択されたジムを保持する変数
-    selected_gym = None
-
-    for i, area in enumerate(major_areas):
-        with tabs[i]:
-            # そのエリアのジムリストを取得
-            area_gyms = merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique()
-            
-            if len(area_gyms) > 0:
-                # ラジオボタンにすることで、選択しても即座にリロードされない
-                # label_visibility="collapsed" でラベルを隠してスッキリさせる
-                res = st.radio(
-                    f"{area}のジムを選択",
-                    options=area_gyms,
-                    index=None,
-                    key=f"radio_{area}",
-                    label_visibility="visible"
-                )
-                if res:
-                    selected_gym = res
-
-    st.divider()
-
-    # 2. 日付選択 (ジム選択と同じ画面に配置)
-    q_date = st.date_input("📅 日程を選択", value=today_jp, key="q_date_one_shot")
-
-    # 3. 登録ボタン
-    col1, col2 = st.columns(2)
+    with st.expander("📅 予定・実績を入力する", expanded=False):
+        # 1. エリアごとにタブを分ける
+        # major_master（または merged_gyms['major_area']）からエリア取得
+        major_areas = ["都内・神奈川", "関東", "全国"]
+        tabs = st.tabs(major_areas)
+        
+        # 選択されたジムを保持する変数
+        selected_gym = None
     
-    # 保存処理
-    if col1.button("✋ 登ります", use_container_width=True, type="secondary"):
-        if selected_gym:
-            new_row = pd.DataFrame([{
-                'date': pd.to_datetime(q_date),
-                'gym_name': selected_gym,
-                'user': st.session_state.get('USER', 'Unknown'),
-                'type': '予定'
-            }])
-            # フォームをクリアするために session_state を掃除
-            for area in major_areas:
-                if f"radio_{area}" in st.session_state:
-                    st.session_state[f"radio_{area}"] = None
-            
-            safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
-        else:
-            st.error("ジムを選択してください")
-
-    if col2.button("✊ 登りました", use_container_width=True, type="primary"):
-        if selected_gym:
-            new_row = pd.DataFrame([{
-                'date': pd.to_datetime(q_date),
-                'gym_name': selected_gym,
-                'user': st.session_state.get('USER', 'Unknown'),
-                'type': '実績'
-            }])
-            # フォームをクリア
-            for area in major_areas:
-                if f"radio_{area}" in st.session_state:
-                    st.session_state[f"radio_{area}"] = None
-            
-            safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
-            
-                # そのエリアのジムだけを表示
-                target_gyms = merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique()
-                cols = st.columns(2) # 2列で押しやすい大きなボタンにする
-                for j, g_name in enumerate(target_gyms):
-                    if cols[j % 2].button(g_name, key=f"btn_{g_name}", use_container_width=True):
-                        st.session_state.q_gym = g_name
-                        st.rerun()
+        for i, area in enumerate(major_areas):
+            with tabs[i]:
+                # そのエリアのジムリストを取得
+                area_gyms = merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique()
+                
+                if len(area_gyms) > 0:
+                    # ラジオボタンにすることで、選択しても即座にリロードされない
+                    # label_visibility="collapsed" でラベルを隠してスッキリさせる
+                    res = st.radio(
+                        f"{area}のジムを選択",
+                        options=area_gyms,
+                        index=None,
+                        key=f"radio_{area}",
+                        label_visibility="visible"
+                    )
+                    if res:
+                        selected_gym = res
+    
+        st.divider()
+    
+        # 2. 日付選択 (ジム選択と同じ画面に配置)
+        q_date = st.date_input("📅 日程を選択", value=today_jp, key="q_date_one_shot")
+    
+        # 3. 登録ボタン
+        col1, col2 = st.columns(2)
+        
+        # 保存処理
+        if col1.button("✋ 登るよ", use_container_width=True, type="secondary"):
+            if selected_gym:
+                new_row = pd.DataFrame([{
+                    'date': pd.to_datetime(q_date),
+                    'gym_name': selected_gym,
+                    'user': st.session_state.get('USER', 'Unknown'),
+                    'type': '予定'
+                }])
+                # フォームをクリアするために session_state を掃除
+                for area in major_areas:
+                    if f"radio_{area}" in st.session_state:
+                        st.session_state[f"radio_{area}"] = None
+                
+                safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
+            else:
+                st.error("ジムを選択してください")
+    
+        if col2.button("✊ 登った", use_container_width=True, type="primary"):
+            if selected_gym:
+                new_row = pd.DataFrame([{
+                    'date': pd.to_datetime(q_date),
+                    'gym_name': selected_gym,
+                    'user': st.session_state.get('USER', 'Unknown'),
+                    'type': '実績'
+                }])
+                # フォームをクリア
+                for area in major_areas:
+                    if f"radio_{area}" in st.session_state:
+                        st.session_state[f"radio_{area}"] = None
+                
+                safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
+                
+                    # そのエリアのジムだけを表示
+                    target_gyms = merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique()
+                    cols = st.columns(2) # 2列で押しやすい大きなボタンにする
+                    for j, g_name in enumerate(target_gyms):
+                        if cols[j % 2].button(g_name, key=f"btn_{g_name}", use_container_width=True):
+                            st.session_state.q_gym = g_name
+                            st.rerun()
 
     st.divider()
     
