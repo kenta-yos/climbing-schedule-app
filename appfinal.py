@@ -18,25 +18,24 @@ st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="cen
 # --- キーボード出現対策 ---
 st.markdown("""
     <style>
-    /* selectboxやdate_inputの「入力エリア」だけを、
-       クリック（タップ）を無視する設定にします。
-       こうすると、ブラウザは「入力欄を触った」と認識せずキーボードが出ません。
-       でも、Streamlitの「外枠」をクリックした判定は生きるので、リストやカレンダーは開きます。
-    */
-
-    /* セレクトボックスの入力欄をガード */
-    div[data-testid="stSelectbox"] input {
-        pointer-events: none !important;
-    }
-
-    /* 日付選択の入力欄をガード */
+    /* 決定版：入力欄の『入力機能』だけを物理的に封鎖し、クリックイベントは透過させる */
+    div[data-testid="stSelectbox"] input, 
     div[data-testid="stDateInput"] input {
-        pointer-events: none !important;
+        inputmode: none !important;
+        caret-color: transparent !important;
+        /* pointer-eventsをautoに戻し、readonly的な挙動をCSSで模倣 */
+        user-select: none !important;
     }
 
-    /* スマホでタップした時の青いハイライトを消す */
-    input {
-        -webkit-tap-highlight-color: rgba(0,0,0,0);
+    /* selectboxの検索機能をスマホで無効化するための透明なカバー */
+    /* これにより、タップしても「外枠」をクリックしたことになり、リストが開く */
+    div[data-testid="stSelectbox"] div[role="button"] {
+        cursor: pointer;
+    }
+    
+    /* 予定登録フォームの各要素に少し余裕を持たせる */
+    .stForm [data-testid="stVerticalBlock"] > div {
+        margin-bottom: -10px;
     }
     </style>
 """, unsafe_allow_html=True)
