@@ -331,7 +331,6 @@ with tabs[0]:
     # 4. ジムのスコアリング
     ranked_list = []
     
-    # 比較用に target_date を date 型に固定
     try:
         check_date = pd.to_datetime(target_date).date()
     except:
@@ -345,60 +344,54 @@ with tabs[0]:
             score = 0
             reasons = []
             
-            # --- 1. 新セット判定 ---
+            # --- 1. 新セット判定 (14日以内) ---
             new_set_dt = None
             if 'new_set_date' in row and pd.notnull(row['new_set_date']):
                 new_set_dt = pd.to_datetime(row['new_set_date']).date()
 
             if new_set_dt:
-                # ターゲット日(選択した日)とセット日の差
                 set_days = (check_date - new_set_dt).days
-                
-                # その日時点でセット済み（14日以内）か判定
-                if 0 <= set_days <= 14:
-                    # 訪問履歴をチェック
-                    is_new_to_me = True
-                    if not log_df.empty:
-                        my_visits = log_df[
-                            (log_df['user'] == st.session_state.USER) & 
-                            (log_df['type'] == '実績') & 
-                            (log_df['gym_name'] == row['gym_name'])
-                        ]
-                        if not my_visits.empty:
-                            v_date = pd.to_datetime(my_visits['date']).max().date()
-                            # 履歴がある場合、セット日が訪問日より後であること
-                            is_new_to_me = new_set_dt > v_date
-                    
-                    # 条件クリアなら加点
-                    if is_new_to_me:
-                        if set_days <= 7:
-                            score += 70
-                            reasons.append("🔥超新セット!")
-                        else:
-                            score += 40
-                            reasons.append("✨新セット")
-                        # else:
-                        #     reasons.append(f"📅セット済({set_days}日前)") 
-    
-                # もし何も理由がないなら、中身をチェックするためにこれを入れる
-                if not reasons:
-                    # デバッグ情報をタグに混ぜる（動いたら消してください）
-                    # reasons.append(f"DEBUG: set={new_set_dt} visit={my_last_visit_dt}")
-                    reasons.append("👍 おすすめ")
-                                
-                # 仲間判定
-                others_count = 0
-                if not log_df.empty:
-                    others_count = len(log_df[
-                        (log_df['user'] != st.session_state.USER) & 
-                        (log_df['type'] == '予定') & 
-                        (pd.to_datetime(log_df['date']).dt.date == check_date) &
-                        (log_df['gym_name'] == row['gym_name'])
-                    ])
-                if others_count > 0:
-                    score += 50
-                    reasons.append(f"👥 仲間{others_count}人")
-    
+                if 0 <= set_days <= 7:
+                    score += 70
+                    reasons.append("🔥超新セット!")
+                elif 8 <= set_days <= 14:
+                    score += 40
+                    reasons.append("✨新セット")
+
+            # --- 2. 仲間判定 ---
+            others_count = 0
+            if not log_df.empty:
+                others_count = len(log_df[
+                    (log_df['user'] != st.session_state.USER) & 
+                    (log_df['type'] == '予定') & 
+                    (pd.to_datetime(log_df['date']).dt.date == check_date) &
+                    (log_df['gym_name'] == row['gym_name'])
+                ])
+            if others_count > 0:
+                score += 50
+                reasons.append(f"👥 仲間{others_count}人あり")
+
+            # --- 3. 30日以上未訪問の加点 ---
+            if not log_df.empty:
+                my_visits = log_df[
+                    (log_df['user'] == st.session_state.USER) & 
+                    (log_df['type'] == '実績') & 
+                    (log_df['gym_name'] == row['gym_name'])
+                ]
+                if not my_visits.empty:
+                    last_visit = pd.to_datetime(my_visits['date']).max().date()
+                    days_since_last = (check_date - last_visit).days
+                    if days_since_last >= 30:
+                        score += 30
+                        reasons.append(f"⏳ {days_since_last}日ぶり")
+                else:
+                    # 一度も行ったことがないジムも「ご無沙汰」扱いで加点する場合
+                    score += 30
+                    reasons.append("🆕 初訪問かも？")
+
+            # --- 4. フィルタリング判定 ---
+            # 「新セット」「仲間」「ご無沙汰」のいずれかがあれば表示
+            if reasons:
                 ranked_list.append({
                     "name": row['gym_name'],
                     "area": row['area_tag'],
@@ -406,7 +399,7 @@ with tabs[0]:
                     "score": score,
                     "reasons": reasons
                 })
-    
+        
         # 5. スコア上位表示
         if ranked_list:
             sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
