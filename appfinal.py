@@ -294,40 +294,43 @@ with tabs[0]:
         st.divider()
 
         # 2. 日付選択
-        # 初期値の設定（初回のみ）
-        if "q_date_val" not in st.session_state:
-            st.session_state.q_date_val = today_jp
-
-        # ① 選択中表示
-        current_date_str = st.session_state.q_date_val.strftime('%Y/%m/%d (%a)')
-        st.info(f"📅 選択中: **{current_date_str}**")
-
-        # ② カレンダー（keyを直接計算に使わない名前に変更）
-        # valueにsession_stateを使い、変化を検知したら反映させる
-        q_date = st.date_input(
-            "カレンダーで選択", 
-            value=st.session_state.q_date_val, 
-            label_visibility="collapsed"
-        )
-        # カレンダーが直接触られたら、値を更新
-        if q_date != st.session_state.q_date_val:
-            st.session_state.q_date_val = q_date
-            st.rerun()
-
-        # ③ －1日 / ＋1日 ボタン
-        c_minus, c_plus = st.columns(2)
-
-        with c_minus:
-            if st.button("⬅️ 1日", use_container_width=True):
-                # ここで直接代入しても、keyと被っていなければエラーになりません
+        @st.fragment # ← この範囲だけを高速リロードする魔法
+        def fast_date_selector():
+            # 1. 初期値の設定
+            if "q_date_val" not in st.session_state:
+                st.session_state.q_date_val = today_jp
+        
+            # 2. カレンダー（上側に配置）
+            q_date = st.date_input(
+                "カレンダーで選択", 
+                value=st.session_state.q_date_val, 
+                label_visibility="collapsed",
+                key="fast_calendar"
+            )
+            
+            # カレンダーが操作されたら値を更新
+            if q_date != st.session_state.q_date_val:
+                st.session_state.q_date_val = q_date
+                st.rerun(scope="fragment")
+        
+            # 3. ＋1 / －1 ボタン（カレンダーのすぐ下）
+            c_minus, c_plus = st.columns(2)
+            
+            if c_minus.button("⬅️ 1日", use_container_width=True, key="btn_minus"):
                 st.session_state.q_date_val -= pd.Timedelta(days=1)
-                st.rerun()
-
-        with c_plus:
-            if st.button("1日 ➡️", use_container_width=True):
+                st.rerun(scope="fragment") # アプリ全体を止めず、ここだけリロード
+        
+            if c_plus.button("1日 ➡️", use_container_width=True, key="btn_plus"):
                 st.session_state.q_date_val += pd.Timedelta(days=1)
-                st.rerun()
-                
+                st.rerun(scope="fragment")
+        
+            # 4. 現在の選択値をデカデカと表示（ボタンのすぐ下に見やすく）
+                current_date_str = st.session_state.q_date_val.strftime('%Y/%m/%d (%a)')
+                st.info(f"📅 選択中: **{current_date_str}**")
+       
+        # 実行
+        fast_date_selector()
+                                
         st.divider()
          
         # 3. 登録ボタン
