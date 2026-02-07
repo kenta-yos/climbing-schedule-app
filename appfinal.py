@@ -273,11 +273,11 @@ with tabs[0]:
         else:
             all_areas = ["未設定"]
     
-        tabs = st.tabs(all_areas)
+        area_tabs = st.tabs(all_areas)
         selected_gym = None
     
         for i, area in enumerate(all_areas):
-            with tabs[i]:
+            with area_tabs[i]:
                 area_gyms = sorted(merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique().tolist())
                 
                 if len(area_gyms) > 0:
