@@ -352,7 +352,7 @@ with tabs[0]:
                     latest_end = past_sets['end_date'].max()
                     diff = (t_dt - latest_end).days
                     if 0 <= diff <= 7: 
-                        score += 40
+                        score += 60
                         reasons.append(f"🔥 新セット({diff}日前)")
                     elif 8 <= diff <= 14: 
                         score += 30
@@ -386,7 +386,7 @@ with tabs[0]:
                         reasons.append(f"⏳ {days_since_last}日ぶり")
                 else:
                     # 一度も行ったことがないジムも「ご無沙汰」扱いで加点する場合
-                    score += 30
+                    score += 15
                     reasons.append("🆕 初訪問かも？")
 
             # --- 4. フィルタリング判定 ---
