@@ -394,10 +394,11 @@ with tabs[0]:
                     reasons.append(f"⌛ {last_v_days}日ぶり")
 
             if reasons:
+                default_date = pd.Timestamp("2000-01-01").date()
                 ranked_list.append({
                     "name": name, "score": score, "reasons": reasons, 
                     "area": gym['area_tag'], "url": gym['profile_url'],
-                    "latest_set_date": latest_set_date if latest_set_date else past_date
+                    "latest_set_date": latest_set_date if latest_set_date else default_date
                 })
                 
         # 5. スコア上位表示
