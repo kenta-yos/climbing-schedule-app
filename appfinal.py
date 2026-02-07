@@ -282,11 +282,11 @@ with tabs[0]:
                 
                 if len(area_gyms) > 0:
                     res = st.radio(
-                        f"{area}のジムを選択", # 文字列自体は内部的に必要ですが
+                        f"{area}のジムを選択", 
                         options=area_gyms,
                         index=None,
                         key=f"radio_top_{area}",
-                        label_visibility="collapsed" # ← これを追加！
+                        label_visibility="collapsed" 
                     )
                     if res:
                         selected_gym = res
@@ -903,7 +903,6 @@ with tabs[5]:
                     st.warning("ジム名とエリアは必須です")
                     
     # --- 📅 2. セットスケジュール登録 (UX改善版) ---
-    # 💡 改善1: expanded=False にして、最初は閉じておく
     with st.expander("📅 セットスケジュール登録", expanded=False):
         
         selected_gym_set = None
