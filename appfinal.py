@@ -18,34 +18,29 @@ st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="cen
 # --- キーボード出現対策 ---
 st.markdown("""
     <style>
-    /* 1. selectboxの入力欄をタップしてもキーボードを出さない（読み取り専用化） */
+    /* selectboxやdate_inputの「入力エリア」だけを、
+       クリック（タップ）を無視する設定にします。
+       こうすると、ブラウザは「入力欄を触った」と認識せずキーボードが出ません。
+       でも、Streamlitの「外枠」をクリックした判定は生きるので、リストやカレンダーは開きます。
+    */
+
+    /* セレクトボックスの入力欄をガード */
     div[data-testid="stSelectbox"] input {
-        inputmode: none;
-        caret-color: transparent;
+        pointer-events: none !important;
     }
 
-    /* 2. date_inputの入力欄をタップしてもキーボードを出さない */
+    /* 日付選択の入力欄をガード */
     div[data-testid="stDateInput"] input {
-        inputmode: none;
-        caret-color: transparent;
+        pointer-events: none !important;
     }
 
-    /* 3. モバイルでのフォーカス時の青い枠線を消す（任意） */
-    input:focus {
-        outline: none !important;
-        box-shadow: none !important;
+    /* スマホでタップした時の青いハイライトを消す */
+    input {
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
     }
     </style>
-
-    <script>
-    // ブラウザ側で「input要素をすべてReadOnlyにする」魔法
-    // これにより、クリック（選択）はできるがキーボードは出なくなる
-    const inputs = window.parent.document.querySelectorAll('div[data-testid="stSelectbox"] input, div[data-testid="stDateInput"] input');
-    inputs.forEach(input => {
-        input.setAttribute('readonly', 'true');
-    });
-    </script>
 """, unsafe_allow_html=True)
+
 
 st.markdown("""
     <style>
