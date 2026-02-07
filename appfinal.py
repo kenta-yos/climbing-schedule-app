@@ -904,21 +904,19 @@ with tabs[5]:
                 else:
                     st.warning("ジム名とエリアは必須です")
                     
-    # --- 📅 2. セットスケジュール登録 (最終調整版) ---
-    with st.expander("📅 セットスケジュール登録", expanded=True):
+    # --- 📅 2. セットスケジュール登録 (UX改善版) ---
+    # 💡 改善1: expanded=False にして、最初は閉じておく
+    with st.expander("📅 セットスケジュール登録", expanded=False):
         
-        # 変数の初期化
         selected_gym_set = None
         
         st.write("### 1. 対象ジムを選択")
         if not m_gyms_admin.empty:
-            # エリア選択用のサブタブ
             admin_set_tabs = st.tabs(all_areas_admin)
             for i, area in enumerate(all_areas_admin):
                 with admin_set_tabs[i]:
                     area_gyms = sorted(m_gyms_admin[m_gyms_admin['major_area'] == area]['gym_name'].unique().tolist())
                     if area_gyms:
-                        # 💡 ラジオボタンの選択
                         res = st.radio(
                             f"{area}のジムを選択",
                             options=area_gyms,
@@ -928,33 +926,29 @@ with tabs[5]:
                         )
                         if res:
                             selected_gym_set = res
-        else:
-            st.error("ジムデータが読み込めません。")
-
+        
         st.divider()
         st.write("### 2. セット日程とURLを入力")
 
-        # 💡 clear_on_submit=True で登録後にフォーム内を自動クリア
-        with st.form("admin_schedule_form_final", clear_on_submit=True):
-            
+        # 💡 改善2: 「追加」ボタンと「フォーム」を一つの枠内に配置
+        if "rows" not in st.session_state: 
+            st.session_state.rows = 1
+        
+        # フォーム開始
+        with st.form("admin_schedule_form_ux_fix", clear_on_submit=True):
             p_url_set = st.text_input("告知URL (Instagramなど)", key="set_final_post_url")
             
-            # 日程入力の行数管理
-            if "rows" not in st.session_state: 
-                st.session_state.rows = 1
-                
             d_list = []
             for i in range(st.session_state.rows):
                 c1, c2 = st.columns(2)
-                sd = c1.date_input(f"開始 {i+1}", value=today_jp, key=f"sd_final_{i}")
-                ed = c2.date_input(f"終了 {i+1}", value=today_jp, key=f"ed_final_{i}")
+                sd = c1.date_input(f"開始 {i+1}", value=today_jp, key=f"sd_v4_{i}")
+                ed = c2.date_input(f"終了 {i+1}", value=today_jp, key=f"ed_v4_{i}")
                 d_list.append((sd, ed))
 
-            # フォーム送信ボタン
-            submit_button = st.form_submit_button("登録", use_container_width=True)
+            # フォーム内の登録ボタン
+            submit_button = st.form_submit_button("上記の内容で一括登録", use_container_width=True)
             
             if submit_button:
-                # 💡 selected_gym_set が None でないか確認
                 if selected_gym_set and p_url_set:
                     new_s_list = []
                     for d in d_list:
@@ -966,23 +960,22 @@ with tabs[5]:
                         })
                     
                     new_s_df = pd.DataFrame(new_s_list)
-                    
-                    # 💡 登録後のリセット処理
                     st.session_state.rows = 1 
-                    # 💡 ラジオボタンをリセットするために各Keyを削除
+                    # ラジオボタンリセット
                     for area in all_areas_admin:
                         if f"radio_admin_set_{area}" in st.session_state:
                             del st.session_state[f"radio_admin_set_{area}"]
                     
                     safe_save("set_schedules", new_s_df, mode="add", target_tab="📅 セット")
                 else:
-                    st.error("ジムの選択（上のタブ）と告知URLの入力は必須です。")
+                    st.error("ジムの選択と告知URLの入力は必須です。")
 
-    # 日程追加ボタン
-    if st.button("➕ 日程欄を追加", key="btn_add_row_final"): 
-        st.session_state.rows += 1
-        st.rerun()
-        
+        # 💡 「追加」ボタンを expander の中、かつフォームのすぐ下に配置
+        # これにより、見た目上はセットスケジュール登録機能の一部としてまとまります
+        if st.button("➕ 日程入力欄を増やす", key="btn_add_row_ux_fix"): 
+            st.session_state.rows += 1
+            st.rerun()
+            
     # --- 🚪 3. ログアウト ---
     st.divider()
     if st.button("🚪 ログアウト", use_container_width=True): 
