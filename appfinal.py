@@ -329,57 +329,54 @@ with tabs[0]:
         allowed_tags = area_master[area_master['major_area'] == major_choice]['area_tag'].tolist() if not area_master.empty else []
 
     # 4. ジムのスコアリング
-        ranked_list = []
-        
-        # target_dateを確実にdate型に統一
-        try:
-            check_date = pd.to_datetime(target_date).date()
-        except:
-            check_date = target_date
+    ranked_list = []
     
-        if not gym_df.empty:
-            for _, row in gym_df.iterrows():
-                if row['area_tag'] not in allowed_tags:
-                    continue
-    
-                score = 0
-                reasons = []
+    # 比較用に target_date を date 型に固定
+    try:
+        check_date = pd.to_datetime(target_date).date()
+    except:
+        check_date = target_date
+
+    if not gym_df.empty:
+        for _, row in gym_df.iterrows():
+            if row['area_tag'] not in allowed_tags:
+                continue
+
+            score = 0
+            reasons = []
+            
+            # --- 1. 新セット判定 ---
+            new_set_dt = None
+            if 'new_set_date' in row and pd.notnull(row['new_set_date']):
+                new_set_dt = pd.to_datetime(row['new_set_date']).date()
+
+            if new_set_dt:
+                # ターゲット日(選択した日)とセット日の差
+                set_days = (check_date - new_set_dt).days
                 
-                # --- 自分の最終訪問日 (timestamptz -> date) ---
-                my_last_visit_dt = None
-                if not log_df.empty:
-                    my_visits = log_df[
-                        (log_df['user'] == st.session_state.USER) & 
-                        (log_df['type'] == '実績') & 
-                        (log_df['gym_name'] == row['gym_name'])
-                    ]
-                    if not my_visits.empty:
-                        my_last_visit_dt = pd.to_datetime(my_visits['date']).max().date()
-    
-                # --- ジムの新セット日 (date型 or 文字列 -> date) ---
-                new_set_dt = None
-                if 'new_set_date' in row and pd.notnull(row['new_set_date']):
-                    new_set_dt = pd.to_datetime(row['new_set_date']).date()
-    
-                # --- 加点判定 ---
-                if new_set_dt:
-                    # ターゲット日(選択した日)とセット日の差
-                    # (例: ターゲット日が2/10で、セット日が2/1なら 9日経過)
-                    set_days = (check_date - new_set_dt).days
+                # その日時点でセット済み（14日以内）か判定
+                if 0 <= set_days <= 14:
+                    # 訪問履歴をチェック
+                    is_new_to_me = True
+                    if not log_df.empty:
+                        my_visits = log_df[
+                            (log_df['user'] == st.session_state.USER) & 
+                            (log_df['type'] == '実績') & 
+                            (log_df['gym_name'] == row['gym_name'])
+                        ]
+                        if not my_visits.empty:
+                            v_date = pd.to_datetime(my_visits['date']).max().date()
+                            # 履歴がある場合、セット日が訪問日より後であること
+                            is_new_to_me = new_set_dt > v_date
                     
-                    # 最後に訪問した実績日（なければ過去）
-                    v_date = pd.to_datetime(my_last_visit_dt).date() if my_last_visit_dt else datetime(2000, 1, 1).date()
-                    
-                    # 【判定】その日時点で「セット済み」かつ「その後にまだ行っていない」か？
-                    if 0 <= set_days <= 14:  # セット後14日以内
-                        if new_set_dt > v_date: # そのセット後、未訪問
-                            if set_days <= 7:
-                                score += 70
-                                reasons.append("🔥超新セット!")
-                            else:
-                                score += 40
-                                reasons.append("✨新セット")
-                            # 【デバッグ用】もし条件に当てはまらないけど新セット扱いならここを通る
+                    # 条件クリアなら加点
+                    if is_new_to_me:
+                        if set_days <= 7:
+                            score += 70
+                            reasons.append("🔥超新セット!")
+                        else:
+                            score += 40
+                            reasons.append("✨新セット")
                         # else:
                         #     reasons.append(f"📅セット済({set_days}日前)") 
     
