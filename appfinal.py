@@ -774,30 +774,27 @@ with tabs[5]:
 
     # --- 🆕 ジム登録 ---
     with st.expander("🆕 ジムの新規登録"):
-        with st.form("gym_reg_form", clear_on_submit=True):
-            new_gym_name = st.text_input("ジム名")
-            area_options = ["都内", "神奈川", "千葉", "埼玉", "その他"] 
-            new_area_tag = st.radio(
-                "エリア選択", 
-                options=area_options, 
-                horizontal=True  # 横並びにして省スペース化
-            )
-            new_profile_url = st.text_input("InstagramのURL")
+        with st.form("adm_gym", clear_on_submit=True):
+            n = st.text_input("ジム名（例: B-PUMP Ogikubo）")
+            u = st.text_input("Instagram等のURL")
             
-            submit_gym = st.form_submit_button("ジムを登録")
-            if submit_gym:
-                if new_gym_name and new_area_tag:
-                    # Supabaseへの登録処理（変更なし）
-                    gym_data = {
-                        "gym_name": new_gym_name,
-                        "area_tag": new_area_tag,
-                        "profile_url": new_profile_url
-                    }
-                    # ... (supabase.table('gym_master').insert(gym_data).execute() のような処理)
-                    st.success(f"「{new_gym_name}」を登録しました！")
-                else:
-                    st.error("ジム名とエリアは必須です。")
+            # --- エリア選択（area_masterから動的に取得） ---
+            if not area_master.empty:
+                # area_tagの一覧を取得（重複排除してソート）
+                area_tags = sorted(area_master['area_tag'].unique().tolist())
+                a = st.radio("エリア選択", options=area_tags, horizontal=True)
+            else:
+                # area_masterが読み込めていない場合のフォールバック
+                a = st.text_input("エリアタグ（手入力）")
+                st.caption("⚠️ area_masterからデータを読み込めませんでした")
 
+            if st.form_submit_button("登録"):
+                if n and a:
+                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': a}])
+                    safe_save("gym_master", new_gym, mode="add", target_tab="⚙️ 管理")
+                else:
+                    st.warning("ジム名とエリアは必須です")
+                    
     # --- 📅 セット一括登録 (復活) ---
     with st.expander("📅 セットスケジュール登録", expanded=True):
         
