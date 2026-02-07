@@ -263,17 +263,13 @@ with tabs[0]:
     st.subheader("🚀 予定登録")
     
     with st.expander("📅 予定・実績を入力する", expanded=False):
-        custom_order = ["都内・神奈川", "関東", "関西", "その他"]
+        # エリアの並び順定義
+        custom_order = ["都内・神奈川", "関東", "関西", "全国"]
+        
         if not merged_gyms.empty:
-                actual_areas = [a for a in merged_gyms['major_area'].unique() if pd.notna(a)]
-                all_areas = [a for a in custom_order if a in actual_areas]
-                all_areas += [a for a in actual_areas if a not in custom_order]
-                
-                # 訪問回数の集計（log_dfを使用）
-                gym_counts = {}
-                if not log_df.empty:
-                    user_logs = log_df[log_df['user'] == st.session_state.get('USER')]
-                    gym_counts = user_logs['gym_name'].value_counts().to_dict()
+            actual_areas = [a for a in merged_gyms['major_area'].unique() if pd.notna(a)]
+            all_areas = [a for a in custom_order if a in actual_areas]
+            all_areas += [a for a in actual_areas if a not in custom_order]
         else:
             all_areas = ["未設定"]
     
@@ -282,24 +278,17 @@ with tabs[0]:
     
         for i, area in enumerate(all_areas):
             with tabs[i]:
-                # そのエリアのジムを取得
-                area_gyms = merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique().tolist()
+                area_gyms = sorted(merged_gyms[merged_gyms['major_area'] == area]['gym_name'].unique().tolist())
                 
                 if len(area_gyms) > 0:
-                    # --- 【ここを修正】2段階ソートロジック ---
-                    # 第1条件: 訪問回数 (多い順なのでマイナスをつける)
-                    # 第2条件: ジムの名前 (50音順 = 昇順)
-                    area_gyms.sort(key=lambda x: (-gym_counts.get(x, 0), x))
-                    
                     res = st.radio(
-                        f"{area}のジムを選択",
                         options=area_gyms,
                         index=None,
                         key=f"radio_top_{area}"
                     )
                     if res:
                         selected_gym = res
-    
+                        
         # 2. 日付選択
         q_date = st.date_input("📅 日程を選択", value=today_jp, key="q_date_one_shot")
     
