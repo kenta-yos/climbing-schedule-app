@@ -13,7 +13,7 @@ now_jp = datetime.now(jp_timezone)
 today_jp = now_jp.date()
 
 # --- 1. ページ設定 & CSS (変更なし) ---
-st.set_page_config(page_title="Go Bouldering Pro", layout="centered")
+st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered")
 
 st.markdown("""
     <style>
