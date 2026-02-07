@@ -396,12 +396,17 @@ with tabs[0]:
             if reasons:
                 ranked_list.append({
                     "name": name, "score": score, "reasons": reasons, 
-                    "area": gym['area_tag'], "url": gym['profile_url']
+                    "area": gym['area_tag'], "url": gym['profile_url'],
+                    "latest_set_date": latest_set_date if latest_set_date else datetime.date(2000, 1, 1)
                 })
                 
         # 5. スコア上位表示
         if ranked_list:
-            sorted_gyms = sorted(ranked_list, key=lambda x: x['score'], reverse=True)[:6]
+            sorted_gyms = sorted(
+                ranked_list, 
+                key=lambda x: (x['score'], x['latest_set_date']), 
+                reverse=True
+            )[:5]
             
             for gym in sorted_gyms:
                 # タグ生成
