@@ -363,17 +363,31 @@ with tabs[0]:
     
                 # --- 加点判定 ---
                 if new_set_dt:
-                    # ターゲット日との日数差
-                    set_days = (check_date - new_set_dt).days
-                    # 「まだ行ってない」または「セット後に行ってない」
-                    if my_last_visit_dt is None or new_set_dt > my_last_visit_dt:
+                    # 1. ログ上の最後に行った日と、新セット日を比較
+                    # ログがない場合は「2000年1月1日」を仮置きして比較を通す
+                    visit_to_compare = my_last_visit_dt if my_last_visit_dt else datetime(2000, 1, 1).date()
+                    
+                    # 新セット日が前回の訪問より後、かつ、ターゲット日より前（または当日）
+                    if new_set_dt > visit_to_compare:
+                        # ターゲット日との差（何日前のセット替えか）
+                        set_days = (check_date - new_set_dt).days
+                        
                         if 0 <= set_days <= 7:
                             score += 70
                             reasons.append("🔥超新セット!")
                         elif 7 < set_days <= 14:
                             score += 40
                             reasons.append("✨新セット")
+                        # 【デバッグ用】もし条件に当てはまらないけど新セット扱いならここを通る
+                        # else:
+                        #     reasons.append(f"📅セット済({set_days}日前)") 
     
+                # もし何も理由がないなら、中身をチェックするためにこれを入れる
+                if not reasons:
+                    # デバッグ情報をタグに混ぜる（動いたら消してください）
+                    # reasons.append(f"DEBUG: set={new_set_dt} visit={my_last_visit_dt}")
+                    reasons.append("👍 おすすめ")
+                                
                 # 仲間判定
                 others_count = 0
                 if not log_df.empty:
