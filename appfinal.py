@@ -343,7 +343,8 @@ with tabs[0]:
                 }])
                 # 【ここも重要】すべてのエリアのラジオボタンを掃除
                 for area in all_areas:
-                    st.session_state[f"radio_top_{area}"] = None
+                    if f"radio_top_{area}" in st.session_state:
+                        del st.session_state[f"radio_top_{area}"]
                 
                 safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
             else:
@@ -359,7 +360,8 @@ with tabs[0]:
                 }])
                 # すべてのエリアのラジオボタンを掃除
                 for area in all_areas:
-                    st.session_state[f"radio_top_{area}"] = None
+                    if f"radio_top_{area}" in st.session_state:
+                        del st.session_state[f"radio_top_{area}"]
                     
                 safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
             else:
