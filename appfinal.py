@@ -666,9 +666,7 @@ with tabs[1]:
             st.caption("予定はありません。")
         else:
             for _, row in all_my_plans.iterrows():
-                # 💡 horizontal=True で行全体を包む（スマホでの縦割れを防止）
                 with st.container(horizontal=True):
-                    # 1. カラム比率を少し調整（ボタンが切れないように 0.2 確保）
                     c1, c2 = st.columns([0.8, 0.2])
                     
                     # 2. 左側：日付とジム名
@@ -699,9 +697,6 @@ with tabs[1]:
                     
                     if c2.button("🗑️", key=f"del_p_{row['id']}"):
                         safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
-            
-                # 💡 最後に区切り線を st.markdown で引くときれいです
-                st.markdown("<hr style='margin: 0; opacity: 0.1;'>", unsafe_allow_html=True)
 
     with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
