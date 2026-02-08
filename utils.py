@@ -70,51 +70,39 @@ def apply_common_style():
     st.markdown("""
         <style>
         
-        /* 1. ヘッダーの左上にある、サイドバーを開くボタン自体を狙い撃ち */
-        header[data-testid="stHeader"] button {
-            background-color: #FF512F !important; /* オレンジ */
+        /* 1. ヘッダーの中のボタンのうち、左側(CollapsedControl)にあるものだけを指定 */
+        [data-testid="stHeader"] [data-testid="collapsedControl"] button {
+            background-color: #FF512F !important;
             color: white !important;
-            border-radius: 0 12px 12px 0 !important; /* 右側だけ丸く */
+            border-radius: 0 12px 12px 0 !important;
             width: 85px !important;
-            height: 45px !important;
+            height: 40px !important;
             margin-left: 0 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             box-shadow: 2px 2px 8px rgba(0,0,0,0.2) !important;
-            opacity: 1 !important;
-            visibility: visible !important;
         }
 
-        /* 2. アイコンの色を白く固定 */
-        header[data-testid="stHeader"] button svg {
+        /* 2. 上記の特定のボタンの中にあるアイコン(svg)だけ白くする */
+        [data-testid="stHeader"] [data-testid="collapsedControl"] button svg {
             fill: white !important;
             color: white !important;
-            width: 25px !important;
-            height: 25px !important;
         }
 
-        /* 3. ボタンに文字を追加 */
-        header[data-testid="stHeader"] button::after {
+        /* 3. 上記の特定のボタンにだけ「MENU」の文字を追加 */
+        [data-testid="stHeader"] [data-testid="collapsedControl"] button::after {
             content: "MENU" !important;
             color: white !important;
             font-size: 13px !important;
             font-weight: 800 !important;
             margin-left: 4px !important;
-            letter-spacing: 0.5px !important;
         }
 
-        /* 4. サイドバーが開いている時は、閉じるボタン(×)を目立たせすぎないよう調整 */
-        [data-testid="stSidebar"] button {
-            background-color: transparent !important;
-            color: #333 !important;
-            box-shadow: none !important;
-            width: auto !important;
-        }
-        [data-testid="stSidebar"] button::after {
-            content: "" !important; /* 閉じる時はMENU文字を消す */
-        }
-        
+        /* 4. 【重要】右上の設定ボタンなどは元のスタイルに戻す（または干渉させない） */
+        /* 指定を [data-testid="collapsedControl"] 経由に絞ったので、
+           通常の [data-testid="stHeader"] 内の他のボタン（右側など）には影響しなくなります */
+           
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
         .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
         .insta-card {
