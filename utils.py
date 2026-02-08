@@ -69,62 +69,59 @@ def get_colored_user_text(user_name, user_df):
 def apply_common_style():
     st.markdown("""
         <style>
-        /* 1. ヘッダー（箱）自体は見せる設定にする */
+        /* 1. ヘッダー自体は「表示」させるが、背景を透明にして存在感を消す */
         header[data-testid="stHeader"] {
             visibility: visible !important;
-            background-color: rgba(0,0,0,0) !important; /* 背景は透明に */
+            background-color: rgba(0,0,0,0) !important;
         }
 
-        /* 2. 【重要】右上のメニューボタンとデプロイボタンだけをピンポイントで消す */
-        [data-testid="stStatusWidget"], 
-        #MainMenu, 
-        header[data-testid="stHeader"] div:last-child {
+        /* 2. 右上の設定メニューボタン(︙)やデプロイボタンが入っている場所を狙い撃ちして消す */
+        header[data-testid="stHeader"] > div:nth-child(2),
+        [data-testid="stStatusWidget"] {
             display: none !important;
-            visibility: hidden !important;
         }
 
-        /* 3. 左上のサイドバー開閉ボタンだけを装飾して表示する */
-        [data-testid="collapsedControl"],
-        header[data-testid="stHeader"] button:first-of-type {
+        /* 3. 左側の「サイドバーを開くボタン」のエリアを強制表示＆装飾 */
+        [data-testid="collapsedControl"] {
             visibility: visible !important;
-            background-color: #FF512F !important;
-            color: white !important;
+            display: flex !important;
+            background-color: #FF512F !important; /* オレンジ色 */
             border-radius: 0 12px 12px 0 !important;
             width: 85px !important;
             height: 40px !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            box-shadow: 2px 2px 8px rgba(0,0,0,0.2) !important;
-            position: fixed !important; /* 場所を固定 */
+            position: fixed !important;
             top: 10px !important;
             left: 0 !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.3) !important;
+            z-index: 999999 !important;
+            cursor: pointer !important;
         }
 
-        /* アイコンの色と文字 */
-        [data-testid="collapsedControl"] svg,
-        header[data-testid="stHeader"] button:first-of-type svg {
+        /* 4. アイコン(＞＞)の色を白くする */
+        [data-testid="collapsedControl"] svg {
             fill: white !important;
             color: white !important;
-            width: 24px !important;
-            height: 24px !important;
+            width: 22px !important;
+            height: 22px !important;
         }
 
-        [data-testid="collapsedControl"]::after,
-        header[data-testid="stHeader"] button:first-of-type::after {
+        /* 5. 「MENU」という文字を合成する */
+        [data-testid="collapsedControl"]::after {
             content: "MENU" !important;
             color: white !important;
             font-size: 13px !important;
             font-weight: 800 !important;
             margin-left: 4px !important;
-            visibility: visible !important;
         }
 
-        /* 4. フッター（Streamlitのロゴ）を消す */
-        footer {visibility: hidden;}
+        /* 6. フッターは消す */
+        footer {
+            visibility: hidden !important;
+        }
 
 
-        
         
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
         .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
