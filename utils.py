@@ -70,49 +70,43 @@ def apply_common_style():
     st.markdown("""
 
         <style>
-        /* 1. ヘッダー自体は表示するが、背景を透明にしてボタンだけを浮かせる */
-        header[data-testid="stHeader"] {
-            visibility: visible !important;
-            background: transparent !important;
-        }
-
-        /* 2. 【重要】右上のメニュー（︙）とデプロイボタンを「非表示」にする */
-        /* idを使った方が確実に右側を狙い撃ちできます */
-        #MainMenu, 
-        header[data-testid="stHeader"] [data-testid="stStatusWidget"] {
-            visibility: hidden !important;
+        /* 1. 右上のボタン類を完全に消去 */
+        #MainMenu, [data-testid="stStatusWidget"], header[data-testid="stHeader"] > div:last-child {
             display: none !important;
         }
 
-        /* 3. 左上のサイドバーボタン（collapsedControl）を「強制表示」して装飾 */
-        [data-testid="collapsedControl"] {
-            visibility: visible !important;
-            display: flex !important;
-            background-color: #FF512F !important; /* オレンジ色 */
+        /* 2. 左上のMENUボタンを「強制的に」オレンジ色にする */
+        /* [data-testid="collapsedControl"] の中にある「button」を直接指定するのがコツです */
+        [data-testid="collapsedControl"] button {
+            background-color: #FF512F !important; /* 鮮やかなオレンジ */
             border-radius: 0 10px 10px 0 !important;
             width: 90px !important;
             height: 40px !important;
-            align-items: center !important;
-            justify-content: center !important;
-            box-shadow: 2px 2px 8px rgba(0,0,0,0.3) !important;
+            border: none !important;
         }
 
-        /* 4. アイコンの色を白く、文字を追加 */
-        [data-testid="collapsedControl"] svg {
+        /* 3. ボタンの中のアイコン（＞＞）と文字（MENU）の設定 */
+        [data-testid="collapsedControl"] button svg {
             fill: white !important;
             color: white !important;
         }
-        [data-testid="collapsedControl"]::after {
+
+        [data-testid="collapsedControl"] button::after {
             content: "MENU" !important;
             color: white !important;
-            font-size: 13px !important;
-            font-weight: bold !important;
+            font-size: 14px !important;
+            font-weight: 800 !important;
             margin-left: 5px !important;
         }
 
-        /* 5. フッターを消す */
-        footer {visibility: hidden !important;}
+        /* 4. マウスを乗せたときも色をキープ */
+        [data-testid="collapsedControl"] button:hover {
+            background-color: #FF7E5F !important; /* 少し明るいオレンジ */
+            color: white !important;
+        }
 
+        /* フッター消去 */
+        footer {visibility: hidden !important;}
         
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
         .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
