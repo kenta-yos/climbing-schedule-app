@@ -1,6 +1,7 @@
 import streamlit as st
 from utils import apply_common_style
 
+from streamlit_option_menu import option_menu
 import pages.home as home
 import pages.dashboard as dashboard
 import pages.gyms as gyms
