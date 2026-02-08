@@ -216,7 +216,7 @@ def show_page():
                 # ラジオボタンをすべてリセット
                 for area in all_areas:
                     if f"radio_top_{area}" in st.session_state:
-                        st.session_state[k] = None
+                        del st.session_state[f"radio_top_{area}"]
                 safe_save("climbing_logs", new_row, mode="add", target_tab = None)
             else:
                 st.warning("ジムを選んでからボタンを押してね！")            
