@@ -53,10 +53,21 @@ if not st.session_state.get('USER'):
 
 col_title, col_btn = st.columns([0.7, 0.3])
 with col_title: st.write(f"🧗 Let's Go Bouldering **{st.session_state.U_ICON} {st.session_state.USER}**")
-with col_btn:
-    if st.button("🔄 更新", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
+
+# 1. 簡易ナビゲーションを横並びで配置
+cols = st.columns(5) # 5つの主要メニュー
+with cols[0]:
+    if st.button("📊", help="統計", use_container_width=True): st.switch_page("pages/dashboard.py")
+with cols[1]:
+    if st.button("🎲", help="ジム", use_container_width=True): st.switch_page("pages/gyms.py")
+with cols[2]:
+    if st.button("🫶", help="仲間", use_container_width=True): st.switch_page("pages/friends.py")
+with cols[3]:
+    if st.button("📅", help="セット", use_container_width=True): st.switch_page("pages/set.py")
+with cols[4]:
+    if st.button("⚙️", help="管理", use_container_width=True): st.switch_page("pages/admin.py")
+
+st.divider() # 区切り線を入れてからメインコンテンツへ
 
 # 1. データの事前抽出（NameError防止のための初期設定）
 today_logs = pd.DataFrame()
