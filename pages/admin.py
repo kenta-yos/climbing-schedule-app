@@ -3,7 +3,7 @@ import pandas as pd
 # utils.py から必要な機能をインポート
 from utils import get_supabase_data, safe_save, init_connection
 
-def show_page:
+def show_page():
     # --- 初期定義 (元のコードそのまま) ---
     gym_df = get_supabase_data("gym_master")
     area_master = get_supabase_data("area_master")
