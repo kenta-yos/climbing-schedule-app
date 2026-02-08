@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 # utils.py から必要な機能をインポート
-from utils import get_supabase_data
+from utils import get_supabase_data, get_now_jp
 
 def show_page():
     # --- 初期定義 (元のコードそのまま) ---
