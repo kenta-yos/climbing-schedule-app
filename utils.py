@@ -70,45 +70,46 @@ def apply_common_style():
     st.markdown("""
         <style>
         
-        /* 閉じている時の「＞」ボタンと、開いている時の「≡」ボタンの両方を狙い撃ち */
-        button[kind="headerNoPadding"], 
-        [data-testid="stSidebarCollapsedControl"],
+/* 1. サイドバーが閉じている時のボタン(＞)を狙い撃ち */
         [data-testid="collapsedControl"] {
-            background-color: #FF512F !important;
-            color: white !important;
-            border-radius: 8px !important;
-            width: 80px !important; /* 横幅を広げて文字を見せる */
-            height: 40px !important;
-            position: fixed !important;
-            top: 15px !important;
-            left: 15px !important;
-            z-index: 1000000 !important;
+            background-color: #FF512F !important; /* オレンジ */
+            border-radius: 0 10px 10px 0 !important; /* 右側だけ角丸 */
+            width: 70px !important;
+            height: 45px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-            border: 1px solid rgba(255,255,255,0.3) !important;
+            transition: all 0.3s !important;
         }
 
-        /* アイコン自体の色を白く */
-        button[kind="headerNoPadding"] svg,
-        [data-testid="stSidebarCollapsedControl"] svg {
+        /* 2. ボタンの中の「＞」アイコンの色とサイズ */
+        [data-testid="collapsedControl"] svg {
             fill: white !important;
             color: white !important;
-            width: 20px !important;
-            height: 20px !important;
+            width: 28px !important;
+            height: 28px !important;
         }
 
-        /* 「＞」の横に MENU と表示（擬似要素） */
-        button[kind="headerNoPadding"]::after,
-        [data-testid="stSidebarCollapsedControl"]::after {
+        /* 3. ボタンの横に MENU と表示（擬似要素） */
+        [data-testid="collapsedControl"]::after {
             content: "MENU" !important;
             color: white !important;
-            font-size: 14px !important;
+            font-size: 12px !important;
             font-weight: bold !important;
-            margin-left: 5px !important;
+            margin-left: 2px !important;
         }
-                
+
+        /* 4. クリックを邪魔しないようにする設定 */
+        /* fixedを外し、標準のヘッダー位置に従わせます */
+        header[data-testid="stHeader"] {
+            background-color: rgba(0,0,0,0) !important; /* ヘッダー自体は透明に */
+        }
+        
+        /* 5. 既存のスマホ用調整：サイドバーが開いている時は標準の「≡」を見せる */
+        [data-testid="stSidebarNav"] {
+            padding-top: 2rem !important;
+        }
+        
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
         .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
         .insta-card {
