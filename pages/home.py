@@ -264,13 +264,12 @@ def show_page():
             bg_style = "background-color: #f9f9f9;" if is_today else ""
 
             st.markdown(f'''
-                <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; {bg_style} display: flex; align-items: flex-start;">
-                    <div style="min-width: 65px; font-size: 0.85rem; color: #666; margin-top: 2px;">
+                <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; {bg_style_attr} display: flex; align-items: flex-start;">
+                    <div style="min-width: 65px; font-size: 0.85rem; color: #666; margin-top: 2px; flex-shrink: 0;">
                         {date_display}
                     </div>
-                    
-                    <div style="flex-grow: 1;">
-                        <div style="font-weight: bold; color: #333; font-size: 0.95rem; line-height: 1.2; margin-bottom: 4px;">
+                    <div style="flex-grow: 1; margin-left: 4px;">
+                        <div style="font-weight: bold; color: #333; font-size: 0.95rem; line-height: 1.2; margin-bottom: 2px;">
                             {gym}
                         </div>
                         <div style="font-size: 0.9rem; line-height: 1.4;">
