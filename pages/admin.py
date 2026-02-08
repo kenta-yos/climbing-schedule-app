@@ -1,9 +1,15 @@
 import streamlit as st
 import pandas as pd
-# utils.py から必要な機能をインポート
+from datetime import timedelta
 from utils import get_supabase_data, safe_save, init_connection, get_now_jp
 
 def show_page():
+    now_jp = get_now_jp(log_df, user_df, gym_df, sched_df)
+    today_jp = now_jp.date()
+    
+    # ページ専用の補助データ
+    area_master = get_supabase_data("area_master")
+    
     st.query_params["tab"] = "⚙️ 管理"
 
     # データの準備（エリア情報を付与したジムリストを作成）
