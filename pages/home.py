@@ -1,10 +1,10 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import timedelta
 from utils import get_supabase_data, safe_save, get_now_jp, get_colored_user_text
 
 def show_page():
-    from datetime import timedelta
     # --- 初期定義 (元のコードそのまま) ---
     now_jp = get_now_jp()
     today_jp = now_jp.date()
