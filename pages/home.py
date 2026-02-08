@@ -201,8 +201,8 @@ def show_page():
             for area in all_areas:
                 k = f"radio_top_{area}"
                 if k in st.session_state and st.session_state[k] is not None:
-                    final_selected_gym = st.session_state[k]
-                    # ※ もし複数タブで選んでいたら、あとのタブの選択肢が優先されます
+                    raw_val = st.session_state[k]
+                    final_selected_gym = raw_val.replace(" ⭐", "").strip()
     
             if final_selected_gym:
                 reg_type = '予定' if btn_plan else '実績'
