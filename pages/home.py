@@ -55,17 +55,26 @@ col_title, col_btn = st.columns([0.7, 0.3])
 with col_title: st.write(f"🧗 Let's Go Bouldering **{st.session_state.U_ICON} {st.session_state.USER}**")
 
 # 1. 簡易ナビゲーションを横並びで配置
-cols = st.columns(5) # 5つの主要メニュー
-with cols[0]:
-    if st.button("📊", help="統計", use_container_width=True): st.switch_page("pages/dashboard.py")
-with cols[1]:
-    if st.button("🎲", help="ジム", use_container_width=True): st.switch_page("pages/gyms.py")
-with cols[2]:
-    if st.button("🫶", help="仲間", use_container_width=True): st.switch_page("pages/friends.py")
-with cols[3]:
-    if st.button("📅", help="セット", use_container_width=True): st.switch_page("pages/set.py")
-with cols[4]:
-    if st.button("⚙️", help="管理", use_container_width=True): st.switch_page("pages/admin.py")
+# ナビゲーション項目の定義
+nav_items = [
+    {"icon": "🏠", "label": "Home", "page": "pages/home.py"},
+    {"icon": "📊", "label": "統計", "page": "pages/dashboard.py"},
+    {"icon": "🎲", "label": "ジム", "page": "pages/gyms.py"},
+    {"icon": "🫶", "label": "仲間", "page": "pages/friends.py"},
+    {"icon": "📅", "label": "セット", "page": "pages/set.py"},
+    {"icon": "⚙️", "label": "管理", "page": "pages/admin.py"},
+]
+
+# 5列並列のループ処理
+for i in range(0, len(nav_items), 5):
+    with st.container(horizontal=True):
+        chunk = nav_items[i:i+5]
+        # 列数をchunkの長さに合わせることで、端数が出ても綺麗に並びます
+        cols = st.columns(len(chunk))
+        for idx, item in enumerate(chunk):
+            # アイコンとラベルを改行でつなげて表示（ボタンを大きく見せる）
+            if cols[idx].button(f"{item['icon']}\n{item['label']}", key=f"nav_{item['page']}", use_container_width=True):
+                st.switch_page(item['page'])
 
 st.divider() # 区切り線を入れてからメインコンテンツへ
 
