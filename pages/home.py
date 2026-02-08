@@ -57,18 +57,18 @@ with col_title: st.write(f"🧗 Let's Go Bouldering **{st.session_state.U_ICON} 
 # 1. 簡易ナビゲーションを横並びで配置
 # ナビゲーション項目の定義
 nav_items = [
-    {"icon": "🏠", "label": "Home", "page": "pages/home.py"},
-    {"icon": "📊", "label": "統計", "page": "pages/dashboard.py"},
-    {"icon": "🎲", "label": "ジム", "page": "pages/gyms.py"},
-    {"icon": "🫶", "label": "仲間", "page": "pages/friends.py"},
-    {"icon": "📅", "label": "セット", "page": "pages/set.py"},
-    {"icon": "⚙️", "label": "管理", "page": "pages/admin.py"},
+    {"icon": "🏠", "page": "pages/home.py"},
+    {"icon": "📊", "page": "pages/dashboard.py"},
+    {"icon": "🎲", "page": "pages/gyms.py"},
+    {"icon": "🫶", "page": "pages/friends.py"},
+    {"icon": "📅", "page": "pages/set.py"},
+    {"icon": "⚙️", "page": "pages/admin.py"},
 ]
 
 # 5列並列のループ処理
 for i in range(0, len(nav_items), 5):
     with st.container(horizontal=True):
-        chunk = nav_items[5]
+        chunk = nav_items[i:i:5]
         # 列数をchunkの長さに合わせることで、端数が出ても綺麗に並びます
         cols = st.columns(len(chunk))
         for idx, item in enumerate(chunk):
