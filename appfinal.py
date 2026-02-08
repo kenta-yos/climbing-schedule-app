@@ -181,51 +181,36 @@ def get_colored_user_text(user_name, user_df_input):
     )
     return f'<span style="{style}">{u_icon}{user_name}</span>'
     
-# --- 4. ログイン処理 (スマホ強制3列版) ---
+# --- 4. ログイン処理 (シンプルカラム版) ---
 if not st.session_state.get('USER'):
-    st.markdown("<h2 style='text-align: center; margin-top: 2rem;'>🧗 Go Bouldering</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center;'>🧗 Go Bouldering</h2>", unsafe_allow_html=True)
     
-    # 💡 このスタイル設定が「横並び」を維持する心臓部です
-    st.markdown("""
-        <style>
-        /* 親要素のフレックス方向を横(row)に固定 */
-        [data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: wrap !important;
-            align-items: flex-start !important;
-            justify-content: center !important;
-        }
-        /* 各カラムの幅をスマホでも33%に固定 */
-        [data-testid="column"] {
-            width: calc(33.3% - 8px) !important;
-            flex: 0 0 calc(33.3% - 8px) !important;
-            min-width: calc(33.3% - 8px) !important;
-            margin-bottom: 8px !important;
-        }
-        /* ボタン自体のデザイン */
-        div.stButton > button {
-            width: 100% !important;
-            height: 80px !important;
-            border-radius: 12px !important;
-            padding: 0 !important;
-            font-size: 0.8rem !important;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    # 🔥 【魔法の一行】これを入れるとスマホでも縦に並ばず、横3列を維持します
+    st.markdown('''<style>[data-testid="column"] {width: calc(33.3% - 1rem) !important; flex: 1 1 calc(33.3% - 1rem) !important; min-width: calc(33.3% - 1rem) !important;}</style>''', unsafe_allow_html=True)
 
     if not user_df.empty:
         sorted_user_df = user_df.sort_values("user_name")
         
-        # あなたが提示してくれた基本の3カラム
-        cols = st.columns(3)
+        # あなたが書いてくれた 3カラム の形
+        cols = st.columns(2)
         
         for i, (_, row) in enumerate(sorted_user_df.iterrows()):
+            # iを3で割った余りで、col1, col2, col3 に順番に振り分ける
             with cols[i % 3]:
                 btn_key = f"l_{row['user_name']}"
                 
-                # ボタンの色指定
-                st.markdown(f"<style>div.stButton > button[key='{btn_key}'] {{ background-color: {row['color']}; color: white; }}</style>", unsafe_allow_html=True)
+                # ボタンのデザイン（色と高さ）だけ少し整える
+                st.markdown(f"""
+                    <style>
+                    div.stButton > button[key='{btn_key}'] {{
+                        background-color: {row['color']};
+                        color: white;
+                        height: 80px;
+                        width: 100%;
+                        border-radius: 15px;
+                    }}
+                    </style>
+                """, unsafe_allow_html=True)
                 
                 if st.button(f"{row['icon']}\n{row['user_name']}", key=btn_key):
                     st.session_state.USER = row['user_name']
