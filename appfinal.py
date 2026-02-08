@@ -666,16 +666,42 @@ with tabs[1]:
             st.caption("予定はありません。")
         else:
             for _, row in all_my_plans.iterrows():
-                c1, c2 = st.columns([0.85, 0.15])
-                c1.markdown(f'''
-                    <div class="compact-row">
-                        <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
-                        <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
-                        <div class="compact-gym">{row["gym_name"]}</div>
-                    </div>
-                ''', unsafe_allow_html=True)
-                if c2.button("🗑️", key=f"del_p_{row['id']}"):
-                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+                # 💡 horizontal=True で行全体を包む（スマホでの縦割れを防止）
+                with st.container(horizontal=True):
+                    # 1. カラム比率を少し調整（ボタンが切れないように 0.2 確保）
+                    c1, c2 = st.columns([0.8, 0.2])
+                    
+                    # 2. 左側：日付とジム名
+                    c1.markdown(f'''
+                        <div class="compact-row" style="border-bottom: none; padding: 0;">
+                            <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
+                            <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
+                            <div class="compact-gym">{row["gym_name"]}</div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+                    
+                    # 3. 右側：削除ボタン
+                    # CSSでボタン自体の余計な余白を削ってセンタリング
+                    st.markdown(f"""
+                        <style>
+                        div[data-testid="column"]:nth-child(2) {{
+                            display: flex;
+                            justify-content: flex-end;
+                            align-items: center;
+                        }}
+                        div.stButton > button[key='del_p_{row['id']}'] {{
+                            border: none;
+                            padding: 0;
+                            background: transparent;
+                        }}
+                        </style>
+                    """, unsafe_allow_html=True)
+                    
+                    if c2.button("🗑️", key=f"del_p_{row['id']}"):
+                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+            
+                # 💡 最後に区切り線を st.markdown で引くときれいです
+                st.markdown("<hr style='margin: 0; opacity: 0.1;'>", unsafe_allow_html=True)
 
     with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
