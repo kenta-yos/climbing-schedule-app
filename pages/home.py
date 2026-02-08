@@ -259,8 +259,7 @@ def show_page():
             
             # 今日の予定だけ色を変えるアクセント処理
             is_today = (d_val == today_jp)
-            accent_color = "#ffffff" if is_today else "#F36C21"
-            bg_style = "background-color: #F36C21;" if is_today else ""
+            accent_color = "#D93A49" if is_today else "#F36C21"
 
             st.markdown(f'''
                 <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; {bg_style} display: flex; align-items: flex-start;">
