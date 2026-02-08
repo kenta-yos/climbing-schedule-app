@@ -181,45 +181,48 @@ def get_colored_user_text(user_name, user_df_input):
     )
     return f'<span style="{style}">{u_icon}{user_name}</span>'
     
-# --- 4. ログイン処理 (シンプルカラム版) ---
+# --- 4. ログイン処理 (最新 horizontal=True 版) ---
 if not st.session_state.get('USER'):
-    st.markdown("<h2 style='text-align: center;'>🧗 Go Bouldering</h2>", unsafe_allow_html=True)
-    
-    # 🔥 【魔法の一行】これを入れるとスマホでも縦に並ばず、横3列を維持します
-    st.markdown('''<style>[data-testid="column"] {width: calc(33.3% - 1rem) !important; flex: 1 1 calc(33.3% - 1rem) !important; min-width: calc(33.3% - 1rem) !important;}</style>''', unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; margin-top: 2rem;'>🧗 Go Bouldering</h2>", unsafe_allow_html=True)
+    st.write("") # 少し余白
 
     if not user_df.empty:
         sorted_user_df = user_df.sort_values("user_name")
         
-        # あなたが書いてくれた 3カラム の形
-        cols = st.columns(2)
+        # 💡 最新機能: horizontal=True で中身を横に並べるコンテナ
+        # これ自体は「行」を作るイメージなので、3人ずつ並べる処理を書きます
+        user_list = sorted_user_df.to_dict('records')
         
-        for i, (_, row) in enumerate(sorted_user_df.iterrows()):
-            # iを3で割った余りで、col1, col2, col3 に順番に振り分ける
-            with cols[i % 2]:
-                btn_key = f"l_{row['user_name']}"
-                
-                # ボタンのデザイン（色と高さ）だけ少し整える
-                st.markdown(f"""
-                    <style>
-                    div.stButton > button[key='{btn_key}'] {{
-                        background-color: {row['color']};
-                        color: white;
-                        height: 80px;
-                        width: 100%;
-                        border-radius: 15px;
-                    }}
-                    </style>
-                """, unsafe_allow_html=True)
-                
-                if st.button(f"{row['icon']}\n{row['user_name']}", key=btn_key):
-                    st.session_state.USER = row['user_name']
-                    st.session_state.U_COLOR = row['color']
-                    st.session_state.U_ICON = row['icon']
-                    st.query_params["user"] = row['user_name']
-                    st.rerun()
+        # 3人ずつ分割して表示
+        for i in range(0, len(user_list), 3):
+            # このコンテナの中身はスマホでも横に並ぼうと努力します
+            with st.container(horizontal=True):
+                chunk = user_list[i:i+3]
+                for row in chunk:
+                    btn_key = f"l_{row['user_name']}"
+                    
+                    # ボタンの「色」と「高さ」だけCSSで指定（配置はStreamlitにお任せ）
+                    st.markdown(f"""
+                        <style>
+                        div.stButton > button[key='{btn_key}'] {{
+                            background-color: {row['color']};
+                            color: white;
+                            height: 70px; /* 少し低めにして押しやすく */
+                            width: 100%;
+                            border-radius: 12px;
+                            padding: 0;
+                        }}
+                        </style>
+                    """, unsafe_allow_html=True)
+                    
+                    if st.button(f"{row['icon']}\n{row['user_name']}", key=btn_key):
+                        st.session_state.USER = row['user_name']
+                        st.session_state.U_COLOR = row['color']
+                        st.session_state.U_ICON = row['icon']
+                        st.query_params["user"] = row['user_name']
+                        st.rerun()
     st.stop()
-    
+
 # --- 5. メイン画面 ---
 if "toast_msg" in st.session_state:
     st.toast(st.session_state.toast_msg)
