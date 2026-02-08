@@ -68,36 +68,41 @@ def get_colored_user_text(user_name, user_df):
 # --- 共通スタイル (元のCSSを完コピ) ---
 def apply_common_style():
     st.markdown("""
+
         <style>
-        /* 1. 右上のいらないボタン（︙やDeployなど）を根こそぎ消す */
-        [data-testid="stHeader"] > div:last-child, 
+        /* 1. ヘッダー自体は表示するが、背景を透明にしてボタンだけを浮かせる */
+        header[data-testid="stHeader"] {
+            visibility: visible !important;
+            background: transparent !important;
+        }
+
+        /* 2. 【重要】右上のメニュー（︙）とデプロイボタンを「非表示」にする */
+        /* idを使った方が確実に右側を狙い撃ちできます */
         #MainMenu, 
-        [data-testid="stStatusWidget"] {
+        header[data-testid="stHeader"] [data-testid="stStatusWidget"] {
+            visibility: hidden !important;
             display: none !important;
         }
 
-        /* 2. 左上のボタン（＞＞）をオレンジ色にして、MENUという文字を添える */
-        /* ボタン本体の装飾 */
-        [data-testid="stHeader"] button:first-of-type {
-            background-color: #FF512F !important; /* オレンジ色 */
-            color: white !important;
-            border-radius: 0 10px 10px 0 !important;
-            width: 85px !important;
-            height: 40px !important;
-            box-shadow: 2px 2px 8px rgba(0,0,0,0.2) !important;
+        /* 3. 左上のサイドバーボタン（collapsedControl）を「強制表示」して装飾 */
+        [data-testid="collapsedControl"] {
+            visibility: visible !important;
             display: flex !important;
+            background-color: #FF512F !important; /* オレンジ色 */
+            border-radius: 0 10px 10px 0 !important;
+            width: 90px !important;
+            height: 40px !important;
             align-items: center !important;
             justify-content: center !important;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.3) !important;
         }
 
-        /* アイコンの色を白に */
-        [data-testid="stHeader"] button:first-of-type svg {
+        /* 4. アイコンの色を白く、文字を追加 */
+        [data-testid="collapsedControl"] svg {
             fill: white !important;
             color: white !important;
         }
-
-        /* 「MENU」という文字をボタン内に追加 */
-        [data-testid="stHeader"] button:first-of-type::after {
+        [data-testid="collapsedControl"]::after {
             content: "MENU" !important;
             color: white !important;
             font-size: 13px !important;
@@ -105,8 +110,8 @@ def apply_common_style():
             margin-left: 5px !important;
         }
 
-        /* 3. 余計なフッターを消す */
-        footer {visibility: hidden;}
+        /* 5. フッターを消す */
+        footer {visibility: hidden !important;}
 
         
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
