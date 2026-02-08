@@ -312,9 +312,9 @@ with tabs[0]:
                     
                     for g_name in raw_area_gyms:
                         if g_name in recent_gyms:
-                            label = f"⭐ {g_name}"
+                            label = f"{g_name} ⭐"
                         else:
-                            label = f"　 {g_name}" # ズレ防止の全角スペース
+                            label = f"{g_name}" # ズレ防止の全角スペース
                         display_options.append(label)
                         label_map[label] = g_name
 
@@ -970,9 +970,9 @@ with tabs[5]:
                         
                         for g_name in raw_area_gyms:
                             if g_name in recent_gyms_admin:
-                                label = f"🌟 {g_name}"
+                                label = f"{g_name} 🌟"
                             else:
-                                label = f"　 {g_name}"
+                                label = f"{g_name}"
                             display_options_admin.append(label)
                             label_map_admin[label] = g_name
 
