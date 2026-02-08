@@ -70,6 +70,11 @@ else:
     elif selected == "管理":
         admin.show_page()
 
+st.write("") 
+st.write("")
+# 空白をHTMLで調整（約100px程度の余白を作る）
+st.markdown('<div style="margin-bottom: 100px;"></div>', unsafe_allow_html=True)
+
 # 3. トースト通知の処理
 if "toast_msg" in st.session_state:
     st.toast(st.session_state.toast_msg)
