@@ -9,7 +9,11 @@ import pages.friends as friends
 import pages.set as set
 import pages.admin as admin
 
-# 1. ページ設定（このファイルで一度だけ実行）
+# 1. ユーザー状態の初期化 (メニュー表示判定の前にやる必要があります！)
+if 'USER' not in st.session_state:
+    st.session_state.USER = None
+
+# 2. ページ定義
 st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered", initial_sidebar_state="auto")
 apply_common_style()
 
@@ -29,43 +33,29 @@ selected = option_menu(
     }
 )
 
-# 選択されたメニューに応じて表示を切り替える
-if selected == "Home":
-    home.show_page()
-elif selected == "ダッシュボード":
-    dashboard.show_page()
-elif selected == "ジム":
-    gyms.show_page()
-elif selected == "仲間":
-    friends.show_page()
-elif selected == "セット":
-    set.show_page()
-elif selected == "管理":
-    admin.show_page()
-
-# 2. セッション状態の初期化
-if 'USER' not in st.session_state:
-    st.session_state.USER = None
+if st.session_state.USER is None:
+    # ログイン前
+    pages_list = [st.Page("pages/home.py", title="Home", icon="🏠")]
+else:
+    # ログイン後
+    # option_menu の選択(selected)に合わせて表示するファイルを決める
+    page_map = {
+        "Home": "pages/home.py",
+        "ダッシュボード": "pages/dashboard.py",
+        "ジム": "pages/gyms.py",
+        "仲間": "pages/friends.py",
+        "セット": "pages/set.py",
+        "管理": "pages/admin.py"
+    }
+    # 選択されたページを st.Page にして実行
+    pages_list = [st.Page(page_map[selected])]
 
 # 3. トースト通知の処理
 if "toast_msg" in st.session_state:
     st.toast(st.session_state.toast_msg)
     del st.session_state.toast_msg
 
-# 4. ナビゲーションの定義
-if st.session_state.USER is None:
-    # ログインしていない時はログイン画面(home.py)のみ
-    pg = st.navigation([st.Page("pages/home.py", title="Go Bouldering", icon="🧗")], position="hidden")
-else:
-    # ログイン後は全メニューを表示
-    pg = st.navigation([
-        st.Page("pages/home.py", title="Home", icon="🏠"),
-        st.Page("pages/dashboard.py", title="ダッシュボード", icon="📊"),
-        st.Page("pages/gyms.py", title="ジム", icon="🎲"),
-        st.Page("pages/friends.py", title="仲間", icon="🫶"),
-        st.Page("pages/set.py", title="セット", icon="📅"),
-        st.Page("pages/admin.py", title="管理", icon="⚙️"),
-    ], position="top")
-
-# 5. 実行
+# 4. ナビゲーションの実行
+pg = st.navigation(pages_list, position="hidden") # 標準サイドバーは隠す
 pg.run()
+
