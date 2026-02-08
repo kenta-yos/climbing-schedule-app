@@ -262,8 +262,8 @@ def show_page():
             accent_color = "#D93A49" if is_today else "#F36C21"
 
             st.markdown(f'''
-                <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; {bg_style} display: flex; align-items: flex-start;">
-                    <div style="min-width: 65px; font-size: 0.85rem; color: {accent_color}; margin-top: 2px; flex-shrink: 0;">
+                <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; display: flex; align-items: flex-start;">
+                    <div style="min-width: 65px; font-size: 0.85rem; color: {accent_color}; font-weight: bold; margin-top: 2px; flex-shrink: 0;">
                         {date_display}
                     </div>
                     <div style="flex-grow: 1; margin-left: 4px;">
