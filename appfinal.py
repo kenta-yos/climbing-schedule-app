@@ -33,7 +33,7 @@ else:
     selected = option_menu(
         menu_title=None, 
         options=["トップ", "ログ", "ジム", "セット", "管理"], 
-        icons=["house", "bar-chart", "grid", "heart", "gear"], 
+        icons=["house", "bar-chart", "grid", "calendar", "gear"], 
         orientation="horizontal",
         styles={
             "container": {"padding": "0!important", "background-color": "#fafafa"},
