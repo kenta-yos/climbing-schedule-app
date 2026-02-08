@@ -7,6 +7,12 @@ def show_page():
     # --- 初期定義 (元のコードそのまま) ---
     gym_df = get_supabase_data("gym_master")
     area_master = get_supabase_data("area_master")
+    log_df = get_supabase_data("climbing_logs")
+    sched_df = get_supabase_data("set_schedules")
+    
+    # 日付計算の準備
+    now_jp = get_now_jp()
+    t_dt = pd.Timestamp(now_jp.date())
     
     # 未ログイン時のガード
     if st.session_state.USER is None:
