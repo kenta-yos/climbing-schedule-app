@@ -218,7 +218,7 @@ def show_page():
                     if f"radio_top_{area}" in st.session_state:
                         del st.session_state[f"radio_top_{area}"]
                 
-                safe_save("climbing_logs", new_row, mode="add", target_tab="🏠 Top")
+                safe_save("climbing_logs", new_row, mode="add", target_tab: str = None)
             else:
                 st.warning("ジムを選んでからボタンを押してね！")            
     st.divider()
