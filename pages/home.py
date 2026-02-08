@@ -54,30 +54,6 @@ if not st.session_state.get('USER'):
 col_title, col_btn = st.columns([0.7, 0.3])
 with col_title: st.write(f"🧗 Let's Go Bouldering **{st.session_state.U_ICON} {st.session_state.USER}**")
 
-# 1. 簡易ナビゲーションを横並びで配置
-# ナビゲーション項目の定義
-nav_items = [
-    {"icon": "🏠", "page": "pages/home.py"},
-    {"icon": "📊", "page": "pages/dashboard.py"},
-    {"icon": "🎲", "page": "pages/gyms.py"},
-    {"icon": "🫶", "page": "pages/friends.py"},
-    {"icon": "📅", "page": "pages/set.py"},
-    {"icon": "⚙️", "page": "pages/admin.py"},
-]
-
-# 5列並列のループ処理
-for i in range(0, len(nav_items), 5):
-    with st.container(horizontal=True):
-        chunk = nav_items[i:i:5]
-        # 列数をchunkの長さに合わせることで、端数が出ても綺麗に並びます
-        cols = st.columns(len(chunk))
-        for idx, item in enumerate(chunk):
-            # アイコンとラベルを改行でつなげて表示（ボタンを大きく見せる）
-            if cols[idx].button(f"{item['icon']}\n{item['label']}", key=f"nav_{item['page']}", use_container_width=True):
-                st.switch_page(item['page'])
-
-st.divider() # 区切り線を入れてからメインコンテンツへ
-
 # 1. データの事前抽出（NameError防止のための初期設定）
 today_logs = pd.DataFrame()
 tomorrow_logs = pd.DataFrame()
