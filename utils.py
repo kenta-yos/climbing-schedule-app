@@ -69,6 +69,39 @@ def get_colored_user_text(user_name, user_df):
 def apply_common_style():
     st.markdown("""
         <style>
+        
+        /* 1. ボタン自体をオレンジ色にして浮かせる */
+        [data-testid="stSidebarCollapseButton"] {
+            background-color: #FF512F !important; 
+            color: white !important;
+            border-radius: 8px !important; /* 少し角丸 */
+            width: auto !important;
+            padding-right: 15px !important; /* 文字を入れるスペース */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+            position: fixed !important;
+            top: 10px !important;
+            left: 10px !important;
+            z-index: 999999 !important;
+        }
+        /* 2. 三本線アイコンの色を白くする */
+        [data-testid="stSidebarCollapseButton"] svg {
+            fill: white !important;
+            width: 25px !important;
+            height: 25px !important;
+        }
+        /* 3. ボタンの横に「MENU」という文字を強制的に表示する */
+        [data-testid="stSidebarCollapseButton"]::after {
+            content: " MENU";
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            vertical-align: middle;
+        }
+        /* 4. サイドバーが開いている時はボタンを隠す（重ならないように） */
+        [data-testid="stSidebar"][aria-expanded="true"] ~ section [data-testid="stSidebarCollapseButton"] {
+            display: none !important;
+        }
+        
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
         .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
         .insta-card {
