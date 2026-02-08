@@ -21,13 +21,13 @@ if st.session_state.USER is None:
 else:
     # ログイン後は全メニューを表示
     pg = st.navigation([
-    st.Page("pages/home.py", title="Home", icon="🏠"),
-    st.Page("pages/dashboard.py", title="ダッシュボード", icon="📊"),
-    st.Page("pages/gyms.py", title="ジム", icon="🎲"),
-    st.Page("pages/friends.py", title="仲間", icon="🫶"),
-    st.Page("pages/set.py", title="セット", icon="📅"),
-    st.Page("pages/admin.py", title="管理", icon="⚙️"),
-    ])
+        st.Page("pages/home.py", title="Home", icon="🏠"),
+        st.Page("pages/dashboard.py", title="ダッシュボード", icon="📊"),
+        st.Page("pages/gyms.py", title="ジム", icon="🎲"),
+        st.Page("pages/friends.py", title="仲間", icon="🫶"),
+        st.Page("pages/set.py", title="セット", icon="📅"),
+        st.Page("pages/admin.py", title="管理", icon="⚙️"),
+    ], position="top")
 
 # 5. 実行
 pg.run()
