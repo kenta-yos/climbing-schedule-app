@@ -260,7 +260,7 @@ def show_page():
             
             # 今日の予定だけ色を変えるアクセント処理
             is_today = (d_val == today_jp)
-            accent_color = "#4CAF50" if is_today else "#DDDDDD" # 今日は緑、それ以外はグレー
+            accent_color = "#4CAF50" if is_today else "#F36C21" # 今日は緑、それ以外はグレー
             bg_style = "background-color: #f9f9f9;" if is_today else ""
 
             st.markdown(f'''
