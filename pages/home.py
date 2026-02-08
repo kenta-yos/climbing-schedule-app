@@ -264,12 +264,20 @@ def show_page():
             bg_style = "background-color: #f9f9f9;" if is_today else ""
 
             st.markdown(f'''
-                <div style="margin-bottom: 6px; padding: 4px 10px; border-left: 4px solid {accent_color}; {bg_style}">
-                    <span style="font-size: 0.85rem; color: #666; margin-right: 8px;">{date_display}</span>
-                    <span style="font-weight: bold; color: #333; margin-right: 12px;">{gym}</span>
-                    <span style="font-size: 0.95rem;">{members_html}</span>
+                <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; {bg_style} display: flex; align-items: flex-start;">
+                    <div style="min-width: 65px; font-size: 0.85rem; color: #666; margin-top: 2px;">
+                        {date_display}
+                    </div>
+                    
+                    <div style="flex-grow: 1;">
+                        <div style="font-weight: bold; color: #333; font-size: 0.95rem; line-height: 1.2; margin-bottom: 4px;">
+                            {gym}
+                        </div>
+                        <div style="font-size: 0.9rem; line-height: 1.4;">
+                            {members_html}
+                        </div>
+                    </div>
                 </div>
-            ''', unsafe_allow_html=True)
     else:
         st.caption("3週間以内に予定を入れている仲間はいません😭")
         
