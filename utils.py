@@ -69,8 +69,12 @@ def get_colored_user_text(user_name, user_df):
 def apply_common_style():
     st.markdown("""
         <style>
+
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
         
-    /* 1. ヘッダーの中にあるボタンのうち、左側に配置されているものだけを特定 */
+        /* 1. ヘッダーの中にあるボタンのうち、左側に配置されているものだけを特定 */
         header[data-testid="stHeader"] button {
             transition: all 0.3s !important;
         }
