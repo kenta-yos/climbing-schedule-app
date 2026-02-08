@@ -224,7 +224,6 @@ def show_page():
     
     # 3. 3週間以内の予定一覧表示
     st.subheader("👋 一緒にのぼろー")
-    st.markdown("##### 🗓️ 3週間以内の予定")
 
     # --- データの準備 ---
     from datetime import timedelta
@@ -283,7 +282,7 @@ def show_page():
         
     st.divider()
     
-    st.subheader("✨ 今日のおすすめジム")
+    st.subheader("✨ おすすめジム")
     # 1. ターゲット設定
     c_date1, c_date2 = st.columns([0.6, 0.4])
     target_date = c_date1.date_input("ターゲット日", value=today_jp, key="tg_date")
