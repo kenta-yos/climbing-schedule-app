@@ -843,7 +843,7 @@ with tabs[3]:
     st.subheader("👥 仲間たちの予定 (直近30日)")
     
     # 1. 表示オプション
-    include_me = st.checkbox("自分の予定も表示する", value=False, key="check_include_me")
+    include_me = st.toggle("自分の予定も表示する", value=False, key="check_include_me")
     
     # 2. データの抽出
     if not log_df.empty:
