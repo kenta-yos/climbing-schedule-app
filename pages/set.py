@@ -5,6 +5,16 @@ from datetime import datetime
 from utils import get_supabase_data, get_now_jp
 
 def show_page():
+    # --- 過ぎたスケジュールをグレー字に ---
+    st.markdown("""
+        <style>
+        .past-opacity { 
+            opacity: 0.35 !important; 
+            filter: grayscale(80%);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     # --- 初期定義 (元のコードそのまま) ---
     now_jp = get_now_jp()
     today_jp = now_jp.date()
