@@ -181,7 +181,7 @@ def get_colored_user_text(user_name, user_df_input):
     )
     return f'<span style="{style}">{u_icon}{user_name}</span>'
     
-# --- 4. ログイン処理 (スマホ最適化タイル版) ---
+# --- 4. ログイン処理 (HTMLタイル版) ---
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
     u_match = user_df[user_df['user_name'] == saved_user]
@@ -189,73 +189,78 @@ if saved_user and not user_df.empty and st.session_state.USER is None:
         st.session_state.USER, st.session_state.U_COLOR, st.session_state.U_ICON = u_match.iloc[0][['user_name', 'color', 'icon']]
 
 if not st.session_state.get('USER'):
-    # タイトルを中央寄せで表示
-    st.markdown("<h2 style='text-align: center; margin: 3rem 0 1rem 0; color: #333;'>🧗 Go Bouldering</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #666; margin-bottom: 2rem;'>Who is climbing today?</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; margin: 3rem 0 0.5rem 0;'>🧗 Go Bouldering</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #666; margin-bottom: 2.5rem;'>Who is climbing today?</p>", unsafe_allow_html=True)
     
     if not user_df.empty:
-        # 強制的に横並びを維持する魔法のCSS
+        # 💡 ボタンを並べるためのコンテナ（CSS）
+        # flex-wrap で、入りきらなくなったら自動で次の行へ。
         st.markdown("""
             <style>
-            /* カラムの自動折り返しを阻止し、横並びを強制 */
-            [data-testid="stHorizontalBlock"] {
-                display: flex !important;
-                flex-direction: row !important;
-                flex-wrap: wrap !important;
-                justify-content: center !important;
-                gap: 10px !important;
+            .login-container {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 12px;
+                width: 100%;
+                max-width: 500px;
+                margin: 0 auto;
             }
-            /* 各カラムの幅をスマホでも維持 */
-            [data-testid="column"] {
-                width: calc(33% - 15px) !important;
-                flex: 0 0 calc(33% - 15px) !important;
-                min-width: calc(33% - 15px) !important;
+            /* ボタンの外枠（Streamlitのボタンを包むdiv） */
+            .user-tile {
+                flex: 0 0 calc(33.33% - 12px); /* 3列。隙間分を引く */
+                aspect-ratio: 1 / 1; /* 正方形を維持 */
+                min-width: 90px;
             }
-            /* ボタン自体のデザイン調整 */
+            /* ボタン自体のスタイルを強制上書き */
             div.stButton > button {
                 width: 100% !important;
-                height: 90px !important;
-                border-radius: 16px !important;
+                height: 100% !important;
+                aspect-ratio: 1 / 1 !important;
+                border-radius: 20px !important;
                 border: none !important;
-                font-weight: bold !important;
-                text-align: center !important;
-                display: flex !important;
-                flex-direction: column !important;
-                align-items: center !important;
-                justify-content: center !important;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-                padding: 5px !important;
-                white-space: pre-wrap !important; /* 改行を有効に */
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+                font-size: 1.2rem !important; /* アイコンを大きく */
+                transition: transform 0.2s !important;
+            }
+            div.stButton > button:active {
+                transform: scale(0.95) !important;
+            }
+            /* 名前が長すぎる場合の調整 */
+            .user-name {
+                font-size: 0.7rem !important;
+                font-weight: bold;
+                margin-top: 4px;
+                display: block;
+                color: white;
             }
             </style>
         """, unsafe_allow_html=True)
 
-        sorted_user_df = user_df.sort_values("user_name")
-        cols = st.columns(3) # 3列に設定
+        # 💡 ここがポイント：コンテナを作成
+        st.write('<div class="login-container">', unsafe_allow_html=True)
         
+        sorted_user_df = user_df.sort_values("user_name")
+        
+        # カラムを使わず、1つずつボタンを配置
         for i, (_, row) in enumerate(sorted_user_df.iterrows()):
-            with cols[i % 3]:
+            # タイル1つ分
+            with st.container():
                 btn_key = f"l_{row['user_name']}"
-                # 各ユーザーの色を適用
-                st.markdown(f"""
-                    <style>
-                    div.stButton > button[key='{btn_key}'] {{
-                        background-color: {row['color']} !important;
-                        color: white !important;
-                    }}
-                    </style>
-                """, unsafe_allow_html=True)
+                st.markdown(f"<style>div.stButton > button[key='{btn_key}'] {{ background-color: {row['color']} !important; color: white !important; }}</style>", unsafe_allow_html=True)
                 
-                # ボタンクリックでログイン
-                # アイコンを大きく、名前をその下に配置
+                # HTMLのdivで包んで、CSSでタイル状に制御
+                # ※ st.button 自体は独立して配置
                 if st.button(f"{row['icon']}\n{row['user_name']}", key=btn_key):
                     st.session_state.USER = row['user_name']
                     st.session_state.U_COLOR = row['color']
                     st.session_state.U_ICON = row['icon']
                     st.query_params["user"] = row['user_name']
                     st.rerun()
+        
+        st.write('</div>', unsafe_allow_html=True)
     st.stop()
-    
+
 # --- 5. メイン画面 ---
 if "toast_msg" in st.session_state:
     st.toast(st.session_state.toast_msg)
