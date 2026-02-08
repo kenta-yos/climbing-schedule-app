@@ -37,16 +37,22 @@ else:
         orientation="horizontal",
     styles={
                 "container": {"padding": "0!important", "background-color": "#fafafa"},
+                "icon": {
+                    "margin": "0",             # アイコンの余白をリセット
+                    "padding": "0",
+                    "font-size": "1.2rem",     # アイコンサイズ（適宜調整）
+                },
                 "nav-link": {
-                    "font-size": "12px",        # サイズダウン
-                    "font-weight": "bold",      # 太字
-                    "text-align": "center",     # テキスト中央揃え
-                    "display": "flex",          # 以下、アイコンと文字を中央に寄せる設定
-                    "flex-direction": "column", # アイコンと文字を縦に並べる（横並びが良ければ削除）
-                    "align-items": "center",    # 中央揃え
-                    "justify-content": "center",# 中央揃え
-                    "margin": "0px", 
-                    "padding": "5px",           # 少し余白を作ると綺麗
+                    "font-size": "11px",       # 文字サイズ
+                    "font-weight": "bold",     # 太字
+                    "display": "flex", 
+                    "flex-direction": "column",# アイコンと文字を縦に並べて中央揃え
+                    "align-items": "center", 
+                    "justify-content": "center",
+                    "text-align": "center",
+                    "padding": "10px 0px",     # 上下の余白
+                    "margin": "0px",
+                    "width": "100%",           # 幅いっぱい
                     "--hover-color": "#eee"
                 },
                 "nav-link-selected": {"background-color": "#FF512F"},
