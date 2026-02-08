@@ -70,28 +70,36 @@ def apply_common_style():
     st.markdown("""
         <style>
         
-        /* 1. ヘッダーの中のボタンのうち、左側(CollapsedControl)にあるものだけを指定 */
-        [data-testid="stHeader"] [data-testid="collapsedControl"] button {
+    /* 1. ヘッダーの中にあるボタンのうち、左側に配置されているものだけを特定 */
+        header[data-testid="stHeader"] button {
+            transition: all 0.3s !important;
+        }
+
+        /* 左側（サイドバー開閉ボタン）を狙い撃ちするための「位置ベース」の指定 */
+        /* Streamlitの左側ボタンは、親要素の配置から「左寄り」にあります */
+        header[data-testid="stHeader"] div:first-child > button:first-child,
+        [data-testid="collapsedControl"] button {
             background-color: #FF512F !important;
             color: white !important;
             border-radius: 0 12px 12px 0 !important;
             width: 85px !important;
             height: 40px !important;
-            margin-left: 0 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             box-shadow: 2px 2px 8px rgba(0,0,0,0.2) !important;
         }
 
-        /* 2. 上記の特定のボタンの中にあるアイコン(svg)だけ白くする */
-        [data-testid="stHeader"] [data-testid="collapsedControl"] button svg {
+        /* アイコンを白くする */
+        header[data-testid="stHeader"] div:first-child > button:first-child svg,
+        [data-testid="collapsedControl"] button svg {
             fill: white !important;
             color: white !important;
         }
 
-        /* 3. 上記の特定のボタンにだけ「MENU」の文字を追加 */
-        [data-testid="stHeader"] [data-testid="collapsedControl"] button::after {
+        /* MENUという文字を追加 */
+        header[data-testid="stHeader"] div:first-child > button:first-child::after,
+        [data-testid="collapsedControl"] button::after {
             content: "MENU" !important;
             color: white !important;
             font-size: 13px !important;
@@ -99,10 +107,17 @@ def apply_common_style():
             margin-left: 4px !important;
         }
 
-        /* 4. 【重要】右上の設定ボタンなどは元のスタイルに戻す（または干渉させない） */
-        /* 指定を [data-testid="collapsedControl"] 経由に絞ったので、
-           通常の [data-testid="stHeader"] 内の他のボタン（右側など）には影響しなくなります */
-           
+        /* 2. 右上の設定ボタン（通常は右側のdiv内にある）を強制的に元に戻す */
+        header[data-testid="stHeader"] div:last-child button,
+        header[data-testid="stHeader"] div[style*="right"] button {
+            background-color: transparent !important;
+            color: inherit !important;
+            width: auto !important;
+            box-shadow: none !important;
+        }
+        header[data-testid="stHeader"] div:last-child button::after {
+            content: "" !important;
+        }           
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
         .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
         .insta-card {
