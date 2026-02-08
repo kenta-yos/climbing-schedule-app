@@ -33,10 +33,19 @@ else:
     selected = option_menu(
         menu_title=None, 
         options=["トップ", "ログ", "ジム", "セット", "管理"], 
-        icons=["🏠", "📊", "🎲", "🫶", "📅", "⚙️"], 
+        icons=["house", "bar-chart", "grid", "heart", "gear"], 
         orientation="horizontal",
         styles={
-            "nav-link-selected": {"background-color": "#FF512F"},
+            "container": {"padding": "0!important", "background-color": "#fafafa"},
+            # ✨ nav-link で文字のスタイルを指定
+            "nav-link": {
+                "font-size": "12px",       # ここでサイズを下げる（標準は16px程度）
+                "font-weight": "bold",     # 太字にする
+                "text-align": "center", 
+                "margin": "0px", 
+                "--hover-color": "#eee"
+            },
+            "nav-link-selected": {"background-color": "#FF512F"}, # 選択時の色
         }
     )
 
