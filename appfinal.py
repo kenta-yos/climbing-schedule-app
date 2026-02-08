@@ -185,6 +185,15 @@ def get_colored_user_text(user_name, user_df_input):
 if not st.session_state.get('USER'):
     st.markdown("<h2 style='text-align: center; margin-top: 2rem;'>🧗 Go Bouldering</h2>", unsafe_allow_html=True)
     st.write("") # 少し余白
+    
+    # 💡 このCSSが「横並びコンテナ」を真ん中に寄せます
+    st.markdown("""
+        <style>
+        [data-testid="stHorizontalBlock"] {
+            justify-content: center !important;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     if not user_df.empty:
         sorted_user_df = user_df.sort_values("user_name")
