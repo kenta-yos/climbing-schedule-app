@@ -69,20 +69,24 @@ def get_colored_user_text(user_name, user_df):
 def apply_common_style():
     st.markdown("""
         <style>
-
-        #MainMenu {visibility: hidden;}
-        header {visibility: hidden;}
-        footer {visibility: hidden;}
-        
-        /* 1. ヘッダーの中にあるボタンのうち、左側に配置されているものだけを特定 */
-        header[data-testid="stHeader"] button {
-            transition: all 0.3s !important;
+        /* 1. ヘッダー（箱）自体は見せる設定にする */
+        header[data-testid="stHeader"] {
+            visibility: visible !important;
+            background-color: rgba(0,0,0,0) !important; /* 背景は透明に */
         }
 
-        /* 左側（サイドバー開閉ボタン）を狙い撃ちするための「位置ベース」の指定 */
-        /* Streamlitの左側ボタンは、親要素の配置から「左寄り」にあります */
-        header[data-testid="stHeader"] div:first-child > button:first-child,
-        [data-testid="collapsedControl"] button {
+        /* 2. 【重要】右上のメニューボタンとデプロイボタンだけをピンポイントで消す */
+        [data-testid="stStatusWidget"], 
+        #MainMenu, 
+        header[data-testid="stHeader"] div:last-child {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* 3. 左上のサイドバー開閉ボタンだけを装飾して表示する */
+        [data-testid="collapsedControl"],
+        header[data-testid="stHeader"] button:first-of-type {
+            visibility: visible !important;
             background-color: #FF512F !important;
             color: white !important;
             border-radius: 0 12px 12px 0 !important;
@@ -92,36 +96,36 @@ def apply_common_style():
             align-items: center !important;
             justify-content: center !important;
             box-shadow: 2px 2px 8px rgba(0,0,0,0.2) !important;
+            position: fixed !important; /* 場所を固定 */
+            top: 10px !important;
+            left: 0 !important;
         }
 
-        /* アイコンを白くする */
-        header[data-testid="stHeader"] div:first-child > button:first-child svg,
-        [data-testid="collapsedControl"] button svg {
+        /* アイコンの色と文字 */
+        [data-testid="collapsedControl"] svg,
+        header[data-testid="stHeader"] button:first-of-type svg {
             fill: white !important;
             color: white !important;
+            width: 24px !important;
+            height: 24px !important;
         }
 
-        /* MENUという文字を追加 */
-        header[data-testid="stHeader"] div:first-child > button:first-child::after,
-        [data-testid="collapsedControl"] button::after {
+        [data-testid="collapsedControl"]::after,
+        header[data-testid="stHeader"] button:first-of-type::after {
             content: "MENU" !important;
             color: white !important;
             font-size: 13px !important;
             font-weight: 800 !important;
             margin-left: 4px !important;
+            visibility: visible !important;
         }
 
-        /* 2. 右上の設定ボタン（通常は右側のdiv内にある）を強制的に元に戻す */
-        header[data-testid="stHeader"] div:last-child button,
-        header[data-testid="stHeader"] div[style*="right"] button {
-            background-color: transparent !important;
-            color: inherit !important;
-            width: auto !important;
-            box-shadow: none !important;
-        }
-        header[data-testid="stHeader"] div:last-child button::after {
-            content: "" !important;
-        }           
+        /* 4. フッター（Streamlitのロゴ）を消す */
+        footer {visibility: hidden;}
+
+
+        
+        
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
         .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
         .insta-card {
