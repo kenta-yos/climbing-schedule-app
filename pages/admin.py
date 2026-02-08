@@ -8,7 +8,10 @@ def show_page:
     gym_df = get_supabase_data("gym_master")
     area_master = get_supabase_data("area_master")
     sched_df = get_supabase_data("set_schedules")
-    
+    log_df = get_supabase_data("climbing_logs")
+    user_df = get_supabase_data("users")
+    area_master = get_supabase_data("area_master")
+
     # 未ログイン時のガード
     if st.session_state.USER is None:
         st.warning("ログインしてください")
