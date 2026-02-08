@@ -35,20 +35,23 @@ else:
         options=["トップ", "ログ", "ジム", "セット", "管理"], 
         icons=["house", "bar-chart", "grid", "calendar", "gear"], 
         orientation="horizontal",
-        styles={
-            "container": {"padding": "0!important", "background-color": "#fafafa"},
-            # ✨ nav-link で文字のスタイルを指定
-            "nav-link": {
-                "font-size": "12px",       # ここでサイズを下げる（標準は16px程度）
-                "font-weight": "bold",     # 太字にする
-                "text-align": "center", 
-                "margin": "0px", 
-                "--hover-color": "#eee"
-            },
-            "nav-link-selected": {"background-color": "#FF512F"}, # 選択時の色
-        }
-    )
-
+    styles={
+                "container": {"padding": "0!important", "background-color": "#fafafa"},
+                "nav-link": {
+                    "font-size": "12px",        # サイズダウン
+                    "font-weight": "bold",      # 太字
+                    "text-align": "center",     # テキスト中央揃え
+                    "display": "flex",          # 以下、アイコンと文字を中央に寄せる設定
+                    "flex-direction": "column", # アイコンと文字を縦に並べる（横並びが良ければ削除）
+                    "align-items": "center",    # 中央揃え
+                    "justify-content": "center",# 中央揃え
+                    "margin": "0px", 
+                    "padding": "5px",           # 少し余白を作ると綺麗
+                    "--hover-color": "#eee"
+                },
+                "nav-link-selected": {"background-color": "#FF512F"},
+            }
+        )
     # 選択されたページを呼び出す
     if selected == "トップ":
         home.show_page()
