@@ -220,43 +220,57 @@ def show_page():
                 st.warning("ジムを選んでからボタンを押してね！")            
     st.divider()
     
-    # 3. シンプル1行表示
+    # 3. 3週間以内の予定一覧表示
     st.subheader("👋 一緒にのぼろー")
-    st.markdown("##### 🔥 今日どこいくー？")
-    if not today_logs.empty:
-        # ジム名でグループ化してユーザーをリストにする
-        grouped_today = today_logs.groupby('gym_name')['user'].apply(list).reset_index()
-        for _, row in grouped_today.iterrows():
+    st.markdown("##### 🗓️ 3週間以内の予定")
+
+    # --- データの準備 ---
+    from datetime import timedelta
+    three_weeks_later = today_jp + timedelta(days=21)
+    
+    # 今日から3週間後までの「予定」ログを抽出
+    future_logs = log_df[
+        (log_df['type'] == '予定') & 
+        (log_df['date'].dt.date >= today_jp) & 
+        (log_df['date'].dt.date <= three_weeks_later)
+    ].copy()
+
+    if not future_logs.empty:
+        # 日付とジム名でグループ化して、ユーザーをリストにまとめる
+        # 日付は昇順（近い順）、ジム名は五十音順
+        grouped_future = future_logs.groupby(['date', 'gym_name'])['user'].apply(list).reset_index()
+        grouped_future = grouped_future.sort_values(['date', 'gym_name'])
+
+        for _, row in grouped_future.iterrows():
+            d_val = row['date'].date()
             gym = row['gym_name']
+            
+            # 日付の表示形式を調整 (例: 02/14(土))
+            weekdays = ["月", "火", "水", "木", "金", "土", "日"]
+            d_str = d_val.strftime('%m/%d')
+            w_str = weekdays[d_val.weekday()]
+            date_display = f"{d_str}({w_str})"
+            
+            # ユーザー名のHTML化（重複排除・ソート）
             unique_users = sorted(list(set(row['user'])))
             user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
             members_html = " & ".join(user_htmls)
-    
+            
+            # 今日の予定だけ色を変えるアクセント処理
+            is_today = (d_val == today_jp)
+            accent_color = "#4CAF50" if is_today else "#DDDDDD" # 今日は緑、それ以外はグレー
+            bg_style = "background-color: #f9f9f9;" if is_today else ""
+
             st.markdown(f'''
-                <div style="margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #4CAF50;">
-                    <span style="font-weight: bold; color: #333;">{gym}</span>：{members_html}
+                <div style="margin-bottom: 6px; padding: 4px 10px; border-left: 4px solid {accent_color}; {bg_style}">
+                    <span style="font-size: 0.85rem; color: #666; margin-right: 8px;">{date_display}</span>
+                    <span style="font-weight: bold; color: #333; margin-right: 12px;">{gym}</span>
+                    <span style="font-size: 0.95rem;">{members_html}</span>
                 </div>
             ''', unsafe_allow_html=True)
     else:
-        st.caption("誰もいないよ😭")
-    
-    st.markdown("##### 👀 明日どこいくー？")
-    if not tomorrow_logs.empty:
-        grouped_tom = tomorrow_logs.groupby('gym_name')['user'].apply(list).reset_index()
-        for _, row in grouped_tom.iterrows():
-            gym = row['gym_name']
-            unique_users = sorted(list(set(row['user'])))
-            user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
-            members_html = " & ".join(user_htmls)
-    
-            st.markdown(f'''
-                <div style="margin-bottom: 8px; padding-left: 10px; border-left: 4px solid #FF9800;">
-                    <span style="font-weight: bold; color: #333;">{gym}</span>：{members_html}
-                </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.caption("誰もいないよ😭")
-    
+        st.caption("3週間以内に予定を入れている仲間はいません😭")
+        
     st.divider()
     
     st.subheader("✨ 今日のおすすめジム")
