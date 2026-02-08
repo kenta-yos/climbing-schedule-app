@@ -2,7 +2,7 @@ import streamlit as st
 from utils import apply_common_style
 
 # 1. ページ設定（このファイルで一度だけ実行）
-st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered", initial_sidebar_state="auto")
 apply_common_style()
 
 # 2. セッション状態の初期化
@@ -17,7 +17,7 @@ if "toast_msg" in st.session_state:
 # 4. ナビゲーションの定義
 if st.session_state.USER is None:
     # ログインしていない時はログイン画面(home.py)のみ
-    pg = st.navigation([st.Page("pages/home.py", title="Go Bouldering", icon="🧗")])
+    pg = st.navigation([st.Page("pages/home.py", title="Go Bouldering", icon="🧗")], position="hidden")
 else:
     # ログイン後は全メニューを表示
     pg = st.navigation([
