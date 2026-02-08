@@ -6,6 +6,8 @@ from datetime import timedelta
 from utils import get_supabase_data, get_now_jp
 
 def show_page():
+    from utils import get_now_jp
+    
     # --- 初期定義 (元のコードそのまま) ---
     gym_df = get_supabase_data("gym_master")
     area_master = get_supabase_data("area_master")
@@ -14,8 +16,8 @@ def show_page():
 
     # 日付計算の準備
     now_jp = get_now_jp()
-    t_dt = pd.Timestamp(now_jp.date())
-    
+    today_jp = now_jp.date()
+
     # 未ログイン時のガード
     if st.session_state.USER is None:
         st.warning("ログインしてください")
@@ -27,7 +29,6 @@ def show_page():
     # 1. ターゲット設定
     c_date1, c_date2 = st.columns([0.6, 0.4])
     target_date = c_date1.date_input("ターゲット日", value=today_jp, key="tg_date")
-    # 比較用に型を Timestamp に統一
     t_dt = pd.Timestamp(target_date)
     
     # 2. エリア選択（ラジオボタン）
