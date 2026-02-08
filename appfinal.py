@@ -181,7 +181,7 @@ def get_colored_user_text(user_name, user_df_input):
     )
     return f'<span style="{style}">{u_icon}{user_name}</span>'
     
-# --- 4. ログイン処理 (変更なし) ---
+# --- 4. ログイン処理 (タイルデザイン版) ---
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
     u_match = user_df[user_df['user_name'] == saved_user]
@@ -189,22 +189,50 @@ if saved_user and not user_df.empty and st.session_state.USER is None:
         st.session_state.USER, st.session_state.U_COLOR, st.session_state.U_ICON = u_match.iloc[0][['user_name', 'color', 'icon']]
 
 if not st.session_state.get('USER'):
-    st.title("🧗 Go Bouldering")
+    st.markdown("<h2 style='text-align: center; margin-bottom: 2rem;'>🧗Go Bouldering</h2>", unsafe_allow_html=True)
+    
     if not user_df.empty:
-        cols = st.columns(2)
+        # 💡 グリッドレイアウトの作成
+        # スマホでの押しやすさを考慮して 2列 または 3列 がベスト
         sorted_user_df = user_df.sort_values("user_name")
+        
+        # Streamlitのcolumnを使ってタイル状に配置
+        cols = st.columns(3)  # 3列に設定（人数が多い場合は2列でもOK）
+        
         for i, (_, row) in enumerate(sorted_user_df.iterrows()):
-            with cols[i % 2]:
+            with cols[i % 3]:
+                # 各ユーザー専用のスタイル定義（タイル状のボタン）
                 btn_key = f"l_{row['user_name']}"
-                st.markdown(f"<style>div.stButton > button[key='{btn_key}'] {{ background:{row['color']}; color:white; width:100%; height:4rem; border-radius:15px; font-weight:bold; }}</style>", unsafe_allow_html=True)
-                if st.button(f"{row['icon']} {row['user_name']}", key=btn_key):
+                st.markdown(f"""
+                    <style>
+                    div.stButton > button[key='{btn_key}'] {{
+                        background-color: {row['color']};
+                        color: white;
+                        border-radius: 20px;
+                        height: 100px;  /* 高さを出してタイルっぽく */
+                        width: 100%;
+                        border: 3px solid transparent;
+                        transition: all 0.3s;
+                        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                        margin-bottom: 10px;
+                        padding: 0;
+                    }}
+                    div.stButton > button[key='{btn_key}']:hover {{
+                        border: 3px solid white;
+                        transform: scale(1.05);
+                    }}
+                    </style>
+                """, unsafe_allow_html=True)
+                
+                # ボタンの中身（アイコンを大きく、名前を下に）
+                if st.button(f"{row['icon']}\n\n{row['user_name']}", key=btn_key):
                     st.session_state.USER = row['user_name']
                     st.session_state.U_COLOR = row['color']
                     st.session_state.U_ICON = row['icon']
                     st.query_params["user"] = row['user_name']
                     st.rerun()
     st.stop()
-
+    
 # --- 5. メイン画面 ---
 if "toast_msg" in st.session_state:
     st.toast(st.session_state.toast_msg)
