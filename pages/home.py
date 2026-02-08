@@ -278,6 +278,7 @@ def show_page():
                         </div>
                     </div>
                 </div>
+            ''', unsafe_allow_html=True)
     else:
         st.caption("3週間以内に予定を入れている仲間はいません😭")
         
