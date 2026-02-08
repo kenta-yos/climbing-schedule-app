@@ -207,7 +207,7 @@ def show_page():
             if final_selected_gym:
                 reg_type = '予定' if btn_plan else '実績'
                 new_row = pd.DataFrame([{
-                    'date': pd.to_datetime(q_date),
+                    'date': q_date.strftime('%Y-%m-%d'),
                     'gym_name': final_selected_gym,
                     'user': st.session_state.get('USER', 'Unknown'),
                     'type': reg_type
