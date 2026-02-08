@@ -69,58 +69,44 @@ def get_colored_user_text(user_name, user_df):
 def apply_common_style():
     st.markdown("""
         <style>
-        /* 1. ヘッダー自体は「表示」させるが、背景を透明にして存在感を消す */
-        header[data-testid="stHeader"] {
-            visibility: visible !important;
-            background-color: rgba(0,0,0,0) !important;
-        }
-
-        /* 2. 右上の設定メニューボタン(︙)やデプロイボタンが入っている場所を狙い撃ちして消す */
-        header[data-testid="stHeader"] > div:nth-child(2),
+        /* 1. 右上のいらないボタン（︙やDeployなど）を根こそぎ消す */
+        [data-testid="stHeader"] > div:last-child, 
+        #MainMenu, 
         [data-testid="stStatusWidget"] {
             display: none !important;
         }
 
-        /* 3. 左側の「サイドバーを開くボタン」のエリアを強制表示＆装飾 */
-        [data-testid="collapsedControl"] {
-            visibility: visible !important;
-            display: flex !important;
+        /* 2. 左上のボタン（＞＞）をオレンジ色にして、MENUという文字を添える */
+        /* ボタン本体の装飾 */
+        [data-testid="stHeader"] button:first-of-type {
             background-color: #FF512F !important; /* オレンジ色 */
-            border-radius: 0 12px 12px 0 !important;
+            color: white !important;
+            border-radius: 0 10px 10px 0 !important;
             width: 85px !important;
             height: 40px !important;
-            position: fixed !important;
-            top: 10px !important;
-            left: 0 !important;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.2) !important;
+            display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            box-shadow: 2px 2px 8px rgba(0,0,0,0.3) !important;
-            z-index: 999999 !important;
-            cursor: pointer !important;
         }
 
-        /* 4. アイコン(＞＞)の色を白くする */
-        [data-testid="collapsedControl"] svg {
+        /* アイコンの色を白に */
+        [data-testid="stHeader"] button:first-of-type svg {
             fill: white !important;
             color: white !important;
-            width: 22px !important;
-            height: 22px !important;
         }
 
-        /* 5. 「MENU」という文字を合成する */
-        [data-testid="collapsedControl"]::after {
+        /* 「MENU」という文字をボタン内に追加 */
+        [data-testid="stHeader"] button:first-of-type::after {
             content: "MENU" !important;
             color: white !important;
             font-size: 13px !important;
-            font-weight: 800 !important;
-            margin-left: 4px !important;
+            font-weight: bold !important;
+            margin-left: 5px !important;
         }
 
-        /* 6. フッターは消す */
-        footer {
-            visibility: hidden !important;
-        }
-
+        /* 3. 余計なフッターを消す */
+        footer {visibility: hidden;}
 
         
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
