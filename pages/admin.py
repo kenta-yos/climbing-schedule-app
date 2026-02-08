@@ -4,10 +4,16 @@ from datetime import timedelta
 from utils import get_supabase_data, safe_save, init_connection, get_now_jp
 
 def show_page():
-    now_jp = get_now_jp(log_df, user_df, gym_df, sched_df)
+    # --- 初期定義 (元のコードそのまま) ---
+    now_jp = get_now_jp()
     today_jp = now_jp.date()
+    today_ts = pd.Timestamp(today_jp)
     
-    # ページ専用の補助データ
+    # データの取得 (元のコードそのまま)
+    gym_df = get_supabase_data("gym_master")
+    sched_df = get_supabase_data("set_schedules")
+    log_df = get_supabase_data("climbing_logs")
+    user_df = get_supabase_data("users")
     area_master = get_supabase_data("area_master")
     
     st.query_params["tab"] = "⚙️ 管理"
