@@ -204,8 +204,8 @@ if not st.session_state.get('USER'):
                     st.markdown(f"""
                         <style>
                         div.stButton {
-                            flex: 1 1 calc(33.333% - 10px) !important; /* 全体の1/3の幅を確保しろ */
-                            min-width: 0 !important; /* 文字が長くても縮めろ */
+                            flex: 1 1 calc(33.333% - 10px) !important; 
+                            min-width: 0 !important;
                         }
                         div.stButton > button[key='{btn_key}'] {{
                             background-color: {row['color']};
