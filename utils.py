@@ -32,8 +32,8 @@ def get_supabase_data(table_name):
             return pd.DataFrame()
     return _read(table_name)
 
-# --- 保存・削除処理 (元のロジックを完全維持) ---
-def safe_save(table: str, data_input, mode: str = "add"):
+# --- 保存・削除処理 (target_tabとrerunを追加) ---
+def safe_save(table: str, data_input, mode: str = "add", target_tab: str = None):
     conn = init_connection()
     try:
         if mode == "add":
@@ -45,10 +45,24 @@ def safe_save(table: str, data_input, mode: str = "add"):
                             d[key] = d[key].isoformat()
                 conn.table(table).insert(data_to_insert).execute()
         elif mode == "delete":
+            # deleteの場合はidが直接渡される想定
             conn.table(table).delete().eq("id", data_input).execute()
         
         st.cache_data.clear()
         st.session_state.toast_msg = "登録したよ🚀" if mode == "add" else "削除したよ🙆‍♂️"
+        
+        # --- リダイレクト処理：ログイン画面に戻るのを防ぐ ---
+        new_params = {}
+        # ユーザー情報を維持
+        curr_user = st.session_state.get('USER') or st.query_params.get("user")
+        if curr_user:
+            new_params["user"] = curr_user
+        # 指定されたタブを維持
+        if target_tab:
+            new_params["tab"] = target_tab
+            
+        st.query_params.update(new_params)
+        st.rerun()
         return True
     except Exception as e:
         st.error(f"⚠️ エラー: {e}")
@@ -65,20 +79,16 @@ def get_colored_user_text(user_name, user_df):
     style = f"color: {u_color}; font-weight: 800; text-shadow: 1px 1px 0px #fff, -1px -1px 0px #fff, 1px -1px 0px #fff, -1px 1px 0px #fff; padding: 0 2px;"
     return f'<span style="{style}">{u_icon}{user_name}</span>'
 
-# --- 共通スタイル (元のCSSを完コピ) ---
+# --- 共通スタイル ---
 def apply_common_style():
     hide_st_style = """
-                <style>
-                header {visibility: hidden; height: 0%;}
-                footer {visibility: hidden;}
-                [data-testid="stHeader"] {z-index: -1;}
-                #MainMenu {visibility: hidden;}
-                /* コンテンツ上部の余白を削ってメニューを上に寄せる */
-                .block-container {
-                    padding-top: 1rem;
-                    padding-bottom: 0rem;
-                }
-                </style>
+        <style>
+        header {visibility: hidden; height: 0%;}
+        footer {visibility: hidden;}
+        [data-testid="stHeader"] {z-index: -1;}
+        #MainMenu {visibility: hidden;}
+        .block-container { padding-top: 1rem; padding-bottom: 0rem; }
+        </style>
     """
     st.markdown(hide_st_style, unsafe_allow_html=True)
     
