@@ -196,7 +196,7 @@ if not st.session_state.get('USER'):
         
         for i, (_, row) in enumerate(sorted_user_df.iterrows()):
             # iを3で割った余りで、col1, col2, col3 に順番に振り分ける
-            with cols[i % 3]:
+            with cols[i % 2]:
                 btn_key = f"l_{row['user_name']}"
                 
                 # ボタンのデザイン（色と高さ）だけ少し整える
