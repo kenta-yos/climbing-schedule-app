@@ -54,7 +54,7 @@ else:
     elif selected == "セット":
         set.show_page()
     elif selected == "管理":
-        admin.show_page
+        admin.show_page()
 
 # 3. トースト通知の処理
 if "toast_msg" in st.session_state:
