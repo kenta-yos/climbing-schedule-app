@@ -43,9 +43,9 @@ else:
     )
 
     # 選択されたページを呼び出す
-    if selected == "Home":
+    if selected == "トップ":
         home.show_page()
-    elif selected == "ダッシュボード":
+    elif selected == "ログ":
         dashboard.show_page()
     elif selected == "ジム":
         gyms.show_page()
