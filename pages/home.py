@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import timedelta
+from datetime import datetime, timedelta
 from utils import get_supabase_data, safe_save, get_now_jp, get_colored_user_text
 
 def show_page():
