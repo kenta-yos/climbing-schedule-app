@@ -181,7 +181,7 @@ def get_colored_user_text(user_name, user_df_input):
     )
     return f'<span style="{style}">{u_icon}{user_name}</span>'
     
-# --- 4. ログイン処理 (タイルデザイン版) ---
+# --- 4. ログイン処理 (スマホ最適化タイル版) ---
 saved_user = st.query_params.get("user")
 if saved_user and not user_df.empty and st.session_state.USER is None:
     u_match = user_df[user_df['user_name'] == saved_user]
@@ -189,43 +189,66 @@ if saved_user and not user_df.empty and st.session_state.USER is None:
         st.session_state.USER, st.session_state.U_COLOR, st.session_state.U_ICON = u_match.iloc[0][['user_name', 'color', 'icon']]
 
 if not st.session_state.get('USER'):
-    st.markdown("<h2 style='text-align: center; margin-bottom: 2rem;'>🧗Go Bouldering</h2>", unsafe_allow_html=True)
+    # タイトルを中央寄せで表示
+    st.markdown("<h2 style='text-align: center; margin: 3rem 0 1rem 0; color: #333;'>🧗 Go Bouldering</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #666; margin-bottom: 2rem;'>Who is climbing today?</p>", unsafe_allow_html=True)
     
     if not user_df.empty:
-        # 💡 グリッドレイアウトの作成
-        # スマホでの押しやすさを考慮して 2列 または 3列 がベスト
+        # 強制的に横並びを維持する魔法のCSS
+        st.markdown("""
+            <style>
+            /* カラムの自動折り返しを阻止し、横並びを強制 */
+            [data-testid="stHorizontalBlock"] {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                gap: 10px !important;
+            }
+            /* 各カラムの幅をスマホでも維持 */
+            [data-testid="column"] {
+                width: calc(33% - 15px) !important;
+                flex: 0 0 calc(33% - 15px) !important;
+                min-width: calc(33% - 15px) !important;
+            }
+            /* ボタン自体のデザイン調整 */
+            div.stButton > button {
+                width: 100% !important;
+                height: 90px !important;
+                border-radius: 16px !important;
+                border: none !important;
+                font-weight: bold !important;
+                text-align: center !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+                padding: 5px !important;
+                white-space: pre-wrap !important; /* 改行を有効に */
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
         sorted_user_df = user_df.sort_values("user_name")
-        
-        # Streamlitのcolumnを使ってタイル状に配置
-        cols = st.columns(3)  # 3列に設定（人数が多い場合は2列でもOK）
+        cols = st.columns(3) # 3列に設定
         
         for i, (_, row) in enumerate(sorted_user_df.iterrows()):
             with cols[i % 3]:
-                # 各ユーザー専用のスタイル定義（タイル状のボタン）
                 btn_key = f"l_{row['user_name']}"
+                # 各ユーザーの色を適用
                 st.markdown(f"""
                     <style>
                     div.stButton > button[key='{btn_key}'] {{
-                        background-color: {row['color']};
-                        color: white;
-                        border-radius: 20px;
-                        height: 100px;  /* 高さを出してタイルっぽく */
-                        width: 100%;
-                        border: 3px solid transparent;
-                        transition: all 0.3s;
-                        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-                        margin-bottom: 10px;
-                        padding: 0;
-                    }}
-                    div.stButton > button[key='{btn_key}']:hover {{
-                        border: 3px solid white;
-                        transform: scale(1.05);
+                        background-color: {row['color']} !important;
+                        color: white !important;
                     }}
                     </style>
                 """, unsafe_allow_html=True)
                 
-                # ボタンの中身（アイコンを大きく、名前を下に）
-                if st.button(f"{row['icon']}\n\n{row['user_name']}", key=btn_key):
+                # ボタンクリックでログイン
+                # アイコンを大きく、名前をその下に配置
+                if st.button(f"{row['icon']}\n{row['user_name']}", key=btn_key):
                     st.session_state.USER = row['user_name']
                     st.session_state.U_COLOR = row['color']
                     st.session_state.U_ICON = row['icon']
