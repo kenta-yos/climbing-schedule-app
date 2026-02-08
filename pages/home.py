@@ -260,12 +260,12 @@ def show_page():
             
             # 今日の予定だけ色を変えるアクセント処理
             is_today = (d_val == today_jp)
-            accent_color = "#4CAF50" if is_today else "#F36C21" # 今日は緑、それ以外はグレー
-            bg_style = "background-color: #f9f9f9;" if is_today else ""
+            accent_color = "#ffffff" if is_today else "#F36C21"
+            bg_style = "background-color: #F36C21;" if is_today else ""
 
             st.markdown(f'''
                 <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; {bg_style} display: flex; align-items: flex-start;">
-                    <div style="min-width: 65px; font-size: 0.85rem; color: #666; margin-top: 2px; flex-shrink: 0;">
+                    <div style="min-width: 65px; font-size: 0.85rem; color: {accent_color}; margin-top: 2px; flex-shrink: 0;">
                         {date_display}
                     </div>
                     <div style="flex-grow: 1; margin-left: 4px;">
