@@ -17,7 +17,9 @@ if st.session_state.USER is None:
     st.warning("ログインしてください")
     st.stop()
 
-# --- 1. 期間指定 (元の Tab 2 そのまま) ---
+st.query_params["tab"] = "📊 ダッシュボード"
+
+# --- 1. 期間指定（実績の統計用） ---
 st.subheader("📊 ダッシュボード")
 sc1, sc2 = st.columns(2)
 ms = sc1.date_input("開始", value=today_jp.replace(day=1), key="stat_start")
@@ -26,8 +28,9 @@ me = sc2.date_input("終了", value=today_jp, key="stat_end")
 ms_ts = pd.Timestamp(ms)
 me_ts = pd.Timestamp(me)
 
-# --- 2. データの抽出 (元の Tab 2 そのまま) ---
+# --- 2. データの抽出 ---
 if not log_df.empty:
+    # 【実績】は期間で絞り込む
     filtered_done = log_df[
         (log_df['user'] == st.session_state.USER) & 
         (log_df['type'] == '実績') & 
@@ -35,17 +38,17 @@ if not log_df.empty:
         (log_df['date'] <= me_ts)
     ].sort_values('date', ascending=False)
     
+    # 【予定】は期間に関係なく自分のものを全件出す
     all_my_plans = log_df[
         (log_df['user'] == st.session_state.USER) & 
         (log_df['type'] == '予定')
-    ].sort_values('date')
+    ].sort_values('date') # 予定なので日付順
 else:
     filtered_done = pd.DataFrame()
     all_my_plans = pd.DataFrame()
 
-# --- 3. 統計表示とグラフ (元の Tab 2 そのまま) ---
+# --- 3. 統計グラフの表示（ここは実績ベース） ---
 if not filtered_done.empty:
-    # インスタ風カード表示
     st.markdown(f'''
         <div class="insta-card">
             <div style="display: flex; justify-content: space-around;">
@@ -55,7 +58,6 @@ if not filtered_done.empty:
         </div>
     ''', unsafe_allow_html=True)
     
-    # 棒グラフ生成
     counts = filtered_done['gym_name'].value_counts().reset_index()
     counts.columns = ['gym_name', 'count']
     counts = counts.sort_values('count', ascending=True)
@@ -75,8 +77,8 @@ if not filtered_done.empty:
         fig, 
         use_container_width=True, 
         config={
-            'staticPlot': True,
-            'displayModeBar': False,
+            'staticPlot': True,        # これが最強：グラフを完全に静止画にする
+            'displayModeBar': False,   # 上のメニューも出さない
             'scrollZoom': False,
             'doubleClick': False,
             'showAxisDragHandles': False
@@ -89,17 +91,35 @@ else:
 
 st.divider()
 
-# --- 4. 履歴一覧 (元の Tab 2 そのまま) ---
+# --- 4. 予定と実績をタブで表示 ---
 st.subheader("📝 履歴一覧")
 m_tabs = st.tabs(["📅 全ての予定", "✅ 期間内の実績"])
 
-with m_tabs[0]: # 予定タブ
+# スタイルは共通
+st.markdown("""
+    <style>
+    .compact-row {
+        display: grid;
+        grid-template-columns: 4px 45px 1fr;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .compact-date { font-size: 0.8rem; font-weight: 700; color: #666; }
+    .compact-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+""", unsafe_allow_html=True)
+
+with m_tabs[0]: # 予定タブ：全期間
     if all_my_plans.empty:
         st.caption("予定はありません。")
     else:
         for _, row in all_my_plans.iterrows():
             with st.container(horizontal=True):
                 c1, c2 = st.columns([0.8, 0.2])
+                
+                # 2. 左側：日付とジム名
                 c1.markdown(f'''
                     <div class="compact-row" style="border-bottom: none; padding: 0;">
                         <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
@@ -108,12 +128,27 @@ with m_tabs[0]: # 予定タブ
                     </div>
                 ''', unsafe_allow_html=True)
                 
-                # 削除ボタン
+                # 3. 右側：削除ボタン
+                # CSSでボタン自体の余計な余白を削ってセンタリング
+                st.markdown(f"""
+                    <style>
+                    div[data-testid="column"]:nth-child(2) {{
+                        display: flex;
+                        justify-content: flex-end;
+                        align-items: center;
+                    }}
+                    div.stButton > button[key='del_p_{row['id']}'] {{
+                        border: none;
+                        padding: 0;
+                        background: transparent;
+                    }}
+                    </style>
+                """, unsafe_allow_html=True)
+                
                 if c2.button("🗑️", key=f"del_p_{row['id']}"):
-                    safe_save("climbing_logs", row['id'], mode="delete")
-                    st.rerun() # リダイレクトの代わりにrerunで更新
+                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
 
-with m_tabs[1]: # 実績タブ
+with m_tabs[1]: # 実績タブ：期間連動
     if filtered_done.empty:
         st.caption(f"{ms.strftime('%m/%d')}〜{me.strftime('%m/%d')} の実績はありません。")
     else:
@@ -127,5 +162,4 @@ with m_tabs[1]: # 実績タブ
                 </div>
             ''', unsafe_allow_html=True)
             if c2.button("🗑️", key=f"del_d_{row['id']}"):
-                safe_save("climbing_logs", row['id'], mode="delete")
-                st.rerun()
+                safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
