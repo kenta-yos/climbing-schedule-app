@@ -5,9 +5,12 @@ from utils import get_supabase_data, get_now_jp
 
 def show_page():
     # --- 初期定義 (元のコードそのまま) ---
+    st.write("チェック開始") # 👈 追加
+    log_df = get_supabase_data("climbing_logs")
+    st.write("log_dfの取得に成功！") # 👈 追加
+    
     gym_df = get_supabase_data("gym_master")
     area_master = get_supabase_data("area_master")
-    log_df = get_supabase_data("climbing_logs")
     sched_df = get_supabase_data("set_schedules")
     
     # 日付計算の準備
