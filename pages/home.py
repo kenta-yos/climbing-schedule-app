@@ -68,7 +68,7 @@ nav_items = [
 # 5列並列のループ処理
 for i in range(0, len(nav_items), 5):
     with st.container(horizontal=True):
-        chunk = nav_items[i:i+5]
+        chunk = nav_items[5]
         # 列数をchunkの長さに合わせることで、端数が出ても綺麗に並びます
         cols = st.columns(len(chunk))
         for idx, item in enumerate(chunk):
