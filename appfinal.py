@@ -181,36 +181,60 @@ def get_colored_user_text(user_name, user_df_input):
     )
     return f'<span style="{style}">{u_icon}{user_name}</span>'
     
-# --- 4. ログイン処理 (最新 horizontal=True 版) ---
+# --- 4. ログイン処理 (等幅タイル整列版) ---
 if not st.session_state.get('USER'):
     st.markdown("<h2 style='text-align: center; margin-top: 2rem;'>🧗 Go Bouldering</h2>", unsafe_allow_html=True)
-    st.write("") # 少し余白
+    st.write("") 
 
     if not user_df.empty:
+        # 💡 ボタンを強制的に等幅にする魔法のCSS
+        st.markdown("""
+            <style>
+            /* コンテナ内の要素を均等に広げる */
+            [data-testid="stHorizontalBlock"] {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+            }
+            /* 各要素の土台を 30% に固定して、絶対に3列にする */
+            [data-testid="stHorizontalBlock"] > div {
+                flex: 1 1 30% !important;
+                min-width: 0 !important; /* 縮小を許可 */
+            }
+            /* ボタン自体のデザインを統一 */
+            div.stButton > button {
+                width: 100% !important;
+                height: 80px !important; /* 高さを揃える */
+                background-color: white; /* 背景は一旦白（後で色付け） */
+                border-radius: 12px !important;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+                padding: 0 !important;
+                white-space: pre-wrap !important; /* 改行を有効に */
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
         sorted_user_df = user_df.sort_values("user_name")
-        
-        # 💡 最新機能: horizontal=True で中身を横に並べるコンテナ
-        # これ自体は「行」を作るイメージなので、3人ずつ並べる処理を書きます
         user_list = sorted_user_df.to_dict('records')
         
-        # 3人ずつ分割して表示
+        # 3人ずつ1行に配置
         for i in range(0, len(user_list), 3):
-            # このコンテナの中身はスマホでも横に並ぼうと努力します
             with st.container(horizontal=True):
                 chunk = user_list[i:i+3]
                 for row in chunk:
                     btn_key = f"l_{row['user_name']}"
                     
-                    # ボタンの「色」と「高さ」だけCSSで指定（配置はStreamlitにお任せ）
+                    # 💡 個別の色付け（!importantで強制適用）
                     st.markdown(f"""
                         <style>
                         div.stButton > button[key='{btn_key}'] {{
-                            background-color: {row['color']};
-                            color: white;
-                            height: 70px; /* 少し低めにして押しやすく */
-                            width: 100%;
-                            border-radius: 12px;
-                            padding: 0;
+                            background-color: {row['color']} !important;
+                            color: white !important;
                         }}
                         </style>
                     """, unsafe_allow_html=True)
@@ -222,7 +246,7 @@ if not st.session_state.get('USER'):
                         st.query_params["user"] = row['user_name']
                         st.rerun()
     st.stop()
-
+    
 # --- 5. メイン画面 ---
 if "toast_msg" in st.session_state:
     st.toast(st.session_state.toast_msg)
