@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 # utils.py から必要な機能をインポート
 from utils import get_supabase_data, get_now_jp
 
