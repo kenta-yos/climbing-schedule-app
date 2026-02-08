@@ -70,38 +70,45 @@ def apply_common_style():
     st.markdown("""
         <style>
         
-        /* 1. ボタン自体をオレンジ色にして浮かせる */
-        [data-testid="stSidebarCollapseButton"] {
-            background-color: #FF512F !important; 
+        /* 閉じている時の「＞」ボタンと、開いている時の「≡」ボタンの両方を狙い撃ち */
+        button[kind="headerNoPadding"], 
+        [data-testid="stSidebarCollapsedControl"],
+        [data-testid="collapsedControl"] {
+            background-color: #FF512F !important;
             color: white !important;
-            border-radius: 8px !important; /* 少し角丸 */
-            width: auto !important;
-            padding-right: 15px !important; /* 文字を入れるスペース */
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2) !important;
+            border-radius: 8px !important;
+            width: 80px !important; /* 横幅を広げて文字を見せる */
+            height: 40px !important;
             position: fixed !important;
-            top: 10px !important;
-            left: 10px !important;
-            z-index: 999999 !important;
+            top: 15px !important;
+            left: 15px !important;
+            z-index: 1000000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+            border: 1px solid rgba(255,255,255,0.3) !important;
         }
-        /* 2. 三本線アイコンの色を白くする */
-        [data-testid="stSidebarCollapseButton"] svg {
+
+        /* アイコン自体の色を白く */
+        button[kind="headerNoPadding"] svg,
+        [data-testid="stSidebarCollapsedControl"] svg {
             fill: white !important;
-            width: 25px !important;
-            height: 25px !important;
+            color: white !important;
+            width: 20px !important;
+            height: 20px !important;
         }
-        /* 3. ボタンの横に「MENU」という文字を強制的に表示する */
-        [data-testid="stSidebarCollapseButton"]::after {
-            content: " MENU";
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-            vertical-align: middle;
+
+        /* 「＞」の横に MENU と表示（擬似要素） */
+        button[kind="headerNoPadding"]::after,
+        [data-testid="stSidebarCollapsedControl"]::after {
+            content: "MENU" !important;
+            color: white !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            margin-left: 5px !important;
         }
-        /* 4. サイドバーが開いている時はボタンを隠す（重ならないように） */
-        [data-testid="stSidebar"][aria-expanded="true"] ~ section [data-testid="stSidebarCollapseButton"] {
-            display: none !important;
-        }
-        
+                
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
         .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
         .insta-card {
