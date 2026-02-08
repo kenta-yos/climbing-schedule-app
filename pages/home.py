@@ -264,7 +264,7 @@ def show_page():
             bg_style = "background-color: #f9f9f9;" if is_today else ""
 
             st.markdown(f'''
-                <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; {bg_style_attr} display: flex; align-items: flex-start;">
+                <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; {bg_style} display: flex; align-items: flex-start;">
                     <div style="min-width: 65px; font-size: 0.85rem; color: #666; margin-top: 2px; flex-shrink: 0;">
                         {date_display}
                     </div>
