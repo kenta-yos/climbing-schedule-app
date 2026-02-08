@@ -200,27 +200,6 @@ if not st.session_state.get('USER'):
                 for row in chunk:
                     btn_key = f"l_{row['user_name']}"
                     
-                    # ボタンの「色」と「高さ」だけCSSで指定（配置はStreamlitにお任せ）
-                    st.markdown(f"""
-                        <style>
-                        /* ボタンの「枠」を3分割して整列させる設定 */
-                        div.stButton {{
-                            flex: 1 1 calc(33.333% - 10px) !important; 
-                            min-width: 0 !important;
-                        }}
-                        /* ボタン本体のデザイン */
-                        div.stButton > button[key='{btn_key}'] {{
-                            background-color: {row['color']} !important;
-                            color: white !important;
-                            height: 80px !important; 
-                            width: 100% !important;
-                            border-radius: 12px !important;
-                            padding: 5px !important;
-                            font-size: 0.8rem !important;
-                            white-space: pre-wrap !important; /* 改行を許可 */
-                        }}
-                        </style>
-                    """, unsafe_allow_html=True)                    
                     if st.button(f"{row['icon']}\n{row['user_name']}", key=btn_key):
                         st.session_state.USER = row['user_name']
                         st.session_state.U_COLOR = row['color']
