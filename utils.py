@@ -67,47 +67,23 @@ def get_colored_user_text(user_name, user_df):
 
 # --- 共通スタイル (元のCSSを完コピ) ---
 def apply_common_style():
+    hide_st_style = """
+                <style>
+                header {visibility: hidden; height: 0%;}
+                footer {visibility: hidden;}
+                [data-testid="stHeader"] {z-index: -1;}
+                #MainMenu {visibility: hidden;}
+                /* コンテンツ上部の余白を削ってメニューを上に寄せる */
+                .block-container {
+                    padding-top: 1rem;
+                    padding-bottom: 0rem;
+                }
+                </style>
+    """
+    st.markdown(hide_st_style, unsafe_allow_html=True)
+    
     st.markdown("""
-
-        <style>
-        /* 1. 右上のボタン類を完全に消去 */
-        #MainMenu, [data-testid="stStatusWidget"], header[data-testid="stHeader"] > div:last-child {
-            display: none !important;
-        }
-
-        /* 2. 左上のMENUボタンを「強制的に」オレンジ色にする */
-        /* [data-testid="collapsedControl"] の中にある「button」を直接指定するのがコツです */
-        [data-testid="collapsedControl"] button {
-            background-color: #FF512F !important; /* 鮮やかなオレンジ */
-            border-radius: 0 10px 10px 0 !important;
-            width: 90px !important;
-            height: 40px !important;
-            border: none !important;
-        }
-
-        /* 3. ボタンの中のアイコン（＞＞）と文字（MENU）の設定 */
-        [data-testid="collapsedControl"] button svg {
-            fill: white !important;
-            color: white !important;
-        }
-
-        [data-testid="collapsedControl"] button::after {
-            content: "MENU" !important;
-            color: white !important;
-            font-size: 14px !important;
-            font-weight: 800 !important;
-            margin-left: 5px !important;
-        }
-
-        /* 4. マウスを乗せたときも色をキープ */
-        [data-testid="collapsedControl"] button:hover {
-            background-color: #FF7E5F !important; /* 少し明るいオレンジ */
-            color: white !important;
-        }
-
-        /* フッター消去 */
-        footer {visibility: hidden !important;}
-        
+        <style>        
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
         .main .block-container { font-family: 'Noto Sans JP', sans-serif; padding-top: 1.5rem; }
         .insta-card {
