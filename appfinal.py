@@ -9,53 +9,54 @@ import pages.friends as friends
 import pages.set as set
 import pages.admin as admin
 
-# 1. ユーザー状態の初期化 (メニュー表示判定の前にやる必要があります！)
-if 'USER' not in st.session_state:
-    st.session_state.USER = None
-
-# 2. ページ定義
+# ページ定義
 st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered", initial_sidebar_state="auto")
 apply_common_style()
 
-# 上部ナビゲーションメニュー
-selected = option_menu(
-    menu_title=None, 
-    options=["Home", "ダッシュボード", "ジム", "仲間", "セット", "管理"], 
-    icons=["🏠", "📊", "🎲", "🫶", "📅", "⚙️"], 
-    menu_icon="cast", 
-    default_index=0, 
-    orientation="horizontal",
-    styles={
-        "container": {"padding": "0!important", "background-color": "#fafafa"},
-        "icon": {"color": "#FF512F", "font-size": "20px"}, 
-        "nav-link": {"font-size": "16px", "text-align": "center", "margin":"0px", "--hover-color": "#eee"},
-        "nav-link-selected": {"background-color": "#FF512F", "color": "white"},
-    }
-)
+# ユーザー状態の初期化
+if 'USER' not in st.session_state:
+    st.session_state.USER = None
 
+
+# --- 2. ログイン判定による分岐 ---
 if st.session_state.USER is None:
-    # ログイン前
-    pages_list = [st.Page("pages/home.py", title="Home", icon="🏠")]
+    # A. ログイン前：メニューを表示せず、即座に home.py のログイン画面を表示
+    home.show_page()
+
 else:
-    # ログイン後
-    # option_menu の選択(selected)に合わせて表示するファイルを決める
-    page_map = {
-        "Home": "pages/home.py",
-        "ダッシュボード": "pages/dashboard.py",
-        "ジム": "pages/gyms.py",
-        "仲間": "pages/friends.py",
-        "セット": "pages/set.py",
-        "管理": "pages/admin.py"
-    }
-    # 選択されたページを st.Page にして実行
-    pages_list = [st.Page(page_map[selected])]
+    # B. ログイン後：ここで初めてメニューを表示する
+    from streamlit_option_menu import option_menu
+    import pages.dashboard as dashboard
+    import pages.gyms as gyms
+    import pages.friends as friends
+    import pages.set as set
+    import pages.admin as admin
+
+    selected = option_menu(
+        menu_title=None, 
+        options=["Home", "ダッシュボード", "ジム", "仲間", "セット", "管理"], 
+        icons=["🏠", "📊", "🎲", "🫶", "📅", "⚙️"], 
+        orientation="horizontal",
+        styles={
+            "nav-link-selected": {"background-color": "#FF512F"},
+        }
+    )
+
+    # 選択されたページを呼び出す
+    if selected == "Home":
+        home.show_page()
+    elif selected == "ダッシュボード":
+        dashboard.show_page()
+    elif selected == "ジム":
+        gyms.show_page()
+    elif selected == "仲間":
+        friends.show_page()
+    elif selected == "セット":
+        set.show_page()
+    elif selected == "管理":
+        admin.show_page()
 
 # 3. トースト通知の処理
 if "toast_msg" in st.session_state:
     st.toast(st.session_state.toast_msg)
     del st.session_state.toast_msg
-
-# 4. ナビゲーションの実行
-pg = st.navigation(pages_list, position="hidden") # 標準サイドバーは隠す
-pg.run()
-
