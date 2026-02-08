@@ -1,9 +1,46 @@
 import streamlit as st
 from utils import apply_common_style
 
+import pages.home as home
+import pages.dashboard as dashboard
+import pages.gyms as gyms
+import pages.friends as friends
+import pages.set as set
+import pages.admin as admin
+
 # 1. ページ設定（このファイルで一度だけ実行）
 st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered", initial_sidebar_state="auto")
 apply_common_style()
+
+# 上部ナビゲーションメニュー
+selected = option_menu(
+    menu_title=None, 
+    options=["Home", "ダッシュボード", "ジム", "仲間", "セット", "管理"], 
+    icons=["🏠", "📊", "🎲", "🫶", "📅", "⚙️"], 
+    menu_icon="cast", 
+    default_index=0, 
+    orientation="horizontal",
+    styles={
+        "container": {"padding": "0!important", "background-color": "#fafafa"},
+        "icon": {"color": "#FF512F", "font-size": "20px"}, 
+        "nav-link": {"font-size": "16px", "text-align": "center", "margin":"0px", "--hover-color": "#eee"},
+        "nav-link-selected": {"background-color": "#FF512F", "color": "white"},
+    }
+)
+
+# 選択されたメニューに応じて表示を切り替える
+if selected == "Home":
+    home.show_page()
+elif selected == "ダッシュボード":
+    dashboard.show_page()
+elif selected == "ジム":
+    gyms.show_page()
+elif selected == "仲間":
+    friends.show_page()
+elif selected == "セット":
+    set.show_page()
+elif selected == "管理":
+    admin.show_page()
 
 # 2. セッション状態の初期化
 if 'USER' not in st.session_state:
