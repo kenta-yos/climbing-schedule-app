@@ -70,44 +70,49 @@ def apply_common_style():
     st.markdown("""
         <style>
         
-/* 1. サイドバーが閉じている時のボタン(＞)を狙い撃ち */
-        [data-testid="collapsedControl"] {
+        /* 1. ヘッダーの左上にある、サイドバーを開くボタン自体を狙い撃ち */
+        header[data-testid="stHeader"] button {
             background-color: #FF512F !important; /* オレンジ */
-            border-radius: 0 10px 10px 0 !important; /* 右側だけ角丸 */
-            width: 70px !important;
+            color: white !important;
+            border-radius: 0 12px 12px 0 !important; /* 右側だけ丸く */
+            width: 85px !important;
             height: 45px !important;
+            margin-left: 0 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-            transition: all 0.3s !important;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.2) !important;
+            opacity: 1 !important;
+            visibility: visible !important;
         }
 
-        /* 2. ボタンの中の「＞」アイコンの色とサイズ */
-        [data-testid="collapsedControl"] svg {
+        /* 2. アイコンの色を白く固定 */
+        header[data-testid="stHeader"] button svg {
             fill: white !important;
             color: white !important;
-            width: 28px !important;
-            height: 28px !important;
+            width: 25px !important;
+            height: 25px !important;
         }
 
-        /* 3. ボタンの横に MENU と表示（擬似要素） */
-        [data-testid="collapsedControl"]::after {
+        /* 3. ボタンに文字を追加 */
+        header[data-testid="stHeader"] button::after {
             content: "MENU" !important;
             color: white !important;
-            font-size: 12px !important;
-            font-weight: bold !important;
-            margin-left: 2px !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+            margin-left: 4px !important;
+            letter-spacing: 0.5px !important;
         }
 
-        /* 4. クリックを邪魔しないようにする設定 */
-        /* fixedを外し、標準のヘッダー位置に従わせます */
-        header[data-testid="stHeader"] {
-            background-color: rgba(0,0,0,0) !important; /* ヘッダー自体は透明に */
+        /* 4. サイドバーが開いている時は、閉じるボタン(×)を目立たせすぎないよう調整 */
+        [data-testid="stSidebar"] button {
+            background-color: transparent !important;
+            color: #333 !important;
+            box-shadow: none !important;
+            width: auto !important;
         }
-        
-        /* 5. 既存のスマホ用調整：サイドバーが開いている時は標準の「≡」を見せる */
-        [data-testid="stSidebarNav"] {
-            padding-top: 2rem !important;
+        [data-testid="stSidebar"] button::after {
+            content: "" !important; /* 閉じる時はMENU文字を消す */
         }
         
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
