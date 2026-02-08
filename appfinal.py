@@ -5,7 +5,6 @@ from streamlit_option_menu import option_menu
 import pages.home as home
 import pages.dashboard as dashboard
 import pages.gyms as gyms
-import pages.friends as friends
 import pages.set as set
 import pages.admin as admin
 
@@ -28,13 +27,12 @@ else:
     from streamlit_option_menu import option_menu
     import pages.dashboard as dashboard
     import pages.gyms as gyms
-    import pages.friends as friends
     import pages.set as set
     import pages.admin as admin
 
     selected = option_menu(
         menu_title=None, 
-        options=["トップ", "ログ", "ジム", "仲間", "セット", "管理"], 
+        options=["トップ", "ログ", "ジム", "セット", "管理"], 
         icons=["🏠", "📊", "🎲", "🫶", "📅", "⚙️"], 
         orientation="horizontal",
         styles={
@@ -49,8 +47,6 @@ else:
         dashboard.show_page()
     elif selected == "ジム":
         gyms.show_page()
-    elif selected == "仲間":
-        friends.show_page()
     elif selected == "セット":
         set.show_page()
     elif selected == "管理":
