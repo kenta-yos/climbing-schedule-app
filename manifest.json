@@ -1,13 +1,13 @@
 {
   "name": "Go Bouldering Pro",
   "short_name": "ClimbApp",
-  "start_url": "https://climbing-schedule-app-6ramivd2xuyffczpp2x42l.streamlit.app/?utm_source=pwa",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ff7b00",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "https://github.com/kenta-yos/climbing-schedule-app/blob/develop/icon.png?raw=true",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
