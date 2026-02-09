@@ -92,11 +92,11 @@ def show_page():
     # 3. 登録フォーム
     st.markdown(
         f'''
-        <div style="display: flex; align-items: center; gap: 12px; margin-top: 1rem; margin-bottom: 0.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 1rem; margin-bottom: 0.5rem;">
             <span style="font-size: 1.25rem; font-weight: 700; color: #31333F;">🚀 予定登録</span>
             <a href="https://embed.app.guidde.com/playbooks/3VNusTPGSLJNa7phJXFikJ?mode=videoOnly" 
                target="_blank" 
-               style="font-size: 0.65rem; color: #999; text-decoration: none; border: 1px solid #ddd; padding: 1px 6px; border-radius: 10px; white-space: nowrap;">
+               style="font-size: 0.7rem; color: #aaa; text-decoration: none !important; white-space: nowrap;">
                ❔ 登録/削除の方法
             </a>
         </div>
