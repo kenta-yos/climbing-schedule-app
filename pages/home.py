@@ -90,8 +90,20 @@ def show_page():
         sorted_gym_names = sorted(gym_df['gym_name'].unique().tolist()) if not gym_df.empty else []
     
     # 3. 登録フォーム
-    st.subheader("🚀 予定登録")
-    
+    st.markdown(
+        f'''
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 1rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.25rem; font-weight: 700; color: #31333F;">🚀 予定登録</span>
+            <a href="https://embed.app.guidde.com/playbooks/nnS9LxE1oqmECWdMgzyuMt?mode=docOnly" 
+               target="_blank" 
+               style="font-size: 0.7rem; color: #aaa; text-decoration: none !important; white-space: nowrap;">
+               ❔ 登録/削除の方法
+            </a>
+        </div>
+        ''', 
+        unsafe_allow_html=True
+    )
+
     with st.expander("📅 予定・実績を入力する", expanded=False):
         # 2. 日付選択（カレンダーのみ）
         # 初期値の設定（初回のみ）
