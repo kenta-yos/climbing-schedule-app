@@ -11,7 +11,7 @@ import pages.set as set
 import pages.admin as admin
 
 # ページ定義
-st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered", initial_sidebar_state="auto")
+st.set_page_config(page_title="Go Bouldering Pro", page_icon="icon.png", layout="centered", initial_sidebar_state="auto")
 apply_common_style()
 
 # --- ホーム画面用アイコン設定 ---
