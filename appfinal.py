@@ -1,5 +1,6 @@
 import streamlit as st
 from utils import apply_common_style
+from utils import get_supabase_data
 
 from streamlit_option_menu import option_menu
 import pages.home as home
@@ -12,10 +13,21 @@ import pages.admin as admin
 st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered", initial_sidebar_state="auto")
 apply_common_style()
 
-# ユーザー状態の初期化
-if 'USER' not in st.session_state:
-    st.session_state.USER = None
+# --- URL パラメータからログイン自動復元 ---
+if "USER" not in st.session_state or st.session_state.USER is None:
+    url_user = st.query_params.get("user", [None])[0]  # 注意: listなので[0]で取得
+    if url_user:
+        user_df = get_supabase_data("users")
+        user_info = user_df[user_df['user_name'] == url_user]
+        if not user_info.empty:
+            row = user_info.iloc[0]
+            st.session_state.USER = row['user_name']
+            st.session_state.U_COLOR = row['color']
+            st.session_state.U_ICON = row['icon']
 
+# --- USER がまだなければ None で初期化 ---
+if "USER" not in st.session_state:
+    st.session_state.USER = None
 
 # --- 2. ログイン判定による分岐 ---
 if st.session_state.USER is None:

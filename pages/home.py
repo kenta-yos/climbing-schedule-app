@@ -93,6 +93,23 @@ def show_page():
     st.subheader("🚀 予定登録")
     
     with st.expander("📅 予定・実績を入力する", expanded=False):
+        # 2. 日付選択（カレンダーのみ）
+        # 初期値の設定（初回のみ）
+        if "q_date_val" not in st.session_state:
+            st.session_state.q_date_val = today_jp
+        
+        # カレンダー
+        q_date = st.date_input(
+            "日付選択",
+            value=st.session_state.q_date_val,
+            label_visibility="collapsed"
+        )
+        
+        # カレンダー操作があったら反映
+        if q_date != st.session_state.q_date_val:
+            st.session_state.q_date_val = q_date
+            st.rerun()
+    
         # エリアの並び順定義
         custom_order = ["都内・神奈川", "関東", "関西", "全国"]
         
@@ -147,46 +164,7 @@ def show_page():
                     
                     # 💡 ラベルが選ばれたら、元のジム名を selected_gym に入れる
                     if res_label:
-                        selected_gym = label_map[res_label]
-                        
-        st.divider()
-    
-        # 2. 日付選択
-        # 初期値の設定（初回のみ）
-        if "q_date_val" not in st.session_state:
-            st.session_state.q_date_val = today_jp
-    
-        # ① 選択中表示
-        current_date_str = st.session_state.q_date_val.strftime('%Y/%m/%d (%a)')
-        st.info(f"📅 選択中: **{current_date_str}**")
-    
-        # ② カレンダー（keyを直接計算に使わない名前に変更）
-        # valueにsession_stateを使い、変化を検知したら反映させる
-        q_date = st.date_input(
-            "カレンダーで選択", 
-            value=st.session_state.q_date_val, 
-            label_visibility="collapsed"
-        )
-        # カレンダーが直接触られたら、値を更新
-        if q_date != st.session_state.q_date_val:
-            st.session_state.q_date_val = q_date
-            st.rerun()
-    
-        # ③ －1日 / ＋1日 ボタン
-        c_minus, c_plus = st.columns(2)
-    
-        with c_minus:
-            if st.button("⬅️ 1日", use_container_width=True):
-                # ここで直接代入しても、keyと被っていなければエラーになりません
-                st.session_state.q_date_val -= pd.Timedelta(days=1)
-                st.rerun()
-    
-        with c_plus:
-            if st.button("1日 ➡️", use_container_width=True):
-                st.session_state.q_date_val += pd.Timedelta(days=1)
-                st.rerun()
-                                
-        st.divider()
+                        selected_gym = label_map[res_label]    
          
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
