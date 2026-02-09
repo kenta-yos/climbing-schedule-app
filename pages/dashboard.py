@@ -116,7 +116,7 @@ def show_page():
         if all_my_plans.empty:
             st.caption("予定はありません。")
         else:
-            for _, row in filtered_done.iterrows():
+            for _, row in all_my_plans.iterrows():
                 c1, c2 = st.columns([0.85, 0.15])
                 c1.markdown(f'''
                     <div class="compact-row">
@@ -141,5 +141,5 @@ def show_page():
                         <div class="compact-gym">{row["gym_name"]}</div>
                     </div>
                 ''', unsafe_allow_html=True)
-                if c2.button("🗑️", key=f"del_d_v2_{row['id']}"):
+                if c2.button("🗑️", key=f"del_p_{row['id']}"):
                     safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")

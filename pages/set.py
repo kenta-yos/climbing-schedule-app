@@ -69,7 +69,7 @@ def show_page():
                     ">
                         <div class="item-accent" style="background:#B22222 !important; width: 4px; height: 1.4rem; border-radius: 2px;"></div>
                         <span class="item-date" style="color: #B22222; font-weight: 700; font-size: 0.85rem; white-space: nowrap;">{d_disp}</span>
-                        <span class="item-gym" style="color: #1A1A1A; font-weight: 700; font-size: 0.95rem;">{row["gym_name"]}</span>
+                        <span class="item-gym" style="color: #1DA1F2; font-weight: 700; font-size: 0.95rem;">{row["gym_name"]}</span>
                     </div>
                 </a>
             ''', unsafe_allow_html=True)
