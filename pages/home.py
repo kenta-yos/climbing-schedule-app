@@ -94,7 +94,7 @@ def show_page():
         f'''
         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 1rem; margin-bottom: 0.5rem;">
             <span style="font-size: 1.25rem; font-weight: 700; color: #31333F;">🚀 予定登録</span>
-            <a href="https://embed.app.guidde.com/playbooks/3VNusTPGSLJNa7phJXFikJ?mode=videoOnly" 
+            <a href="https://embed.app.guidde.com/playbooks/nnS9LxE1oqmECWdMgzyuMt?mode=docOnly" 
                target="_blank" 
                style="font-size: 0.7rem; color: #aaa; text-decoration: none !important; white-space: nowrap;">
                ❔ 登録/削除の方法
