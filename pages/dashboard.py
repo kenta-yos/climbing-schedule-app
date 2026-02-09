@@ -127,7 +127,7 @@ def show_page():
                 ''', unsafe_allow_html=True)
                 if c2.button("🗑️", key=f"del_d_{row['id']}"):
                     safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
-
+            
     with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
             st.caption(f"{ms.strftime('%m/%d')}〜{me.strftime('%m/%d')} の実績はありません。")

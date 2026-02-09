@@ -115,11 +115,27 @@ def apply_common_style():
         .compact-row { display: grid; grid-template-columns: 4px 45px 1fr; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
         .compact-date { font-size: 0.8rem; font-weight: 700; color: #666; }
         .compact-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        # -- ゴミ箱用に追加 --
+
         .log-row { display: grid; grid-template-columns: 4px 45px 1fr 32px; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; width: 100%; }
         .log-date { font-size: 0.8rem; font-weight: 700; color: #666; white-space: nowrap; }
         .log-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .log-del { display: flex; justify-content: flex-end; align-items: center; }
         .log-del button { border: none; background: transparent; padding: 0; font-size: 1.1rem; line-height: 1; }
+        
+        </style>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        :root { --bg:#0f1115; --border:#2a2f3a; --text:#e6e6eb; --sub:#a0a4b8; }
+        body { background-color: var(--bg); color: var(--text); }
+        .main .block-container { background-color: var(--bg); }
+        .compact-row { border-bottom: 1px solid var(--border); }
+        .compact-date { color: var(--sub); }
+        .compact-gym { color: var(--text); }
+        .log-row { border-bottom: 1px solid var(--border); }
+        .log-date { color: var(--sub); }
+        .log-gym { color: var(--text); }
+        .log-del button { color: var(--sub); }
+        .log-del button:hover { color: #FF512F; }
         </style>
     """, unsafe_allow_html=True)
