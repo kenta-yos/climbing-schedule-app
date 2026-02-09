@@ -117,36 +117,17 @@ def show_page():
             st.caption("予定はありません。")
         else:
             for _, row in all_my_plans.iterrows():
-                with st.container(horizontal=True):
-                    c1, c2 = st.columns([0.8, 0.2])
-                    
-                    # 2. 左側：日付とジム名
-                    c1.markdown(f'''
-                        <div class="compact-row" style="border-bottom: none; padding: 0;">
-                            <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
-                            <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
-                            <div class="compact-gym">{row["gym_name"]}</div>
-                        </div>
-                    ''', unsafe_allow_html=True)
-                    
-                    # 3. 右側：削除ボタン
-                    # CSSでボタン自体の余計な余白を削ってセンタリング
+                with st.container():
                     st.markdown(f"""
-                        <style>
-                        div[data-testid="column"]:nth-child(2) {{
-                            display: flex;
-                            justify-content: flex-end;
-                            align-items: center;
-                        }}
-                        div.stButton > button[key='del_p_{row['id']}'] {{
-                            border: none;
-                            padding: 0;
-                            background: transparent;
-                        }}
-                        </style>
+                        <div class="log-row">
+                            <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
+                            <span class="log-date">{row["date"].strftime("%m/%d")}</span>
+                            <div class="log-gym">{row["gym_name"]}</div>
+                            <div class="log-del"></div>
+                        </div>
                     """, unsafe_allow_html=True)
-                    
-                    if c2.button("🗑️", key=f"del_p_{row['id']}"):
+            
+                    if st.button("🗑️", key=f"del_p_{row['id']}"):
                         safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
     
     with m_tabs[1]: # 実績タブ：期間連動
