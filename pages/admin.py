@@ -49,7 +49,7 @@ def show_page():
 
             if st.form_submit_button("登録"):
                 if n and a:
-                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': a}])
+                    new_gym = pd.DataFrame([{'gym_name': n, 'profile_url': u, 'area_tag': a, 'created_by': st.session_state.get('USER', 'Unknown')}])
                     safe_save("gym_master", new_gym, mode="add", target_tab="⚙️ 管理")
                 else:
                     st.warning("ジム名とエリアは必須です")
@@ -131,7 +131,8 @@ def show_page():
                             'gym_name': selected_gym_set,
                             'start_date': d[0].isoformat(),
                             'end_date': d[1].isoformat(),
-                            'post_url': p_url_set
+                            'post_url': p_url_set,
+                            'created_by': st.session_state.get('USER', 'Unknown')
                         })
                     
                     new_s_df = pd.DataFrame(new_s_list)
