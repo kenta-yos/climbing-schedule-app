@@ -92,6 +92,14 @@ def show_page():
     # 3. 登録フォーム
     st.subheader("🚀 予定登録")
     
+    # ヘルプボタンを配置
+    c_help1, c_help2 = st.columns([0.7, 0.3]) # 右側に寄せる設定
+    with c_help2:
+        st.link_button("❓ 予定登録/削除", 
+                       "https://embed.app.guidde.com/playbooks/3VNusTPGSLJNa7phJXFikJ?mode=videoOnly",
+                       help="操作デモ動画を確認できます",
+                       use_container_width=True)
+        
     with st.expander("📅 予定・実績を入力する", expanded=False):
         # 2. 日付選択（カレンダーのみ）
         # 初期値の設定（初回のみ）
