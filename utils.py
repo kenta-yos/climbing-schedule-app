@@ -107,20 +107,13 @@ def apply_common_style():
         .set-box { display: grid !important; grid-template-columns: 4px 105px 1fr !important; align-items: center !important; gap: 12px !important; padding: 15px 5px !important; border-bottom: 1px solid #F0F0F0 !important; width: 100% !important; }
         .item-accent { width: 4px !important; height: 1.4rem !important; border-radius: 2px !important; flex-shrink: 0; }
         .item-date { color: #B22222 !important; font-weight: 700 !important; font-size: 0.85rem !important; white-space: nowrap !important; }
-        .item-gym { color: #1A1A1A !important; font-weight: 700 !important; font-size: 0.95rem !important; }
+        .item-gym { color: #1DA1F2 !important; font-weight: 700 !important; font-size: 0.95rem !important; }
         .gym-card { padding: 15px; background: #FFF; border-radius: 12px; border: 1px solid #E9ECEF; margin-bottom: 12px; }
         .tag-container { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
         .tag { font-size: 0.65rem; padding: 2px 8px; border-radius: 40px; background: #F0F0F0; color: #666; }
         .tag-hot { background: #FFF0F0; color: #FF512F; font-weight: 700; border: 1px solid #FFDADA; }
         .compact-row { display: grid; grid-template-columns: 4px 45px 1fr; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
         .compact-date { font-size: 0.8rem; font-weight: 700; color: #666; }
-        .compact-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-        .log-row { display: grid; grid-template-columns: 4px 45px 1fr 32px; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; width: 100%; }
-        .log-date { font-size: 0.8rem; font-weight: 700; color: #666; white-space: nowrap; }
-        .log-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .log-del { display: flex; justify-content: flex-end; align-items: center; }
-        .log-del button { border: none; background: transparent; padding: 0; font-size: 1.1rem; line-height: 1; }
-        
+        .compact-gym { font-size: 0.85rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }        
         </style>
     """, unsafe_allow_html=True)
