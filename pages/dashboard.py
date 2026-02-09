@@ -65,10 +65,10 @@ def show_page():
         
         fig = px.bar(counts, x='count', y='gym_name', orientation='h', text='count', 
                      color='count', color_continuous_scale='Sunsetdark')
-        fig.update_traces(texttemplate='  <b>%{text}回</b>', textposition='outside')
+        fig.update_traces(texttemplate='  <b>%{text}</b>', textposition='outside', cliponaxis=False)
         fig.update_layout(
             showlegend=False, coloraxis_showscale=False, xaxis_visible=False, 
-            yaxis_title=None, margin=dict(t=10, b=10, l=120, r=50), 
+            yaxis_title=None, margin=dict(t=10, b=10, l=120, r=80), 
             height=max(150, 35 * len(counts)), paper_bgcolor='rgba(0,0,0,0)', 
             plot_bgcolor='rgba(0,0,0,0)', dragmode=False,            
         )
@@ -116,39 +116,18 @@ def show_page():
         if all_my_plans.empty:
             st.caption("予定はありません。")
         else:
-            for _, row in all_my_plans.iterrows():
-                with st.container(horizontal=True):
-                    c1, c2 = st.columns([0.8, 0.2])
-                    
-                    # 2. 左側：日付とジム名
-                    c1.markdown(f'''
-                        <div class="compact-row" style="border-bottom: none; padding: 0;">
-                            <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
-                            <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
-                            <div class="compact-gym">{row["gym_name"]}</div>
-                        </div>
-                    ''', unsafe_allow_html=True)
-                    
-                    # 3. 右側：削除ボタン
-                    # CSSでボタン自体の余計な余白を削ってセンタリング
-                    st.markdown(f"""
-                        <style>
-                        div[data-testid="column"]:nth-child(2) {{
-                            display: flex;
-                            justify-content: flex-end;
-                            align-items: center;
-                        }}
-                        div.stButton > button[key='del_p_{row['id']}'] {{
-                            border: none;
-                            padding: 0;
-                            background: transparent;
-                        }}
-                        </style>
-                    """, unsafe_allow_html=True)
-                    
-                    if c2.button("🗑️", key=f"del_p_{row['id']}"):
-                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
-    
+            for _, row in filtered_done.iterrows():
+                c1, c2 = st.columns([0.85, 0.15])
+                c1.markdown(f'''
+                    <div class="compact-row">
+                        <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
+                        <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
+                        <div class="compact-gym">{row["gym_name"]}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
+                if c2.button("🗑️", key=f"del_d_{row['id']}"):
+                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+
     with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
             st.caption(f"{ms.strftime('%m/%d')}〜{me.strftime('%m/%d')} の実績はありません。")
@@ -162,5 +141,5 @@ def show_page():
                         <div class="compact-gym">{row["gym_name"]}</div>
                     </div>
                 ''', unsafe_allow_html=True)
-                if c2.button("🗑️", key=f"del_d_{row['id']}"):
+                if c2.button("🗑️", key=f"del_d_v2_{row['id']}"):
                     safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
