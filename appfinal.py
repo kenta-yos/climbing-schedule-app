@@ -14,8 +14,8 @@ st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="cen
 # ホーム画面アイコン変更
 st.markdown(
     f'''
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" href="/icon.png">
+    <link rel="manifest" href="https://raw.githubusercontent.com/kenta-yos/climbing-schedule-app/develop/manifest.json">
+    <link rel="apple-touch-icon" href="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/icon.png?raw=true">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     ''',
