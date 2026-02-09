@@ -1,6 +1,7 @@
 import streamlit as st
 from utils import apply_common_style
 from utils import get_supabase_data
+import base64
 
 from streamlit_option_menu import option_menu
 import pages.home as home
@@ -12,6 +13,23 @@ import pages.admin as admin
 # ページ定義
 st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered", initial_sidebar_state="auto")
 apply_common_style()
+
+# --- ホーム画面用アイコン設定 ---
+def set_home_icon(icon_path: str):
+    """スマホホーム画面用アイコンを埋め込む"""
+    try:
+        with open(icon_path, "rb") as f:
+            encoded = base64.b64encode(f.read()).decode()
+            icon_url = f"data:image/png;base64,{encoded}"
+            st.markdown(f'''
+                <link rel="apple-touch-icon" href="{icon_url}">
+                <link rel="icon" href="{icon_url}">
+            ''', unsafe_allow_html=True)
+    except Exception as e:
+        st.warning(f"アイコン設定に失敗しました: {e}")
+
+# 実際に設定（icon.png は appfinal.py と同じフォルダに置く）
+set_home_icon("icon.png")
 
 # --- URL パラメータからログイン自動復元 ---
 if "USER" not in st.session_state or st.session_state.USER is None:
