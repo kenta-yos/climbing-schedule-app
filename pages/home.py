@@ -90,23 +90,19 @@ def show_page():
         sorted_gym_names = sorted(gym_df['gym_name'].unique().tolist()) if not gym_df.empty else []
     
     # 3. 登録フォーム
-    st.subheader("🚀 予定登録")
-    
-    # ヘルプボタンを配置
     st.markdown(
         f'''
-        <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: -10px;">
-            <h3 style="margin: 0;">📅 予定を入れる</h3>
-            <a href="https://www.guidde.com/share/playbooks/3VNusTPGSLJNa7phJXFikJ" 
+        <div style="display: flex; align-items: center; gap: 12px; margin-top: 1rem; margin-bottom: 0.5rem;">
+            <span style="font-size: 1.25rem; font-weight: 700; color: #31333F;">🚀 予定登録</span>
+            <a href="https://embed.app.guidde.com/playbooks/3VNusTPGSLJNa7phJXFikJ?mode=videoOnly" 
                target="_blank" 
-               style="font-size: 0.7rem; color: #8899a6; text-decoration: none; border-bottom: 1px solid #8899a6; padding-bottom: 1px;">
-               ❓ 登録/削除のやり方
+               style="font-size: 0.65rem; color: #999; text-decoration: none; border: 1px solid #ddd; padding: 1px 6px; border-radius: 10px; white-space: nowrap;">
+               ❔ 登録/削除の方法
             </a>
         </div>
         ''', 
         unsafe_allow_html=True
     )
-    st.write("") # 少し余白を調整
 
     with st.expander("📅 予定・実績を入力する", expanded=False):
         # 2. 日付選択（カレンダーのみ）
