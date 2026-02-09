@@ -165,8 +165,6 @@ def show_page():
                     # 💡 ラベルが選ばれたら、元のジム名を selected_gym に入れる
                     if res_label:
                         selected_gym = label_map[res_label]    
-                                
-        st.divider()
          
         # 3. 登録ボタン
         col1, col2 = st.columns(2)
