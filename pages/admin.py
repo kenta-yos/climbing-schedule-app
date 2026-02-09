@@ -68,6 +68,7 @@ def show_page():
             ]['gym_name'].unique().tolist()
 
         st.write("### 1. 対象ジムを選択")
+        selected_gym_set = None
         if not m_gyms_admin.empty:
             admin_set_tabs = st.tabs(all_areas_admin)
             
@@ -88,13 +89,16 @@ def show_page():
                             display_options_admin.append(label)
                             label_map_admin[label] = g_name
 
-                        st.radio(
+                        res_label = st.radio(
                             f"{area}のジムを選択",
                             options=display_options_admin,
                             index=None,
                             key=f"radio_admin_set_{area}",
                             label_visibility="collapsed"
                         )
+                        if res_label:
+                            selected_gym_set = label_map_admin[res_label]
+
         else:
             st.error("ジムデータが読み込めません。")
         
