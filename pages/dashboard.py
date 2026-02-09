@@ -116,17 +116,19 @@ def show_page():
         if all_my_plans.empty:
             st.caption("予定はありません。")
         else:
-            for _, row in filtered_done.iterrows():
-                c1, c2 = st.columns([0.85, 0.15])
-                c1.markdown(f'''
-                    <div class="compact-row">
-                        <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
-                        <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
-                        <div class="compact-gym">{row["gym_name"]}</div>
-                    </div>
-                ''', unsafe_allow_html=True)
-                if c2.button("🗑️", key=f"del_d_{row['id']}"):
-                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+            for _, row in all_my_plans.iterrows():
+                with st.container():
+                    st.markdown(f"""
+                        <div class="log-row">
+                            <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
+                            <span class="log-date">{row["date"].strftime("%m/%d")}</span>
+                            <div class="log-gym">{row["gym_name"]}</div>
+                            <div class="log-del"></div>
+                        </div>
+                    """, unsafe_allow_html=True)
+            
+                    if st.button("🗑️", key=f"del_p_{row['id']}"):
+                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
 
     with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
