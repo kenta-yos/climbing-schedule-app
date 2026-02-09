@@ -1,7 +1,7 @@
 {
   "name": "Go Bouldering Pro",
   "short_name": "ClimbApp",
-  "start_url": "/",
+  "start_url": "https://climbing-schedule-app-6ramivd2xuyffczpp2x42l.streamlit.app/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ff7b00",
