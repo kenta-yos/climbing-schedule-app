@@ -117,19 +117,14 @@ def show_page():
             st.caption("予定はありません。")
         else:
             for _, row in all_my_plans.iterrows():
-                with st.container():
-                    st.markdown(f"""
-                        <div class="log-row">
-                            <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
-                            <span class="log-date">{row["date"].strftime("%m/%d")}</span>
-                            <div class="log-gym">{row["gym_name"]}</div>
-                            <div class="log-del"></div>
-                        </div>
-                    """, unsafe_allow_html=True)
+            # 4列グリッドの列幅は[0.05, 0.15, 0.7, 0.1]くらいで調整
+                c1, c2, c3, c4 = st.columns([0.05, 0.15, 0.7, 0.1])
+                c1.markdown(f'<div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>', unsafe_allow_html=True)
+                c2.markdown(f'<span class="log-date">{row["date"].strftime("%m/%d")}</span>', unsafe_allow_html=True)
+                c3.markdown(f'<div class="log-gym">{row["gym_name"]}</div>', unsafe_allow_html=True)
+                if c4.button("🗑️", key=f"del_p_{row['id']}"):
+                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
             
-                    if st.button("🗑️", key=f"del_p_{row['id']}"):
-                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
-
     with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
             st.caption(f"{ms.strftime('%m/%d')}〜{me.strftime('%m/%d')} の実績はありません。")
