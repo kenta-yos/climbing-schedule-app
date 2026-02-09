@@ -65,10 +65,10 @@ def show_page():
         
         fig = px.bar(counts, x='count', y='gym_name', orientation='h', text='count', 
                      color='count', color_continuous_scale='Sunsetdark')
-        fig.update_traces(texttemplate='  <b>%{text}回</b>', textposition='outside')
+        fig.update_traces(texttemplate='  <b>%{text}</b>', textposition='outside', cliponaxis=False)
         fig.update_layout(
             showlegend=False, coloraxis_showscale=False, xaxis_visible=False, 
-            yaxis_title=None, margin=dict(t=10, b=10, l=120, r=50), 
+            yaxis_title=None, margin=dict(t=10, b=10, l=120, r=80), 
             height=max(150, 35 * len(counts)), paper_bgcolor='rgba(0,0,0,0)', 
             plot_bgcolor='rgba(0,0,0,0)', dragmode=False,            
         )
