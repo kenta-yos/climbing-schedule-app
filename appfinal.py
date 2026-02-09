@@ -15,20 +15,15 @@ st.set_page_config(page_title="Go Bouldering Pro", page_icon="icon.png", layout=
 apply_common_style()
 
 # --- ホーム画面用アイコン設定 ---
-def set_home_icon(icon_path: str):
-    """スマホホーム画面用アイコンを埋め込む"""
-    try:
-        with open(icon_path, "rb") as f:
-            encoded = base64.b64encode(f.read()).decode()
-            icon_url = f"data:image/png;base64,{encoded}"
-            st.markdown(f'''
-                <link rel="apple-touch-icon" href="{icon_url}">
-                <link rel="icon" href="{icon_url}">
-            ''', unsafe_allow_html=True)
-    except Exception as e:
-        st.warning(f"アイコン設定に失敗しました: {e}")
+def set_home_icon(path):
+    with open(path, "rb") as f:
+        data = base64.b64encode(f.read()).decode()
+    st.markdown(f"""
+        <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,{data}">
+        <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,{data}">
+        <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,{data}">
+    """, unsafe_allow_html=True)
 
-# 実際に設定（icon.png は appfinal.py と同じフォルダに置く）
 set_home_icon("icon.png")
 
 # --- URL パラメータからログイン自動復元 ---
