@@ -184,6 +184,16 @@ def show_page():
         # 💡 ボタンが押されたときに「どのタブで選んだか」を特定するロジック
         btn_plan = col1.button("✋ 登るよ", use_container_width=True)
         btn_done = col2.button("✊ 登った", use_container_width=True, type="primary")
+        
+        # --- 💡 ここに注意書きを追加 ---
+        st.markdown(
+            '''
+            <div style="font-size: 0.75rem; color: #888; margin-top: -10px; padding: 0 5px; line-height: 1.4;">
+                ※「✋ 登るよ」で登録した予定は、その日が過ぎれば自動的に「登った記録」に反映されます。
+            </div>
+            ''', 
+            unsafe_allow_html=True
+        )
     
         if btn_plan or btn_done:
             # 💡 全タブをスキャンして、選ばれているジムを探す
