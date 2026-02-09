@@ -12,12 +12,16 @@ import pages.admin as admin
 # ページ定義
 st.set_page_config(page_title="Go Bouldering Pro", page_icon="🧗", layout="centered", initial_sidebar_state="auto")
 # ホーム画面アイコン変更
+# appfinal.py の該当箇所
+ICON_URL = "https://github.com/kenta-yos/climbing-schedule-app/blob/develop/icon.png?raw=true"
+
 st.markdown(
     f'''
-    <link rel="manifest" href="https://raw.githubusercontent.com/kenta-yos/climbing-schedule-app/develop/manifest.json">
-    <link rel="apple-touch-icon" href="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/icon.png?raw=true">
+    <link rel="apple-touch-icon" sizes="180x180" href="{ICON_URL}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{ICON_URL}">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     ''',
     unsafe_allow_html=True
 )
