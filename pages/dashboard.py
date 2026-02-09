@@ -141,5 +141,5 @@ def show_page():
                         <div class="compact-gym">{row["gym_name"]}</div>
                     </div>
                 ''', unsafe_allow_html=True)
-                if c2.button("🗑️", key=f"del_d_{row['id']}"):
+                if c2.button("🗑️", key=f"del_d_v2_{row['id']}"):
                     safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
