@@ -93,13 +93,21 @@ def show_page():
     st.subheader("🚀 予定登録")
     
     # ヘルプボタンを配置
-    c_help1, c_help2 = st.columns([0.7, 0.3]) # 右側に寄せる設定
-    with c_help2:
-        st.link_button("❓ 予定登録/削除", 
-                       "https://embed.app.guidde.com/playbooks/3VNusTPGSLJNa7phJXFikJ?mode=videoOnly",
-                       help="操作デモ動画を確認できます",
-                       use_container_width=True)
-        
+    st.markdown(
+        f'''
+        <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: -10px;">
+            <h3 style="margin: 0;">📅 予定を入れる</h3>
+            <a href="https://www.guidde.com/share/playbooks/3VNusTPGSLJNa7phJXFikJ" 
+               target="_blank" 
+               style="font-size: 0.7rem; color: #8899a6; text-decoration: none; border-bottom: 1px solid #8899a6; padding-bottom: 1px;">
+               ❓ 登録/削除のやり方
+            </a>
+        </div>
+        ''', 
+        unsafe_allow_html=True
+    )
+    st.write("") # 少し余白を調整
+
     with st.expander("📅 予定・実績を入力する", expanded=False):
         # 2. 日付選択（カレンダーのみ）
         # 初期値の設定（初回のみ）
