@@ -123,3 +123,18 @@ def apply_common_style():
         .log-del button { border: none; background: transparent; padding: 0; font-size: 1.1rem; line-height: 1; }
         </style>
     """, unsafe_allow_html=True)
+    st.markdown("""
+        <style>
+        :root { --bg:#0f1115; --border:#2a2f3a; --text:#e6e6eb; --sub:#a0a4b8; }
+        body { background-color: var(--bg); color: var(--text); }
+        .main .block-container { background-color: var(--bg); }
+        .compact-row { border-bottom: 1px solid var(--border); }
+        .compact-date { color: var(--sub); }
+        .compact-gym { color: var(--text); }
+        .log-row { border-bottom: 1px solid var(--border); }
+        .log-date { color: var(--sub); }
+        .log-gym { color: var(--text); }
+        .log-del button { color: var(--sub); }
+        .log-del button:hover { color: #FF512F; }
+        </style>
+    """, unsafe_allow_html=True)
