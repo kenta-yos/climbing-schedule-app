@@ -77,7 +77,8 @@ def show_page():
     
             # --- ① 鮮度スコア（セット終了日基準） ---
             if latest_set_date:
-                diff = (t_dt.date() - (latest_set_date + timedelta(days=1))).days
+                effective_set_date = latest_set_date + timedelta(days=1)
+                diff = (t_dt.date() - effective_set_date).days
                 if 0 <= diff <= 7: 
                     score += 40
                     reasons.append(f"🔥 新セット({diff}日前)")
