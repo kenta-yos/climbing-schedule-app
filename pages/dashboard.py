@@ -120,7 +120,7 @@ def show_page():
                 c1, c2 = st.columns([0.85, 0.15])
                 c1.markdown(f'''
                     <div class="compact-row">
-                        <div style="background:#DD2476; width:4px; height:1rem; border-radius:2px;"></div>
+                        <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
                         <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
                         <div class="compact-gym">{row["gym_name"]}</div>
                     </div>
