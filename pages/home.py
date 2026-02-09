@@ -51,9 +51,9 @@ def show_page():
                             # アクセス履歴取得
                             from utils import init_connection
                             supabase = init_connection()
-                            supabase.table("acces_logs")\
+                            supabase.table("access_logs")\
                                 .insert({"user_name": row['user_name']})\
-                                .execute
+                                .execute()
                             st.session_state.USER = row['user_name']
                             st.session_state.U_COLOR = row['color']
                             st.session_state.U_ICON = row['icon']
