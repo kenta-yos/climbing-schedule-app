@@ -1,5 +1,6 @@
 import streamlit as st
 from utils import apply_common_style
+from utils import get_supabase_data
 
 from streamlit_option_menu import option_menu
 import pages.home as home
