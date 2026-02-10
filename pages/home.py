@@ -118,7 +118,7 @@ def show_page():
             st.rerun()
     
         # ラジオで時間帯選択
-        time_slot_html = st.radio(
+        time_slot_val = st.radio(
             "時間帯を選択",
             options=["昼", "夕方", "夜"],
             index=0,
