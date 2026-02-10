@@ -131,7 +131,7 @@ def show_page():
                 c1, c2 = st.columns([0.88, 0.12])  
                 with c1:
                     st.markdown(f'''
-                        <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; gap: 10px;">
+                        <div style="display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; gap: 10px;">
                             <div style="background:#4CAF50; width:4px; height:20px; border-radius:2px; flex-shrink:0;"></div>
                             <div style="min-width: 45px; font-size: 0.85rem; font-weight: bold; color: #666;">{row["date"].strftime("%m/%d")}</div>
                             <div style="min-width: 25px; display: flex; justify-content: center;">{icon_html}</div>
@@ -158,7 +158,7 @@ def show_page():
                 c1, c2 = st.columns([0.88, 0.12])  
                 with c1:
                     st.markdown(f'''
-                        <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; gap: 10px;">
+                        <div style="display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; gap: 10px;">
                             <div style="background:#DD2476; width:4px; height:20px; border-radius:2px; flex-shrink:0;"></div>
                             <div style="min-width: 45px; font-size: 0.85rem; font-weight: bold; color: #666;">{row["date"].strftime("%m/%d")}</div>
                             <div style="min-width: 25px; display: flex; justify-content: center;">{icon_html}</div>
