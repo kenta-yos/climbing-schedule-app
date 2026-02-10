@@ -123,7 +123,8 @@ def show_page():
             options=["昼", "夕方", "夜"],
             index=0,
             key="time_slot_radio",
-            horizontal=True
+            horizontal=True,
+            label_visibility="collapsed"
         )
                 
         # エリアの並び順定義
