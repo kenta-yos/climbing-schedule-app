@@ -101,7 +101,7 @@ def show_page():
         <style>
         .compact-row {
             display: grid;
-            grid-template-columns: 4px 45px 1fr;
+            grid-template-columns: 4px 45px 35px 1fr;
             align-items: center;
             gap: 10px;
             padding: 8px 0;
@@ -112,11 +112,22 @@ def show_page():
         </style>
     """, unsafe_allow_html=True)
     
+    # アイコンマップの定義
+    icon_map = {
+        "昼": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/hiru.png?raw=true" width="18"/>',
+        "夕方": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yuu.png?raw=true" width="18"/>',
+        "夜": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yoru.png?raw=true" width="18"/>'
+    }
+    
     with m_tabs[0]: # 予定タブ：全期間
         if all_my_plans.empty:
             st.caption("予定はありません。")
         else:
             for _, row in all_my_plans.iterrows():
+                # アイコンの取得
+                ts = row.get('time_slot')
+                icon_html = icon_map.get(ts, "") # なければ空文字
+                
                 c1, c2 = st.columns([0.85, 0.15])
                 c1.markdown(f'''
                     <div class="compact-row">
@@ -133,6 +144,10 @@ def show_page():
             st.caption(f"{ms.strftime('%m/%d')}〜{me.strftime('%m/%d')} の実績はありません。")
         else:
             for _, row in filtered_done.iterrows():
+                # アイコンの取得
+                ts = row.get('time_slot')
+                icon_html = icon_map.get(ts, "") # なければ空文字
+                
                 c1, c2 = st.columns([0.85, 0.15])
                 c1.markdown(f'''
                     <div class="compact-row">
