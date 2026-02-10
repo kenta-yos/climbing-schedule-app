@@ -119,24 +119,12 @@ def show_page():
         # ラジオで時間帯選択
         time_slot_html = st.radio(
             "時間帯を選択",
-            options=[
-                '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/hiru.png?raw=true" width="20"/> 昼',
-                '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yuu.png?raw=true" width="20"/> 夕方',
-                '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yoru.png?raw=true" width="20"/> 夜'
-            ],
+            options=["昼", "夕方", "夜"],
             index=0,
             key="time_slot_radio",
             horizontal=True
         )
-        
-        # HTMLラベルから文字だけを抽出
-        if "昼" in time_slot_html:
-            time_slot_val = "昼"
-        elif "夕方" in time_slot_html:
-            time_slot_val = "夕方"
-        else:
-            time_slot_val = "夜"
-        
+                
         # エリアの並び順定義
         custom_order = ["都内・神奈川", "関東", "関西", "全国"]
         
