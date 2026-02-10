@@ -127,25 +127,52 @@ def show_page():
                 # アイコンの取得
                 ts = row.get('time_slot')
                 icon_html = icon_map.get(ts, "") # なければ空文字
-                
-                c1, c2 = st.columns([0.88, 0.12])  
-                with c1:
-                    st.markdown(f'''
-                        <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; gap: 10px;">
-                            <div style="background:#4CAF50; width:4px; height:20px; border-radius:2px; flex-shrink:0;"></div>
-                            <div style="min-width: 45px; font-size: 0.85rem; font-weight: bold; color: #666;">{row["date"].strftime("%m/%d")}</div>
-                            <div style="min-width: 25px; display: flex; justify-content: center;">{icon_html}</div>
-                            <div style="flex-grow: 1; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+
+                # 💡 columnsを使わずに、一つのコンテナとしてボタンとテキストを配置
+                # 全体を覆う「外枠」をMarkdownで作る
+                st.markdown(f'''
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-grow: 1; overflow: hidden;">
+                            <div style="background:#4CAF50; width:4px; height:18px; border-radius:2px; flex-shrink:0;"></div>
+                            <div style="min-width: 42px; font-size: 0.8rem; font-weight: bold; color: #666; flex-shrink:0;">{row["date"].strftime("%m/%d")}</div>
+                            <div style="min-width: 20px; flex-shrink:0; display: flex; justify-content: center;">{icon_html}</div>
+                            <div style="font-size: 0.85rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                 {row["gym_name"]}
                             </div>
                         </div>
-                    ''', unsafe_allow_html=True)
+                        <div id="btn-container-{row['id']}"></div>
+                    </div>
+                ''', unsafe_allow_html=True)
                 
-                with c2:
-                    # ボタンの上の余白を調整して中心に合わせる
-                    st.write("") 
+                # 💡 ゴミ箱ボタンだけはStreamlitの機能が必要なので、
+                # columnsを[0.9, 0.1]のように極端な比率で使い、スマホでも縦並びにならないように工夫します
+                # (Streamlitの仕様上、0.1のような極端な幅はスマホでも横に並びやすいです)
+                empty_col, btn_col = st.columns([0.88, 0.12])
+                with btn_col:
+                    # ボタンの見た目を整えるために少し上にずらす
+                    st.markdown('<div style="margin-top: -45px;">', unsafe_allow_html=True)
                     if st.button("🗑️", key=f"del_p_{row['id']}"):
                         safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                # c1, c2 = st.columns([0.88, 0.12])  
+                # with c1:
+                #     st.markdown(f'''
+                #         <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; gap: 10px;">
+                #             <div style="background:#4CAF50; width:4px; height:20px; border-radius:2px; flex-shrink:0;"></div>
+                #             <div style="min-width: 45px; font-size: 0.85rem; font-weight: bold; color: #666;">{row["date"].strftime("%m/%d")}</div>
+                #             <div style="min-width: 25px; display: flex; justify-content: center;">{icon_html}</div>
+                #             <div style="flex-grow: 1; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                #                 {row["gym_name"]}
+                #             </div>
+                #         </div>
+                #     ''', unsafe_allow_html=True)
+                
+                # with c2:
+                #     # ボタンの上の余白を調整して中心に合わせる
+                #     st.write("") 
+                #     if st.button("🗑️", key=f"del_p_{row['id']}"):
+                #         safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
 
     with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
