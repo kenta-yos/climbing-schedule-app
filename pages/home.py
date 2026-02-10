@@ -265,13 +265,6 @@ def show_page():
                 w_str = weekdays[d_val.weekday()]
                 date_display = f"{d_str}({w_str})"
                 accent_color = "#F36C21"   # 通常
-            # ===== ここまで =====
-
-            # 日付の表示形式を調整 (例: 02/14(土))
-            weekdays = ["月", "火", "水", "木", "金", "土", "日"]
-            d_str = d_val.strftime('%m/%d')
-            w_str = weekdays[d_val.weekday()]
-            date_display = f"{d_str}({w_str})"
             
             # ユーザー名のHTML化（重複排除・ソート）
             unique_users = sorted(list(set(row['user'])))
