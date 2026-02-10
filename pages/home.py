@@ -255,7 +255,7 @@ def show_page():
             # 今日と明日だけ日付表示から変更
             if d_val == today_jp:
                 date_display = "Today"
-                accent_color = "#D93A49"   # 今日：赤
+                accent_color = "#1E8449"   # 今日：緑
             elif d_val == today_jp + timedelta(days=1):
                 date_display = "Tomorrow"
                 accent_color = "#2E86DE"   # 明日：青
