@@ -101,7 +101,7 @@ def show_page():
         <style>
         .compact-row {
             display: grid;
-            grid-template-columns: 4px 45px 1fr;
+            grid-template-columns: 4px 45px 35px 1fr;
             align-items: center;
             gap: 10px;
             padding: 8px 0;
@@ -112,34 +112,63 @@ def show_page():
         </style>
     """, unsafe_allow_html=True)
     
+    # アイコンマップの定義
+    icon_map = {
+        "昼": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/hiru.png?raw=true" width="18"/>',
+        "夕方": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yuu.png?raw=true" width="18"/>',
+        "夜": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yoru.png?raw=true" width="18"/>'
+    }
+    
     with m_tabs[0]: # 予定タブ：全期間
         if all_my_plans.empty:
             st.caption("予定はありません。")
         else:
             for _, row in all_my_plans.iterrows():
-                c1, c2 = st.columns([0.85, 0.15])
-                c1.markdown(f'''
-                    <div class="compact-row">
-                        <div style="background:#4CAF50; width:4px; height:1rem; border-radius:2px;"></div>
-                        <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
-                        <div class="compact-gym">{row["gym_name"]}</div>
-                    </div>
-                ''', unsafe_allow_html=True)
-                if c2.button("🗑️", key=f"del_d_{row['id']}"):
-                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
-            
+                # アイコンの取得
+                ts = row.get('time_slot')
+                icon_html = icon_map.get(ts, "") # なければ空文字
+                                                
+                c1, c2 = st.columns([0.88, 0.12])  
+                with c1:
+                    st.markdown(f'''
+                        <div style="display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; gap: 10px;">
+                            <div style="background:#4CAF50; width:4px; height:20px; border-radius:2px; flex-shrink:0;"></div>
+                            <div style="min-width: 45px; font-size: 0.85rem; font-weight: bold; color: #666;">{row["date"].strftime("%m/%d")}</div>
+                            <div style="min-width: 25px; display: flex; justify-content: center;">{icon_html}</div>
+                            <div style="flex-grow: 1; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                {row["gym_name"]}
+                            </div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+                
+                with c2:
+                    # ボタンの上の余白を調整して中心に合わせる
+                    if st.button("🗑️", key=f"del_p_{row['id']}"):
+                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+
     with m_tabs[1]: # 実績タブ：期間連動
         if filtered_done.empty:
             st.caption(f"{ms.strftime('%m/%d')}〜{me.strftime('%m/%d')} の実績はありません。")
         else:
             for _, row in filtered_done.iterrows():
-                c1, c2 = st.columns([0.85, 0.15])
-                c1.markdown(f'''
-                    <div class="compact-row">
-                        <div style="background:#DD2476; width:4px; height:1rem; border-radius:2px;"></div>
-                        <span class="compact-date">{row["date"].strftime("%m/%d")}</span>
-                        <div class="compact-gym">{row["gym_name"]}</div>
-                    </div>
-                ''', unsafe_allow_html=True)
-                if c2.button("🗑️", key=f"del_p_{row['id']}"):
-                    safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+                # アイコンの取得
+                ts = row.get('time_slot')
+                icon_html = icon_map.get(ts, "") # なければ空文字
+                
+                c1, c2 = st.columns([0.88, 0.12])  
+                with c1:
+                    st.markdown(f'''
+                        <div style="display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; gap: 10px;">
+                            <div style="background:#DD2476; width:4px; height:20px; border-radius:2px; flex-shrink:0;"></div>
+                            <div style="min-width: 45px; font-size: 0.85rem; font-weight: bold; color: #666;">{row["date"].strftime("%m/%d")}</div>
+                            <div style="min-width: 25px; display: flex; justify-content: center;">{icon_html}</div>
+                            <div style="flex-grow: 1; font-size: 0.9rem; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                {row["gym_name"]}
+                            </div>
+                        </div>
+                    ''', unsafe_allow_html=True)
+                
+                with c2:
+                    # ボタンの上の余白を調整して中心に合わせる
+                    if st.button("🗑️", key=f"del_d_{row['id']}"):
+                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")

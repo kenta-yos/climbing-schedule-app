@@ -97,7 +97,8 @@ def show_page():
         ''', 
         unsafe_allow_html=True
     )
-
+    
+    time_slot_val = None
     with st.expander("📅 予定・実績を入力する", expanded=False):
         # 2. 日付選択（カレンダーのみ）
         # 初期値の設定（初回のみ）
@@ -116,6 +117,16 @@ def show_page():
             st.session_state.q_date_val = q_date
             st.rerun()
     
+        # ラジオで時間帯選択
+        time_slot_val = st.radio(
+            "時間帯を選択",
+            options=["昼", "夕方", "夜"],
+            index=0,
+            key="time_slot_radio",
+            horizontal=True,
+            label_visibility="collapsed"
+        )
+                
         # エリアの並び順定義
         custom_order = ["都内・神奈川", "関東", "関西", "全国"]
         
@@ -189,7 +200,9 @@ def show_page():
             unsafe_allow_html=True
         )
     
-        if btn_plan or btn_done:
+        if (btn_plan or btn_done) and not time_slot_val:
+            st.warning("時間帯を選んでください")
+        elif btn_plan or btn_done:
             # 💡 全タブをスキャンして、選ばれているジムを探す
             final_selected_gym = None
             for area in all_areas:
@@ -204,7 +217,8 @@ def show_page():
                     'date': pd.to_datetime(q_date),
                     'gym_name': final_selected_gym,
                     'user': st.session_state.get('USER', 'Unknown'),
-                    'type': reg_type
+                    'type': reg_type,
+                    'time_slot': time_slot_val
                 }])
                 
                 # ラジオボタンをすべてリセット
@@ -221,9 +235,7 @@ def show_page():
 
     # --- データの準備 ---
     from datetime import timedelta
-    three_weeks_later = today_jp + timedelta(days=21)
-    
-    # 今日から3週間後までの「予定」ログを抽出
+    three_weeks_later = today_jp + timedelta(days=21)    
     future_logs = log_df[
         (log_df['type'] == '予定') & 
         (log_df['date'].dt.date >= today_jp) & 
@@ -231,16 +243,56 @@ def show_page():
     ].copy()
 
     if not future_logs.empty:
-        # 日付とジム名でグループ化して、ユーザーをリストにまとめる
-        # 日付は昇順（近い順）、ジム名は五十音順
-        grouped_future = future_logs.groupby(['date', 'gym_name'])['user'].apply(list).reset_index()
-        grouped_future = grouped_future.sort_values(['date', 'gym_name'])
+        # 💡 時間帯（time_slot）を含めて集計するために、groupbyの構成を変更します
+        # 日付とジム名でグループ化
+        grouped_future = future_logs.groupby(['date', 'gym_name'])
+        sorted_keys = sorted(grouped_future.groups.keys())
 
-        for _, row in grouped_future.iterrows():
-            d_val = row['date'].date()
-            gym = row['gym_name']
+        for d_ts, gym in sorted_keys:
+            # その「日・ジム」に該当する全ユーザー行を取得
+            day_gym_df = grouped_future.get_group((d_ts, gym))
+            d_val = d_ts.date()
             
-            # 今日と明日だけ日付表示から変更
+            # --- 1. 時間帯ごとのアイコン画像＋文字列の定義 ---
+            icon_map = {
+                "昼": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/hiru.png?raw=true" width="16"/>',
+                "夕方": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yuu.png?raw=true" width="16"/>',
+                "夜": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yoru.png?raw=true" width="16"/>'
+            }
+
+            # --- 2. 時間帯ごとにユーザーを振り分け ---
+            times = {"昼": [], "夕方": [], "夜": []}
+            others = [] # 時間帯が空（古いデータなど）用
+
+            for _, row in day_gym_df.iterrows():
+                u = row['user']
+                ts = row.get('time_slot')
+                
+                if pd.isna(ts) or ts == "" or ts not in times:
+                    if u not in others:
+                        others.append(u)
+                else:
+                    if u not in times[ts]:
+                        times[ts].append(u)
+
+            # --- 3. 時間帯ごとのユーザー名を横1行にまとめる ---
+            time_strs = []
+            for ts in ["昼", "夕方", "夜"]:
+                if times[ts]:
+                    # 色付きユーザー名HTMLを取得
+                    user_htmls = [get_colored_user_text(u, user_df) for u in sorted(times[ts])]
+                    # アイコンラベル: ユーザーA & ユーザーB
+                    time_strs.append(f"{icon_map[ts]}  {' & '.join(user_htmls)}")
+
+            # 時間帯がないユーザーがいる場合、最後に追加（アイコンなしで名前だけ）
+            if others:
+                other_htmls = [get_colored_user_text(u, user_df) for u in sorted(others)]
+                time_strs.append(f"{' & '.join(other_htmls)}")
+
+            # "|" で区切って横並び表示用のHTMLを生成（空なら完全に詰まる）
+            members_html = " | ".join(time_strs)
+
+            # --- 4. 日付の表示形式とアクセントカラー（既存ロジック） ---
             if d_val == today_jp:
                 date_display = "Today"
                 accent_color = "#1E8449"   # 今日：緑
@@ -252,13 +304,9 @@ def show_page():
                 d_str = d_val.strftime('%m/%d')
                 w_str = weekdays[d_val.weekday()]
                 date_display = f"{d_str}({w_str})"
-                accent_color = "#F36C21"   # 通常
-            
-            # ユーザー名のHTML化（重複排除・ソート）
-            unique_users = sorted(list(set(row['user'])))
-            user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
-            members_html = " & ".join(user_htmls)
-            
+                accent_color = "#F36C21"   # 通常：オレンジ
+
+            # --- 5. 最終的なマークダウン出力 ---
             st.markdown(f'''
                 <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; display: flex; align-items: flex-start;">
                     <div style="min-width: 65px; font-size: 0.85rem; color: {accent_color}; font-weight: bold; margin-top: 2px; flex-shrink: 0;">
@@ -268,7 +316,7 @@ def show_page():
                         <div style="font-weight: bold; color: #333; font-size: 0.95rem; line-height: 1.2; margin-bottom: 2px;">
                             {gym}
                         </div>
-                        <div style="font-size: 0.9rem; line-height: 1.4;">
+                        <div style="font-size: 0.85rem; line-height: 1.4;">
                             {members_html}
                         </div>
                     </div>
