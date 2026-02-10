@@ -97,7 +97,8 @@ def show_page():
         ''', 
         unsafe_allow_html=True
     )
-
+    
+    time_slot_val = None
     with st.expander("📅 予定・実績を入力する", expanded=False):
         # 2. 日付選択（カレンダーのみ）
         # 初期値の設定（初回のみ）
