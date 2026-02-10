@@ -254,9 +254,9 @@ def show_page():
             
             # --- 1. 時間帯ごとのアイコン画像＋文字列の定義 ---
             icon_map = {
-                "昼": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/hiru.png?raw=true" width="16"/> 昼',
-                "夕方": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yuu.png?raw=true" width="16"/> 夕方',
-                "夜": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yoru.png?raw=true" width="16"/> 夜'
+                "昼": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/hiru.png?raw=true" width="16"/>',
+                "夕方": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yuu.png?raw=true" width="16"/>',
+                "夜": '<img src="https://github.com/kenta-yos/climbing-schedule-app/blob/develop/images/yoru.png?raw=true" width="16"/>'
             }
 
             # --- 2. 時間帯ごとにユーザーを振り分け ---
@@ -281,7 +281,7 @@ def show_page():
                     # 色付きユーザー名HTMLを取得
                     user_htmls = [get_colored_user_text(u, user_df) for u in sorted(times[ts])]
                     # アイコンラベル: ユーザーA & ユーザーB
-                    time_strs.append(f"{icon_map[ts]}: {' & '.join(user_htmls)}")
+                    time_strs.append(f"{icon_map[ts]}  {' & '.join(user_htmls)}")
 
             # 時間帯がないユーザーがいる場合、最後に追加（アイコンなしで名前だけ）
             if others:
