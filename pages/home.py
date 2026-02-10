@@ -252,21 +252,25 @@ def show_page():
             d_val = row['date'].date()
             gym = row['gym_name']
             
-            # 日付の表示形式を調整 (例: 02/14(土))
-            weekdays = ["月", "火", "水", "木", "金", "土", "日"]
-            d_str = d_val.strftime('%m/%d')
-            w_str = weekdays[d_val.weekday()]
-            date_display = f"{d_str}({w_str})"
+            # 今日と明日だけ日付表示から変更
+            if d_val == today_jp:
+                date_display = "Today"
+                accent_color = "#1E8449"   # 今日：緑
+            elif d_val == today_jp + timedelta(days=1):
+                date_display = "Tomorrow"
+                accent_color = "#2E86DE"   # 明日：青
+            else:
+                weekdays = ["月", "火", "水", "木", "金", "土", "日"]
+                d_str = d_val.strftime('%m/%d')
+                w_str = weekdays[d_val.weekday()]
+                date_display = f"{d_str}({w_str})"
+                accent_color = "#F36C21"   # 通常
             
             # ユーザー名のHTML化（重複排除・ソート）
             unique_users = sorted(list(set(row['user'])))
             user_htmls = [get_colored_user_text(u, user_df) for u in unique_users]
             members_html = " & ".join(user_htmls)
             
-            # 今日の予定だけ色を変えるアクセント処理
-            is_today = (d_val == today_jp)
-            accent_color = "#D93A49" if is_today else "#F36C21"
-
             st.markdown(f'''
                 <div style="margin-bottom: 8px; padding: 6px 12px; border-left: 4px solid {accent_color}; display: flex; align-items: flex-start;">
                     <div style="min-width: 65px; font-size: 0.85rem; color: {accent_color}; font-weight: bold; margin-top: 2px; flex-shrink: 0;">
