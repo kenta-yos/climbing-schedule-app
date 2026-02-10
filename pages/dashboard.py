@@ -204,5 +204,5 @@ def show_page():
                 with c2:
                     # ボタンの上の余白を調整して中心に合わせる
                     st.write("") 
-                    if st.button("🗑️", key=f"del_p_{row['id']}"):
+                    if st.button("🗑️", key=f"del_d_{row['id']}"):
                         safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
