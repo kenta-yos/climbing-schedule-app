@@ -77,23 +77,11 @@ def show_page():
             today_logs = all_plans[all_plans['date'] == t_0]
             tomorrow_logs = all_plans[all_plans['date'] == t_1]
     
-    # 2. 優先順位付きジムリストの作成
-    sorted_gym_names = []
+    # 2. エリア情報のマージ
     if not gym_df.empty and not area_master.empty:
-        priority_order = ["都内・神奈川", "関東", "全国"]
         merged_gyms = pd.merge(gym_df, area_master[['area_tag', 'major_area']], on='area_tag', how='left')
-        for area in priority_order:
-            subset = merged_gyms[merged_gyms['major_area'] == area]
-            gyms_in_this_area = sorted(subset['gym_name'].unique().tolist())
-            for g_name in gyms_in_this_area:
-                if g_name not in sorted_gym_names:
-                    sorted_gym_names.append(g_name)
-        
-        all_gyms = gym_df['gym_name'].unique().tolist()
-        others = sorted([g for g in all_gyms if g not in sorted_gym_names])
-        sorted_gym_names.extend(others)
     else:
-        sorted_gym_names = sorted(gym_df['gym_name'].unique().tolist()) if not gym_df.empty else []
+        merged_gyms = pd.DataFrame()
     
     # 3. 登録フォーム
     st.markdown(
