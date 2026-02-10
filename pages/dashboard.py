@@ -127,12 +127,19 @@ def show_page():
                 # アイコンの取得
                 ts = row.get('time_slot')
                 icon_html = icon_map.get(ts, "") # なければ空文字
-
-                # 💡 columnsを使わずに、一つのコンテナとしてボタンとテキストを配置
-                # 全体を覆う「外枠」をMarkdownで作る
-                st.markdown(f'''
-                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; gap: 8px;">
-                        <div style="display: flex; align-items: center; gap: 8px; flex-grow: 1; overflow: hidden;">
+                
+                # 💡 比率を [左端ボタン: 0.15, 残り全部: 0.85] に分ける
+                c_btn, c_main = st.columns([0.15, 0.85])
+                
+                with c_btn:
+                    # ゴミ箱ボタンを左に配置
+                    if st.button("🗑️", key=f"del_p_{row['id']}"):
+                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
+                
+                with c_main:
+                    # 右側のスペースにHTMLで日付・アイコン・ジム名を1行で並べる
+                    st.markdown(f'''
+                        <div style="display: flex; align-items: center; gap: 8px; height: 35px; border-bottom: 1px solid #f0f0f0;">
                             <div style="background:#4CAF50; width:4px; height:18px; border-radius:2px; flex-shrink:0;"></div>
                             <div style="min-width: 42px; font-size: 0.8rem; font-weight: bold; color: #666; flex-shrink:0;">{row["date"].strftime("%m/%d")}</div>
                             <div style="min-width: 20px; flex-shrink:0; display: flex; justify-content: center;">{icon_html}</div>
@@ -140,10 +147,8 @@ def show_page():
                                 {row["gym_name"]}
                             </div>
                         </div>
-                        <div id="btn-container-{row['id']}"></div>
-                    </div>
-                ''', unsafe_allow_html=True)
-                
+                    ''', unsafe_allow_html=True)
+                                
                 # 💡 ゴミ箱ボタンだけはStreamlitの機能が必要なので、
                 # columnsを[0.9, 0.1]のように極端な比率で使い、スマホでも縦並びにならないように工夫します
                 # (Streamlitの仕様上、0.1のような極端な幅はスマホでも横に並びやすいです)
