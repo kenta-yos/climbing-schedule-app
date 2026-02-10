@@ -149,17 +149,6 @@ def show_page():
                         </div>
                     ''', unsafe_allow_html=True)
                                 
-                # 💡 ゴミ箱ボタンだけはStreamlitの機能が必要なので、
-                # columnsを[0.9, 0.1]のように極端な比率で使い、スマホでも縦並びにならないように工夫します
-                # (Streamlitの仕様上、0.1のような極端な幅はスマホでも横に並びやすいです)
-                empty_col, btn_col = st.columns([0.88, 0.12])
-                with btn_col:
-                    # ボタンの見た目を整えるために少し上にずらす
-                    st.markdown('<div style="margin-top: -45px;">', unsafe_allow_html=True)
-                    if st.button("🗑️", key=f"del_p_{row['id']}"):
-                        safe_save("climbing_logs", row['id'], mode="delete", target_tab="📊 マイページ")
-                    st.markdown('</div>', unsafe_allow_html=True)
-
                 # c1, c2 = st.columns([0.88, 0.12])  
                 # with c1:
                 #     st.markdown(f'''
