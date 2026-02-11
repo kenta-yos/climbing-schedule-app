@@ -328,7 +328,7 @@ def show_page():
         
     # --- 4. ○月登り込みランキング (同着対応) ---
     st.divider()
-    st.subheader(f"🏆 {this_month}月 登り込みランキング")
+    st.subheader(f"🏆 {this_month}月度CLIMB-BAKA AWARD")
 
     first_day_of_month = pd.Timestamp(today_jp.replace(day=1))
     this_month_logs = log_df[(log_df['type'] == '実績') & (log_df['date'] >= first_day_of_month)] if not log_df.empty else pd.DataFrame()
