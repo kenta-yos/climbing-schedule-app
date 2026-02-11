@@ -335,28 +335,61 @@ def show_page():
         </div>
     ''', unsafe_allow_html=True)
 
+# 今月の実績データを抽出
     first_day_of_month = pd.Timestamp(today_jp.replace(day=1))
     this_month_logs = log_df[(log_df['type'] == '実績') & (log_df['date'] >= first_day_of_month)] if not log_df.empty else pd.DataFrame()
 
-    if not this_month_logs.empty:
-        ranking = this_month_logs['user'].value_counts().reset_index()
-        ranking.columns = ['user', 'count']
-        ranking['rank_num'] = ranking['count'].rank(ascending=False, method='min').astype(int)
-        ranking = pd.merge(ranking, user_df[['user_name', 'icon', 'color']], left_on='user', right_on='user_name', how='left').sort_values('rank_num')
+    # 1. 全ユーザーのベースリストを作成
+    # user_dfから全ユーザー名を取得して、初期値0回のデータフレームを作る
+    all_users_base = pd.DataFrame({'user': user_df['user_name'].unique()})
+    all_users_base['count'] = 0
 
-        for _, row in ranking.iterrows():
-            r = row['rank_num']
-            rank_display = {1: "🥇", 2: "🥈", 3: "🥉"}.get(r, f"{r}位")
-            bg_color = "#fff9e6" if r <= 3 else "#ffffff"
-            border_color = "#ffeaa7" if r <= 3 else "#eeeeee"
-            
-            st.markdown(f'''
-                <div style="display: flex; align-items: center; background: {bg_color}; padding: 10px 15px; border-radius: 10px; border: 1px solid {border_color}; margin-bottom: 6px;">
-                    <div style="font-size: 1.2rem; min-width: 45px; font-weight: bold;">{rank_display}</div>
-                    <div style="font-size: 1.3rem; margin-right: 12px;">{row['icon']}</div>
-                    <div style="flex-grow: 1; font-weight: bold; color: #333; font-size: 1rem;">{row['user']}</div>
-                    <div style="font-size: 1.2rem; font-weight: 800; color: {row['color']};">{row['count']}<span style="font-size: 0.75rem; margin-left: 3px; color: #666;">回</span></div>
-                </div>
-            ''', unsafe_allow_html=True)
+    # 2. 今月の実績がある人のカウントを取得
+    if not this_month_logs.empty:
+        actual_counts = this_month_logs['user'].value_counts().reset_index()
+        actual_counts.columns = ['user', 'actual_count']
+        
+        # ベースリストに実績をマージ
+        ranking = pd.merge(all_users_base, actual_counts, on='user', how='left')
+        # 実績がない(NaN)人は0にする
+        ranking['count'] = ranking['actual_count'].fillna(0).astype(int)
     else:
-        st.caption(f"{this_month}月の実績はまだありません。")
+        ranking = all_users_base
+
+    # 3. 同着を考慮した順位付け (回数が同じなら同じ順位)
+    ranking['rank_num'] = ranking['count'].rank(ascending=False, method='min').astype(int)
+    
+    # 4. ユーザー詳細（アイコン・色）をマージしてソート
+    ranking = pd.merge(ranking[['user', 'count', 'rank_num']], 
+                       user_df[['user_name', 'icon', 'color']], 
+                       left_on='user', right_on='user_name', how='left').sort_values(['rank_num', 'user'])
+
+    # 5. リスト表示のループ
+    for _, row in ranking.iterrows():
+        r = row['rank_num']
+        c = row['count']
+        
+        # 0回の人にはメダルを出さず、順位だけにする、などの調整も可能
+        # ここでは1-3位ならメダル、それ以外（0回含む）は数字を表示
+        medals = {1: "🥇", 2: "🥈", 3: "🥉"}
+        rank_display = medals.get(r, f"{r}位")
+        
+        # 1〜3位かつ1回以上登っている場合だけ背景に色をつける（0回で3位以内に入るのを防ぐ場合）
+        is_top = (r <= 3 and c > 0)
+        bg_color = "#fff9e6" if is_top else "#ffffff"
+        border_color = "#ffeaa7" if is_top else "#eeeeee"
+        
+        # 0回の人だけ少し文字を薄くする（お好みで）
+        text_opacity = "1.0" if c > 0 else "0.5"
+
+        st.markdown(f'''
+            <div style="display: flex; align-items: center; background: {bg_color}; padding: 10px 15px; 
+                        border-radius: 10px; border: 1px solid {border_color}; margin-bottom: 6px; opacity: {text_opacity};">
+                <div style="font-size: 1.2rem; min-width: 45px; font-weight: bold;">{rank_display}</div>
+                <div style="font-size: 1.3rem; margin-right: 12px;">{row['icon']}</div>
+                <div style="flex-grow: 1; font-weight: bold; color: #333; font-size: 1rem;">{row['user']}</div>
+                <div style="font-size: 1.2rem; font-weight: 800; color: {row['color']};">
+                    {c}<span style="font-size: 0.75rem; margin-left: 3px; color: #666;">回</span>
+                </div>
+            </div>
+        ''', unsafe_allow_html=True)
