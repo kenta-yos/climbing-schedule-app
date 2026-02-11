@@ -11,6 +11,7 @@ def show_page():
     now_jp = get_now_jp()
     today_jp = now_jp.date()
     today_ts = pd.Timestamp(today_jp)
+    this_month = today_jp.month
     
     # データの取得 (元のコードそのまま)
     gym_df = get_supabase_data("gym_master")
@@ -324,6 +325,7 @@ def show_page():
             ''', unsafe_allow_html=True)
     else:
         st.caption("3週間以内に予定を入れている仲間はいません😭")
+        
     # --- 4. ○月登り込みランキング (同着対応) ---
     st.divider()
     st.subheader(f"🏆 {this_month}月 登り込みランキング")
