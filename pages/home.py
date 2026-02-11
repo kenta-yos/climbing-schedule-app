@@ -324,3 +324,42 @@ def show_page():
             ''', unsafe_allow_html=True)
     else:
         st.caption("3週間以内に予定を入れている仲間はいません😭")
+
+st.divider()
+    st.subheader("🏆 今月のぼり込みランキング")
+
+    # データ集計（前述と同じ）
+    first_day_of_month = pd.Timestamp(today_jp.replace(day=1))
+    this_month_logs = log_df[(log_df['type'] == '実績') & (log_df['date'] >= first_day_of_month)]
+
+    if not this_month_logs.empty:
+        # 回数集計して降順ソート
+        ranking = this_month_logs['user'].value_counts().reset_index()
+        ranking.columns = ['user', 'count']
+        
+        # ユーザー情報をマージしてアイコンを取得
+        ranking = pd.merge(ranking, user_df[['user_name', 'icon', 'color']], 
+                           left_on='user', right_on='user_name', how='left')
+
+        # グリッドのHTML構築
+        grid_html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px;">'
+        
+        for i, row in ranking.iterrows():
+            # 上位3名に特別な装飾
+            border_color = "#FFD700" if i == 0 else "#C0C0C0" if i == 1 else "#CD7F32" if i == 2 else "#eee"
+            bg_color = "#fff9e6" if i < 3 else "#fff"
+            rank_icon = "🥇" if i == 0 else "🥈" if i == 1 else "🥉" if i == 2 else ""
+
+            grid_html += f'''
+                <div style="background: {bg_color}; border: 2px solid {border_color}; border-radius: 12px; padding: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <div style="font-size: 1.2rem; margin-bottom: 4px;">{row['icon']}</div>
+                    <div style="font-size: 0.75rem; font-weight: bold; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{row['user']}</div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: {row['color']};">{row['count']}<span style="font-size: 0.6rem; margin-left: 2px;">回</span></div>
+                    <div style="font-size: 0.8rem; position: absolute; top: 2px; right: 2px;">{rank_icon}</div>
+                </div>
+            '''
+        grid_html += '</div>'
+        
+        st.markdown(grid_html, unsafe_allow_html=True)
+    else:
+        st.caption("今月の実績はまだありません。")
