@@ -325,7 +325,7 @@ def show_page():
     else:
         st.caption("3週間以内に予定を入れている仲間はいません😭")
 
-st.divider()
+    st.divider()
     st.subheader("🏆 今月のぼり込みランキング")
 
     # データ集計（前述と同じ）
