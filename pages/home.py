@@ -324,43 +324,32 @@ def show_page():
             ''', unsafe_allow_html=True)
     else:
         st.caption("3週間以内に予定を入れている仲間はいません😭")
-
+    # --- 4. ○月登り込みランキング (同着対応) ---
     st.divider()
-    st.subheader("🏆 今月のぼり込みランキング")
+    st.subheader(f"🏆 {this_month}月 登り込みランキング")
 
-    # データ集計（今月の実績のみ）
     first_day_of_month = pd.Timestamp(today_jp.replace(day=1))
-    this_month_logs = log_df[(log_df['type'] == '実績') & (log_df['date'] >= first_day_of_month)]
+    this_month_logs = log_df[(log_df['type'] == '実績') & (log_df['date'] >= first_day_of_month)] if not log_df.empty else pd.DataFrame()
 
     if not this_month_logs.empty:
-        # 回数集計して降順ソート
         ranking = this_month_logs['user'].value_counts().reset_index()
         ranking.columns = ['user', 'count']
-        ranking = pd.merge(ranking, user_df[['user_name', 'icon', 'color']], 
-                           left_on='user', right_on='user_name', how='left')
+        ranking['rank_num'] = ranking['count'].rank(ascending=False, method='min').astype(int)
+        ranking = pd.merge(ranking, user_df[['user_name', 'icon', 'color']], left_on='user', right_on='user_name', how='left').sort_values('rank_num')
 
-        # リスト表示開始
-        for i, row in ranking.iterrows():
-            # 順位に応じた装飾
-            medals = {0: "🥇", 1: "🥈", 2: "🥉"}
-            rank_display = medals.get(i, f"{i+1}位")
+        for _, row in ranking.iterrows():
+            r = row['rank_num']
+            rank_display = {1: "🥇", 2: "🥈", 3: "🥉"}.get(r, f"{r}位")
+            bg_color = "#fff9e6" if r <= 3 else "#ffffff"
+            border_color = "#ffeaa7" if r <= 3 else "#eeeeee"
             
-            # 1位〜3位までは背景を少しリッチに
-            bg_color = "#fff9e6" if i < 3 else "transparent"
-            border_l = f"4px solid {row['color']}"
-            
-            # HTMLは「一行分」に限定して使用（これなら崩れにくい）
             st.markdown(f'''
-                <div style="display: flex; align-items: center; background: {bg_color}; 
-                            padding: 8px 12px; border-radius: 8px; border-left: {border_l}; margin-bottom: 5px;">
-                    <div style="font-size: 1.2rem; min-width: 40px;">{rank_display}</div>
-                    <div style="font-size: 1.2rem; margin-right: 10px;">{row['icon']}</div>
-                    <div style="flex-grow: 1; font-weight: bold; color: #333;">{row['user']}</div>
-                    <div style="font-size: 1.1rem; font-weight: 800; color: {row['color']};">
-                        {row['count']}<span style="font-size: 0.7rem; margin-left: 2px;">回</span>
-                    </div>
+                <div style="display: flex; align-items: center; background: {bg_color}; padding: 10px 15px; border-radius: 10px; border: 1px solid {border_color}; margin-bottom: 6px;">
+                    <div style="font-size: 1.2rem; min-width: 45px; font-weight: bold;">{rank_display}</div>
+                    <div style="font-size: 1.3rem; margin-right: 12px;">{row['icon']}</div>
+                    <div style="flex-grow: 1; font-weight: bold; color: #333; font-size: 1rem;">{row['user']}</div>
+                    <div style="font-size: 1.2rem; font-weight: 800; color: {row['color']};">{row['count']}<span style="font-size: 0.75rem; margin-left: 3px; color: #666;">回</span></div>
                 </div>
             ''', unsafe_allow_html=True)
-            
     else:
-        st.caption("今月の実績はまだありません。")
+        st.caption(f"{this_month}月の実績はまだありません。")
