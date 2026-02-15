@@ -237,7 +237,7 @@ def show_page():
     # 注意書きを追加
     st.markdown('''
         <div style="font-size: 0.75rem; color: #777; margin-top: -10px; margin-bottom: 12px; line-height: 1.4;">
-            🤞 セッションに参加する場合は<b>直接本人に予定を確認</b>してね！<br>）
+            🤞 セッションに参加する場合は<b>直接本人に予定を確認</b>してね！<br>
         </div>
     ''', unsafe_allow_html=True)
 
