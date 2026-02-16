@@ -1,0 +1,208 @@
+import streamlit as st
+import pandas as pd
+import instaloader
+import time
+import re
+import utils
+from datetime import datetime
+
+# --- 設定 ---
+# 取得対象のジムリスト（一旦ハードコード、またはDBから取得）
+# DB接続がない場合はモックデータを使用
+SAMPLE_GYMS = [
+    {"gym_name": "B-PUMP 荻窪", "instagram_url": "https://www.instagram.com/bpump_ogikubo/"},
+    {"gym_name": "B-PUMP TOKYO", "instagram_url": "https://www.instagram.com/bpumptokyo/"},
+]
+
+def parse_schedule_date(text):
+    """
+    Instagramの投稿テキストからセット日を抽出する
+    戻り値: (日付文字列 "YYYY-MM-DD", 内容の要約) or (None, None)
+    """
+    if not text:
+        return None, None
+        
+    # キーワード判定
+    keywords = ["セット", "ホールド", "全面", "完了", "set", "change", "new"]
+    if not any(k in text for k in keywords):
+        return None, None
+
+    # 日付抽出: M/D, M月D日
+    date_pattern = r'(\d{1,2})[/月\.](\d{1,2})'
+    match = re.search(date_pattern, text)
+    
+    if match:
+        m, d = match.groups()
+        # 年の補完: 現在の月と比較して、近い年を採用
+        now = datetime.now()
+        year = now.year
+        month = int(m)
+        day = int(d)
+        
+        # 12月に1月の予定が出た場合 -> 翌年
+        if now.month == 12 and month == 1:
+            year += 1
+        # 1月に12月の予定（過去） -> 前年
+        elif now.month == 1 and month == 12:
+            year -= 1
+            
+        try:
+            date_obj = datetime(year, month, day)
+            return date_obj.strftime("%Y-%m-%d"), text[:50] + "..."
+        except ValueError:
+            return None, None
+            
+    return None, None
+
+def get_username_from_url(url):
+    """URLからユーザー名を抽出"""
+    # https://www.instagram.com/username/ -> username
+    if not url:
+        return None
+    # クエリパラメータを除去
+    url = url.split('?')[0]
+    match = re.search(r'instagram\.com/([^/]+)/?', url)
+    if match:
+        return match.group(1)
+    return None
+
+def fetch_latest_posts(url, limit=3):
+    """
+    Instaloaderを使って最新の投稿を取得する
+    """
+    posts_data = []
+    username = get_username_from_url(url)
+    if not username:
+        print(f"Invalid URL: {url}")
+        return []
+
+    print(f"Fetching {username} ({url})...")
+    
+    L = instaloader.Instaloader()
+    
+    try:
+        profile = instaloader.Profile.from_username(L.context, username)
+        
+        count = 0
+        for post in profile.get_posts():
+            if count >= limit:
+                break
+            
+            if post.caption:
+                posts_data.append(post.caption)
+            count += 1
+            
+            # アクセス制限回避のため少し待つ
+            time.sleep(2)
+            
+    except Exception as e:
+        print(f"Error fetching {username}: {e}")
+            
+    return posts_data
+
+def update_schedules(dry_run=False):
+    """
+    スケジュール更新のメイン処理
+    """
+    print("Starting update_schedules...")
+    
+    # 1. ジムリスト取得
+    gyms = []
+    try:
+        df = utils.get_supabase_data("gym_master")
+        df = utils.get_supabase_data("gym_master")
+        if not df.empty and 'profile_url' in df.columns:
+            # URLがあるジムだけ抽出
+            valid_gyms = df[df['profile_url'].notna() & (df['profile_url'] != "")]
+            gyms = valid_gyms[['gym_name', 'profile_url']].rename(columns={'profile_url': 'instagram_url'}).to_dict('records')
+        else:
+            print("Using sample gyms data (DB empty or verification mode)")
+            gyms = SAMPLE_GYMS
+    except Exception as e:
+        print(f"DB connection failed: {e}. Using sample data.")
+        gyms = SAMPLE_GYMS
+        
+    # 2. スクレイピング & 判定
+    new_schedules = []
+    
+    for gym in gyms:
+        name = gym['gym_name']
+        url = gym['instagram_url']
+        
+        # URLが空ならスキップ
+        if not url:
+            continue
+            
+        posts_text = fetch_latest_posts(url)
+        
+        for text in posts_text:
+            date_str, summary = parse_schedule_date(text)
+            if date_str:
+                print(f"  Found schedule: {date_str} - {summary}")
+                new_schedules.append({
+                    "gym_name": name,
+                    "start_date": date_str, # 開始日と終了日を同じにしておく（簡易）
+                    "end_date": date_str,
+                    "info": summary
+                })
+            else:
+                pass
+
+    # 3. 保存
+    if new_schedules:
+        df_new = pd.DataFrame(new_schedules)
+        print(f"Found {len(new_schedules)} new schedules.")
+        if dry_run:
+            print("Dry run: Skipping DB save.")
+            print(df_new)
+        else:
+            try:
+                # utils.safe_save を使う
+                utils.safe_save("set_schedules", df_new, mode="add")
+                print("Saved to DB successfully.")
+            except Exception as e:
+                print(f"Failed to save to DB: {e}")
+    else:
+        print("No new schedules found.")
+
+def main():
+    st.title("Instagram Schedule Checker")
+    
+    if st.button("Check Schedules Now"):
+        with st.status("Checking Instagram...", expanded=True) as status:
+            st.write("Initializing...")
+            # Streamlit上で実行される場合、ログを画面に出すのは難しいので
+            # print出力をキャプチャするか、簡易的に実装
+            
+            # DB接続確認
+            try:
+                utils.init_connection()
+                st.write("DB connection: OK")
+                dry_run = False
+            except Exception as e:
+                st.write("DB connection: Failed (Secrets missing?)")
+                st.write("Running in DRY RUN mode.")
+                dry_run = True
+            
+            update_schedules(dry_run=dry_run)
+            status.update(label="Check Complete!", state="complete", expanded=False)
+            
+            if dry_run:
+                st.warning("ドライランモードで実行しました。DBには保存されていません。")
+            else:
+                st.success("チェック完了！")
+
+if __name__ == "__main__":
+    print("Running as script...")
+    
+    # DB接続確認
+    dry_run = True
+    try:
+        utils.init_connection()
+        print("DB connection: OK")
+        dry_run = False
+    except Exception as e:
+        print(f"DB connection failed: {e}")
+        print("Running in DRY RUN mode.")
+
+    update_schedules(dry_run=dry_run)
