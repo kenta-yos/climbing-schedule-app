@@ -23,6 +23,8 @@ export type GymMaster = {
   area_tag: string;
   created_by: string | null;
   created_at: string;
+  lat: number | null;
+  lng: number | null;
 };
 
 export type AreaMaster = {

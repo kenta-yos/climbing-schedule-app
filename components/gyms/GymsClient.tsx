@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ExternalLink, Star } from "lucide-react";
-import { getTopRecommendations } from "@/lib/scoring";
-import { getNowJST, formatMMDD, getTodayJST, getDateOffsetJST, daysDiff } from "@/lib/utils";
+import { MapPin, Navigation, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { scoreAllGyms } from "@/lib/scoring";
+import { getTodayJST, haversineKm } from "@/lib/utils";
 import { MAJOR_AREA_ORDER } from "@/lib/constants";
+import { GymCard } from "@/components/gyms/GymCard";
 import type { GymMaster, AreaMaster, ClimbingLog, SetSchedule, User } from "@/lib/supabase/queries";
 
 type Props = {
@@ -22,25 +21,78 @@ type Props = {
   currentUser: string;
 };
 
+type SortMode = "score" | "distance";
+type Origin = { lat: number; lng: number } | null;
+
+// 国土地理院API で住所 → lat/lng
+async function geocodeAddress(address: string): Promise<Origin> {
+  const res = await fetch(
+    `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data || data.length === 0) return null;
+  const [lng, lat] = data[0].geometry.coordinates;
+  return { lat, lng };
+}
+
 export function GymsClient({
-  gyms, areas, allLogs, myLogs, friendLogs, setSchedules, currentUser,
+  gyms, areas, allLogs, myLogs, friendLogs, setSchedules,
 }: Props) {
   const [targetDate, setTargetDate] = useState(getTodayJST());
   const [areaFilter, setAreaFilter] = useState<string>("すべて");
+  const [sortMode, setSortMode] = useState<SortMode>("score");
+  const [origin, setOrigin] = useState<Origin>(null);
+  const [originInput, setOriginInput] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeError, setGeocodeError] = useState("");
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [showLowScore, setShowLowScore] = useState(false);
 
-  const now = getNowJST();
-  const thirtyDaysAgo = getDateOffsetJST(-30);
+  // 現在地取得
+  const handleGPS = useCallback(() => {
+    if (!navigator.geolocation) {
+      setGeocodeError("このブラウザは位置情報に対応していません");
+      return;
+    }
+    setGpsLoading(true);
+    setGeocodeError("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setOriginInput("現在地");
+        setGpsLoading(false);
+      },
+      () => {
+        setGeocodeError("位置情報の取得に失敗しました");
+        setGpsLoading(false);
+      },
+      { timeout: 10000 }
+    );
+  }, []);
 
-  // 自分の訪問済みジム
-  const visitedGymNames = new Set(
-    myLogs.filter((l) => l.type === "実績").map((l) => l.gym_name)
-  );
+  // 住所入力でジオコーディング
+  const handleGeocode = useCallback(async () => {
+    if (!originInput.trim() || originInput === "現在地") return;
+    setGeocoding(true);
+    setGeocodeError("");
+    const result = await geocodeAddress(originInput.trim());
+    if (result) {
+      setOrigin(result);
+    } else {
+      setGeocodeError("住所が見つかりませんでした");
+      setOrigin(null);
+    }
+    setGeocoding(false);
+  }, [originInput]);
 
-  // 最近30日の訪問
-  const recentVisits = myLogs.filter(
-    (l) => l.type === "実績" && l.date >= thirtyDaysAgo
-  );
-  const recentGymNames = new Set(recentVisits.map((l) => l.gym_name));
+  // 出発地クリア
+  const clearOrigin = () => {
+    setOrigin(null);
+    setOriginInput("");
+    setGeocodeError("");
+    if (sortMode === "distance") setSortMode("score");
+  };
 
   // エリアフィルタリング
   const filteredGyms = areaFilter === "すべて"
@@ -50,82 +102,56 @@ export function GymsClient({
         return area?.major_area === areaFilter;
       });
 
-  // レコメンド
-  const recommendations = getTopRecommendations({
+  // 選択日の仲間ログ
+  const friendLogsOnDate = friendLogs.filter(
+    (l) => l.date.startsWith(targetDate)
+  );
+
+  // 全ジムをスコアリング
+  const targetDateObj = new Date(targetDate + "T00:00:00+09:00");
+  const allScored = scoreAllGyms({
     gymNames: filteredGyms.map((g) => g.gym_name),
-    targetDate: new Date(targetDate + "T00:00:00+09:00"),
+    targetDate: targetDateObj,
     allLogs,
     myLogs,
     setSchedules,
     friendLogs,
-    topN: 5,
   });
 
-  // 訪問済み/未訪問
-  const visitedGyms = filteredGyms.filter((g) => visitedGymNames.has(g.gym_name));
-  const unvisitedGyms = filteredGyms.filter((g) => !visitedGymNames.has(g.gym_name));
-
-  // 最新の訪問日を取得
-  const getLastVisit = (gymName: string) => {
-    const visits = myLogs
-      .filter((l) => l.gym_name === gymName && l.type === "実績")
-      .sort((a, b) => b.date.localeCompare(a.date));
-    return visits[0]?.date || null;
+  // 距離計算
+  const getDistance = (gym: GymMaster): number | null => {
+    if (!origin || gym.lat === null || gym.lng === null) return null;
+    return haversineKm(origin.lat, origin.lng, gym.lat, gym.lng);
   };
 
-  // 最新のセット日を取得
-  const getLatestSetDate = (gymName: string) => {
-    const schedules = setSchedules
-      .filter((s) => s.gym_name === gymName)
-      .sort((a, b) => b.start_date.localeCompare(a.start_date));
-    return schedules[0]?.start_date || null;
-  };
+  // gymMapで素早くアクセス
+  const gymMap = Object.fromEntries(gyms.map((g) => [g.gym_name, g]));
 
-  const GymRow = ({ gym, showLastVisit = false }: { gym: GymMaster; showLastVisit?: boolean }) => {
-    const lastVisit = getLastVisit(gym.gym_name);
-    const latestSet = getLatestSetDate(gym.gym_name);
-    const isRecent = recentGymNames.has(gym.gym_name);
-    const setAge = latestSet ? daysDiff(new Date(latestSet), now) : null;
+  // スコアつきジムリストを並び替え
+  const sortedScored = [...allScored].sort((a, b) => {
+    if (sortMode === "distance") {
+      const ga = gymMap[a.gymName];
+      const gb = gymMap[b.gymName];
+      const da = ga ? getDistance(ga) : null;
+      const db = gb ? getDistance(gb) : null;
+      // lat/lngがないジムは末尾に
+      if (da === null && db === null) return b.score - a.score;
+      if (da === null) return 1;
+      if (db === null) return -1;
+      return da - db;
+    }
+    return b.score - a.score;
+  });
 
-    return (
-      <div className="flex items-center gap-3 py-3 border-b border-gray-50 last:border-0">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            {isRecent && <Star size={12} className="text-yellow-400 fill-yellow-400 flex-shrink-0" />}
-            <span className="text-sm font-medium text-gray-800 truncate">{gym.gym_name}</span>
-          </div>
-          <div className="flex items-center gap-2 mt-0.5">
-            {latestSet !== null && setAge !== null && (
-              <span className={`text-xs ${setAge <= 7 ? "text-orange-500 font-medium" : setAge <= 14 ? "text-yellow-600" : "text-gray-400"}`}>
-                {setAge <= 7 ? "🔥" : setAge <= 14 ? "✨" : ""} セット {formatMMDD(latestSet)}〜
-              </span>
-            )}
-            {showLastVisit && lastVisit && (
-              <span className="text-xs text-gray-400">最終 {formatMMDD(lastVisit)}</span>
-            )}
-            {!latestSet && (
-              <span className="text-xs text-gray-300">⚠️ スケジュール未登録</span>
-            )}
-          </div>
-        </div>
-        {gym.profile_url && (
-          <a
-            href={gym.profile_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-2 text-gray-400 hover:text-blue-500 transition-colors flex-shrink-0"
-          >
-            <ExternalLink size={14} />
-          </a>
-        )}
-      </div>
-    );
-  };
+  // スコアが正のジム（おすすめ）と低スコアのジム（その他）に分離
+  const highScoreGyms = sortedScored.filter((g) => g.score > 0);
+  const lowScoreGyms = sortedScored.filter((g) => g.score <= 0);
 
   return (
     <>
       <PageHeader title="ジム" />
       <div className="px-4 py-4 space-y-4 page-enter">
+
         {/* エリアフィルター */}
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {["すべて", ...MAJOR_AREA_ORDER].map((area) => (
@@ -143,73 +169,158 @@ export function GymsClient({
           ))}
         </div>
 
-        {/* レコメンド */}
-        <section>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-bold text-gray-800">🎯 おすすめジム</h2>
-            <Input
-              type="date"
-              value={targetDate}
-              onChange={(e) => setTargetDate(e.target.value)}
-              className="w-36 text-xs h-8"
-            />
+        {/* コントロールバー：日付・ソート */}
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            value={targetDate}
+            onChange={(e) => setTargetDate(e.target.value)}
+            className="flex-1 text-sm h-9"
+          />
+          {/* ソート切り替え */}
+          <div className="flex rounded-xl border border-gray-200 overflow-hidden flex-shrink-0">
+            <button
+              onClick={() => setSortMode("score")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                sortMode === "score"
+                  ? "climbing-gradient text-white"
+                  : "bg-white text-gray-500"
+              }`}
+            >
+              おすすめ順
+            </button>
+            <button
+              onClick={() => {
+                if (!origin) return; // 出発地未設定は無効
+                setSortMode("distance");
+              }}
+              disabled={!origin}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors border-l border-gray-200 ${
+                sortMode === "distance"
+                  ? "climbing-gradient text-white"
+                  : origin
+                  ? "bg-white text-gray-500"
+                  : "bg-gray-50 text-gray-300 cursor-not-allowed"
+              }`}
+            >
+              近い順
+            </button>
           </div>
-          {recommendations.length === 0 ? (
-            <div className="bg-white rounded-2xl p-4 text-center text-gray-400 text-sm border border-gray-100">
-              該当するジムがありません
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {recommendations.map((rec, i) => (
-                <div
-                  key={rec.gymName}
-                  className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3"
-                >
-                  <div className="w-8 h-8 rounded-full climbing-gradient flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-gray-800 truncate">{rec.gymName}</div>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {rec.reasons.map((reason) => (
-                        <Badge key={reason} variant="warning" className="text-xs px-1.5 py-0">
-                          {reason}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="text-sm font-bold gradient-text flex-shrink-0">{rec.score}pt</div>
-                </div>
-              ))}
+        </div>
+
+        {/* 出発地設定 */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 space-y-2">
+          <p className="text-xs font-semibold text-gray-500">📍 出発地（距離表示用）</p>
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="住所・駅名を入力（例：渋谷駅）"
+              value={originInput}
+              onChange={(e) => {
+                setOriginInput(e.target.value);
+                if (origin) setOrigin(null); // 入力変更したらリセット
+              }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleGeocode(); }}
+              className="flex-1 text-sm h-9"
+            />
+            <button
+              onClick={handleGeocode}
+              disabled={geocoding || !originInput.trim() || originInput === "現在地"}
+              className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
+            >
+              {geocoding ? <Loader2 size={14} className="animate-spin" /> : "検索"}
+            </button>
+            <button
+              onClick={handleGPS}
+              disabled={gpsLoading}
+              title="現在地を取得"
+              className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
+            >
+              {gpsLoading
+                ? <Loader2 size={14} className="animate-spin" />
+                : <Navigation size={14} />
+              }
+            </button>
+          </div>
+          {geocodeError && (
+            <p className="text-xs text-red-400">{geocodeError}</p>
+          )}
+          {origin && (
+            <div className="flex items-center gap-2">
+              <MapPin size={12} className="text-blue-400 flex-shrink-0" />
+              <span className="text-xs text-blue-500 font-medium flex-1 truncate">
+                {originInput || `${origin.lat.toFixed(4)}, ${origin.lng.toFixed(4)}`}
+              </span>
+              <button onClick={clearOrigin} className="text-xs text-gray-400 hover:text-gray-600">
+                クリア
+              </button>
             </div>
           )}
-        </section>
+        </div>
 
-        {/* ジム一覧 */}
-        <Tabs defaultValue="visited">
-          <TabsList>
-            <TabsTrigger value="visited">✅ 訪問済 ({visitedGyms.length})</TabsTrigger>
-            <TabsTrigger value="unvisited">🔍 未訪問 ({unvisitedGyms.length})</TabsTrigger>
-          </TabsList>
-          <TabsContent value="visited">
-            <div className="bg-white rounded-2xl px-4 shadow-sm border border-gray-100">
-              {visitedGyms.length === 0 ? (
-                <div className="text-center py-6 text-gray-400 text-sm">まだ訪問したジムがありません</div>
-              ) : (
-                visitedGyms.map((gym) => <GymRow key={gym.gym_name} gym={gym} showLastVisit />)
-              )}
-            </div>
-          </TabsContent>
-          <TabsContent value="unvisited">
-            <div className="bg-white rounded-2xl px-4 shadow-sm border border-gray-100">
-              {unvisitedGyms.length === 0 ? (
-                <div className="text-center py-6 text-gray-400 text-sm">すべてのジムを訪問済みです！</div>
-              ) : (
-                unvisitedGyms.map((gym) => <GymRow key={gym.gym_name} gym={gym} />)
-              )}
-            </div>
-          </TabsContent>
-        </Tabs>
+        {/* ジムカードリスト（スコア高い順） */}
+        {filteredGyms.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 text-sm">
+            該当するジムがありません
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {highScoreGyms.length === 0 && (
+              <div className="text-center py-6 text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">
+                このエリアにおすすめジムがありません
+              </div>
+            )}
+            {highScoreGyms.map((scored) => {
+              const gym = gymMap[scored.gymName];
+              if (!gym) return null;
+              return (
+                <GymCard
+                  key={gym.gym_name}
+                  gym={gym}
+                  score={scored}
+                  myLogs={myLogs}
+                  setSchedules={setSchedules}
+                  friendLogsOnDate={friendLogsOnDate}
+                  distanceKm={getDistance(gym)}
+                />
+              );
+            })}
+
+            {/* 低スコアジムの折りたたみ */}
+            {lowScoreGyms.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowLowScore((v) => !v)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showLowScore
+                    ? <><ChevronUp size={14} />閉じる</>
+                    : <><ChevronDown size={14} />他のジム（{lowScoreGyms.length}件）</>
+                  }
+                </button>
+                {showLowScore && (
+                  <div className="space-y-3 mt-1">
+                    {lowScoreGyms.map((scored) => {
+                      const gym = gymMap[scored.gymName];
+                      if (!gym) return null;
+                      return (
+                        <GymCard
+                          key={gym.gym_name}
+                          gym={gym}
+                          score={scored}
+                          myLogs={myLogs}
+                          setSchedules={setSchedules}
+                          friendLogsOnDate={friendLogsOnDate}
+                          distanceKm={getDistance(gym)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

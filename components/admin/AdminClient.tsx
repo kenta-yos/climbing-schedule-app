@@ -57,7 +57,7 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
     }
     setSubmittingGym(true);
     try {
-      await addGym({ gym_name: gymName.trim(), profile_url: gymUrl || null, area_tag: gymAreaTag, created_by: currentUser });
+      await addGym({ gym_name: gymName.trim(), profile_url: gymUrl || null, area_tag: gymAreaTag, created_by: currentUser, lat: null, lng: null });
       toast({ title: "ジムを登録しました！", variant: "success" as any });
       setGymName(""); setGymUrl(""); setGymAreaTag("");
     } catch {

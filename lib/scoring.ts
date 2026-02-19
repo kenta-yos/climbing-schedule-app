@@ -99,6 +99,29 @@ export function scoreGym({
   return { gymName, score, reasons };
 }
 
+// 全ジムをスコアリングして全件返す（件数制限なし、score降順）
+export function scoreAllGyms({
+  gymNames,
+  targetDate,
+  allLogs,
+  myLogs,
+  setSchedules,
+  friendLogs,
+}: {
+  gymNames: string[];
+  targetDate?: Date;
+  allLogs: ClimbingLog[];
+  myLogs: ClimbingLog[];
+  setSchedules: SetSchedule[];
+  friendLogs: ClimbingLog[];
+}): GymScore[] {
+  return gymNames
+    .map((gymName) =>
+      scoreGym({ gymName, targetDate, allLogs, myLogs, setSchedules, friendLogs })
+    )
+    .sort((a, b) => b.score - a.score);
+}
+
 // 全ジムをスコアリングしてトップ5を返す
 export function getTopRecommendations({
   gymNames,
