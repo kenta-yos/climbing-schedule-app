@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { PlanForm } from "@/components/home/PlanForm";
 import { FuturePlanFeed } from "@/components/home/FuturePlanFeed";
 import { MonthlyRanking } from "@/components/home/MonthlyRanking";
 import { Button } from "@/components/ui/button";
@@ -18,72 +17,21 @@ type Props = {
   currentUser: string;
 };
 
-export function HomeClient({ initialLogs, gyms, areas, users, currentUser }: Props) {
-  const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
-  const [showForm, setShowForm] = useState(false);
+export function HomeClient({ initialLogs, users, currentUser }: Props) {
+  const router = useRouter();
+  const logs = initialLogs;
 
   const now = getNowJST();
   const today = now.toISOString().split("T")[0];
-
-  // 自分の直近30日以内に訪問したジム
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
-  const recentGymNames = Array.from(
-    new Set(
-      logs
-        .filter(
-          (l) =>
-            l.user === currentUser &&
-            l.type === "実績" &&
-            l.date >= thirtyDaysAgo
-        )
-        .map((l) => l.gym_name)
-    )
-  );
-
-  const handleSuccess = useCallback(async () => {
-    // 再フェッチ
-    try {
-      const res = await fetch("/api/logs");
-      if (res.ok) {
-        const data = await res.json();
-        setLogs(data);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
 
   return (
     <>
       <PageHeader title="Go Bouldering Pro" subtitle={`今日 ${today}`} />
 
       <div className="px-4 py-4 space-y-6 page-enter">
-        {/* フォームモーダル（シンプルなボトムシート） */}
-        {showForm && (
-          <div className="fixed inset-0 z-50 flex flex-col justify-end">
-            <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setShowForm(false)}
-            />
-            <div className="relative bg-white rounded-t-3xl px-4 pt-4 pb-8 max-h-[90vh] overflow-hidden flex flex-col animate-slide-up">
-              <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
-              <PlanForm
-                userName={currentUser}
-                gyms={gyms}
-                areas={areas}
-                onSuccess={handleSuccess}
-                onClose={() => setShowForm(false)}
-                recentGymNames={recentGymNames}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* 記録ボタン */}
+        {/* 記録ボタン → /home/plan へ遷移 */}
         <Button
-          onClick={() => setShowForm(true)}
+          onClick={() => router.push("/home/plan")}
           variant="climbing"
           size="xl"
           className="w-full flex items-center gap-2"

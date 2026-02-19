@@ -16,6 +16,9 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const pathname = usePathname();
 
+  // フルスクリーンページではBottomNavを非表示
+  if (pathname === "/home/plan") return null;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-bottom">
       <div className="flex items-stretch h-16 max-w-lg mx-auto">
