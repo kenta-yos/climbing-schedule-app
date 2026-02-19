@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { FuturePlanFeed } from "@/components/home/FuturePlanFeed";
 import { MonthlyRanking } from "@/components/home/MonthlyRanking";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { getTodayJST } from "@/lib/utils";
 import type { ClimbingLog, GymMaster, AreaMaster, User } from "@/lib/supabase/queries";
 
@@ -23,6 +23,7 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
 
   const today = getTodayJST();
+  const [navigating, setNavigating] = useState(false);
 
   // 参加登録後にフィードを最新化
   const handleRefresh = useCallback(async () => {
@@ -41,13 +42,17 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
       <div className="px-4 py-4 space-y-6 page-enter">
         {/* 記録ボタン → /home/plan へ遷移 */}
         <Button
-          onClick={() => router.push("/home/plan")}
+          onClick={() => { setNavigating(true); router.push("/home/plan"); }}
+          disabled={navigating}
           variant="climbing"
           size="xl"
           className="w-full flex items-center gap-2"
         >
-          <Plus size={22} />
-          クライミングを記録する
+          {navigating ? (
+            <><Loader2 size={20} className="animate-spin" />移動中…</>
+          ) : (
+            <><Plus size={22} />クライミングを記録する</>
+          )}
         </Button>
 
         {/* 予定フィード */}

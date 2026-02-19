@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { formatMMDD, getTodayJST, getTomorrowJST, getDateOffsetJST } from "@/lib/utils";
@@ -144,6 +144,13 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
   const router = useRouter();
   // 展開中のジムキー（"日付|ジム名"）
   const [openJoinKey, setOpenJoinKey] = useState<string | null>(null);
+  // 編集ページへ遷移中のlogId
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const handleEditNavigate = useCallback((logId: string) => {
+    setEditingId(logId);
+    router.push(`/home/plan?editId=${logId}`);
+  }, [router]);
 
   const today = getTodayJST();
   const tomorrow = getTomorrowJST();
@@ -274,11 +281,16 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                                   )}
                                   {isMe && (
                                     <button
-                                      onClick={() => router.push(`/home/plan?editId=${log.id}`)}
-                                      className="ml-0.5 leading-none flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+                                      onClick={() => handleEditNavigate(log.id)}
+                                      disabled={!!editingId}
+                                      className="ml-0.5 leading-none flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity disabled:opacity-40"
                                       aria-label="編集"
                                     >
-                                      ✏️
+                                      {editingId === log.id ? (
+                                        <span className="inline-block w-3 h-3 border border-orange-400 border-t-transparent rounded-full animate-spin" />
+                                      ) : (
+                                        "✏️"
+                                      )}
                                     </button>
                                   )}
                                 </div>

@@ -10,7 +10,7 @@ import { getTodayJST } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
 import type { GymMaster, ClimbingLog } from "@/lib/supabase/queries";
 import Image from "next/image";
-import { ChevronLeft, Search, X, Trash2 } from "lucide-react";
+import { ChevronLeft, Search, X, Trash2, Loader2 } from "lucide-react";
 
 // ジム未定のときの内部値・DB保存値
 export const GYM_UNDECIDED = "__undecided__";
@@ -317,7 +317,11 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
               variant="climbing"
               className="flex-1 h-14 text-base font-semibold"
             >
-              💾 変更を保存
+              {submitting ? (
+                <><Loader2 size={18} className="animate-spin mr-2" />保存中…</>
+              ) : (
+                "💾 変更を保存"
+              )}
             </Button>
           ) : (
             <>
@@ -327,7 +331,11 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
                 variant="climbing-outline"
                 className="flex-1 h-14 text-base font-semibold"
               >
-                📅 登るよ（予定）
+                {submitting ? (
+                  <><Loader2 size={18} className="animate-spin mr-2" />登録中…</>
+                ) : (
+                  "📅 登るよ（予定）"
+                )}
               </Button>
               <Button
                 onClick={() => handleSubmit("実績")}
@@ -335,7 +343,11 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
                 variant="climbing"
                 className="flex-1 h-14 text-base font-semibold"
               >
-                🧗 登った！
+                {submitting ? (
+                  <><Loader2 size={18} className="animate-spin mr-2" />登録中…</>
+                ) : (
+                  "🧗 登った！"
+                )}
               </Button>
             </>
           )}
