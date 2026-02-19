@@ -2,39 +2,48 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { addClimbingLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { getTodayJST } from "@/lib/utils";
-import { TIME_SLOTS, MAJOR_AREA_ORDER } from "@/lib/constants";
-import type { GymMaster, AreaMaster } from "@/lib/supabase/queries";
+import { TIME_SLOTS } from "@/lib/constants";
+import type { GymMaster } from "@/lib/supabase/queries";
 import Image from "next/image";
-import { X } from "lucide-react";
+import { X, Search } from "lucide-react";
 
 type Props = {
   userName: string;
   gyms: GymMaster[];
-  areas: AreaMaster[];
+  areas?: unknown[]; // 互換性のため残すが未使用
   onSuccess: () => void;
   onClose: () => void;
-  recentGymNames: string[]; // 最近30日以内に訪問したジム
+  recentGymNames: string[];
 };
 
-export function PlanForm({ userName, gyms, areas, onSuccess, onClose, recentGymNames }: Props) {
+export function PlanForm({ userName, gyms, onSuccess, onClose, recentGymNames }: Props) {
   const [date, setDate] = useState(getTodayJST());
   const [timeSlot, setTimeSlot] = useState<string>("夜");
   const [selectedGym, setSelectedGym] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
-  // エリア別にジムを整理
-  const gymsByArea = MAJOR_AREA_ORDER.map((majorArea) => {
-    const areaTags = areas
-      .filter((a) => a.major_area === majorArea)
-      .map((a) => a.area_tag);
-    const areaGyms = gyms.filter((g) => areaTags.includes(g.area_tag));
-    return { majorArea, gyms: areaGyms };
-  }).filter((g) => g.gyms.length > 0);
+  // 検索フィルター結果
+  const filteredGyms = searchQuery.trim()
+    ? gyms.filter((g) =>
+        g.gym_name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+      )
+    : [];
+
+  // よく行くジム（最近訪問・重複なし・最大6件）
+  const recentGyms = recentGymNames
+    .map((name) => gyms.find((g) => g.gym_name === name))
+    .filter((g): g is GymMaster => !!g)
+    .slice(0, 6);
+
+  const handleSelectGym = (gymName: string) => {
+    setSelectedGym(gymName);
+    setSearchQuery("");
+  };
 
   const handleSubmit = async (type: "予定" | "実績") => {
     if (!selectedGym) {
@@ -82,7 +91,7 @@ export function PlanForm({ userName, gyms, areas, onSuccess, onClose, recentGymN
       </div>
 
       {/* スクロール可能エリア */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-2">
+      <div className="flex-1 overflow-y-auto space-y-4 pb-2 min-h-0">
         {/* 日付 */}
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1.5">
@@ -126,47 +135,81 @@ export function PlanForm({ userName, gyms, areas, onSuccess, onClose, recentGymN
           <label className="text-sm font-medium text-gray-700 block mb-2">
             🏢 ジム選択
           </label>
-          {selectedGym && (
-            <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-orange-50 border border-orange-200 rounded-xl">
-              <span className="text-sm font-medium text-orange-700 flex-1">{selectedGym}</span>
-              <button onClick={() => setSelectedGym("")}>
-                <X size={14} className="text-orange-400" />
+
+          {/* 選択済み表示 */}
+          {selectedGym ? (
+            <div className="flex items-center gap-2 px-3 py-2.5 bg-orange-50 border border-orange-300 rounded-xl">
+              <span className="text-sm font-semibold text-orange-700 flex-1">✅ {selectedGym}</span>
+              <button
+                onClick={() => setSelectedGym("")}
+                className="p-0.5 rounded-full hover:bg-orange-100 transition-colors"
+              >
+                <X size={16} className="text-orange-400" />
               </button>
             </div>
-          )}
-          <Tabs defaultValue={gymsByArea[0]?.majorArea || ""}>
-            <TabsList className="mb-2">
-              {gymsByArea.map(({ majorArea }) => (
-                <TabsTrigger key={majorArea} value={majorArea} className="text-xs px-2">
-                  {majorArea}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            {gymsByArea.map(({ majorArea, gyms: areaGyms }) => (
-              <TabsContent key={majorArea} value={majorArea}>
-                <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
-                  {areaGyms.map((gym) => {
-                    const isRecent = recentGymNames.includes(gym.gym_name);
-                    const isSelected = selectedGym === gym.gym_name;
-                    return (
+          ) : (
+            <>
+              {/* 検索ボックス */}
+              <div className="relative mb-3">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="ジム名を検索..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 text-base"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2"
+                  >
+                    <X size={14} className="text-gray-400" />
+                  </button>
+                )}
+              </div>
+
+              {/* 検索結果 */}
+              {searchQuery.trim() ? (
+                <div className="grid grid-cols-2 gap-1.5">
+                  {filteredGyms.length > 0 ? (
+                    filteredGyms.map((gym) => (
                       <button
                         key={gym.gym_name}
-                        onClick={() => setSelectedGym(gym.gym_name)}
-                        className={`text-left px-3 py-2 rounded-xl border text-xs font-medium transition-all duration-150 active:scale-95 ${
-                          isSelected
-                            ? "border-orange-400 bg-orange-50 text-orange-700"
-                            : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
-                        }`}
+                        onClick={() => handleSelectGym(gym.gym_name)}
+                        className="text-left px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:border-orange-300 hover:bg-orange-50 transition-all duration-150 active:scale-95"
                       >
-                        {isRecent && <span className="mr-0.5">⭐</span>}
+                        {recentGymNames.includes(gym.gym_name) && <span className="mr-0.5">⭐</span>}
                         {gym.gym_name}
                       </button>
-                    );
-                  })}
+                    ))
+                  ) : (
+                    <p className="col-span-2 text-sm text-gray-400 text-center py-4">
+                      該当するジムが見つかりません
+                    </p>
+                  )}
                 </div>
-              </TabsContent>
-            ))}
-          </Tabs>
+              ) : (
+                /* よく行くジム */
+                recentGyms.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1.5">⭐ よく行くジム</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {recentGyms.map((gym) => (
+                        <button
+                          key={gym.gym_name}
+                          onClick={() => handleSelectGym(gym.gym_name)}
+                          className="text-left px-3 py-2 rounded-xl border border-orange-200 bg-orange-50/50 text-xs font-medium text-gray-700 hover:border-orange-400 hover:bg-orange-50 transition-all duration-150 active:scale-95"
+                        >
+                          {gym.gym_name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              )}
+            </>
+          )}
         </div>
       </div>
 
