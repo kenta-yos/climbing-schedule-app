@@ -102,36 +102,17 @@ export function FuturePlanFeed({ logs, users, currentUser }: Props) {
                   {gymNames.map((gymName) => {
                     const gymLogs = gymGroups[gymName];
                     const hasMe = gymLogs.some((l) => l.user === currentUser);
-                    // 時間帯はそのグループの最初のもの（複数ある場合は代表）
-                    const slotCounts: Record<string, number> = {};
-                    gymLogs.forEach((l) => {
-                      if (l.time_slot) slotCounts[l.time_slot] = (slotCounts[l.time_slot] || 0) + 1;
-                    });
-                    const dominantSlot = Object.entries(slotCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
-                    const slotInfo = TIME_SLOTS.find((s) => s.value === dominantSlot);
 
                     return (
                       <div
                         key={gymName}
                         className={`px-4 py-3 ${hasMe ? "bg-orange-50/40" : ""}`}
                       >
-                        {/* ジム名 + 時間帯 */}
-                        <div className="flex items-center justify-between mb-2">
+                        {/* ジム名 */}
+                        <div className="flex items-center mb-2">
                           <span className="text-sm font-semibold text-gray-800">
                             🏢 {gymName}
                           </span>
-                          {slotInfo && (
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <Image
-                                src={slotInfo.icon}
-                                alt={slotInfo.label}
-                                width={16}
-                                height={16}
-                                className="object-contain"
-                              />
-                              <span className="text-xs text-gray-500">{slotInfo.label}</span>
-                            </div>
-                          )}
                         </div>
 
                         {/* 参加ユーザー一覧（横並び） */}
@@ -139,6 +120,7 @@ export function FuturePlanFeed({ logs, users, currentUser }: Props) {
                           {gymLogs.map((log) => {
                             const user = userMap[log.user];
                             const isMe = log.user === currentUser;
+                            const userSlot = TIME_SLOTS.find((s) => s.value === log.time_slot);
                             return (
                               <div
                                 key={log.id}
@@ -155,6 +137,15 @@ export function FuturePlanFeed({ logs, users, currentUser }: Props) {
                                   {user?.icon || "?"}
                                 </span>
                                 <span>{log.user}</span>
+                                {userSlot && (
+                                  <Image
+                                    src={userSlot.icon}
+                                    alt={userSlot.label}
+                                    width={14}
+                                    height={14}
+                                    className="object-contain flex-shrink-0"
+                                  />
+                                )}
                                 {isMe && <span className="text-orange-500">★</span>}
                               </div>
                             );
