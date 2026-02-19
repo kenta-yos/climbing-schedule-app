@@ -76,8 +76,8 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* ヘッダー（固定） */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
+      {/* ヘッダー（固定） safe-area-top対応 */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3" style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}>
         <button
           onClick={() => router.back()}
           className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -87,8 +87,8 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
         <h1 className="text-base font-bold text-gray-900">クライミングの予定を入れる</h1>
       </div>
 
-      {/* スクロールコンテンツ */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6 pb-32">
+      {/* スクロールコンテンツ - 固定ボタン分の余白をsafe area込みで確保 */}
+      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6" style={{ paddingBottom: "calc(8rem + env(safe-area-inset-bottom))" }}>
 
         {/* 日付 */}
         <section>
@@ -228,8 +228,8 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
         </section>
       </div>
 
-      {/* 登録ボタン（画面最下部に完全固定） */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 safe-bottom">
+      {/* 登録ボタン（画面最下部に完全固定） safe-area-bottom対応 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
         <div className="flex gap-3 max-w-lg mx-auto">
           <Button
             onClick={() => handleSubmit("予定")}

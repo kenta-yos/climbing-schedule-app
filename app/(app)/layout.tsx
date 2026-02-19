@@ -14,7 +14,14 @@ export default function AppLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className={`max-w-lg mx-auto ${isFullscreen ? "" : "pb-20"}`}>
+      {/* BottomNav分(4rem) + safe area bottom を下部余白として確保 */}
+      <main
+        className="max-w-lg mx-auto"
+        style={isFullscreen
+          ? {}
+          : { paddingBottom: "calc(4rem + env(safe-area-inset-bottom))" }
+        }
+      >
         {children}
       </main>
       <BottomNav />
