@@ -24,6 +24,19 @@ function groupByDate(logs: ClimbingLog[]): Record<string, ClimbingLog[]> {
   );
 }
 
+// 同日内を「ジム」でさらにグループ化
+function groupByGym(logs: ClimbingLog[]): Record<string, ClimbingLog[]> {
+  return logs.reduce(
+    (acc, log) => {
+      const key = log.gym_name;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(log);
+      return acc;
+    },
+    {} as Record<string, ClimbingLog[]>
+  );
+}
+
 // 曜日
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -80,58 +93,79 @@ export function FuturePlanFeed({ logs, users, currentUser }: Props) {
               )}
             </div>
 
-            {/* ログリスト */}
-            <div className="divide-y divide-gray-50">
-              {dayLogs.map((log) => {
-                const user = userMap[log.user];
-                const isMe = log.user === currentUser;
-                const slotInfo = TIME_SLOTS.find((s) => s.value === log.time_slot);
+            {/* ジムごとにグループ化して表示 */}
+            {(() => {
+              const gymGroups = groupByGym(dayLogs);
+              const gymNames = Object.keys(gymGroups).sort();
+              return (
+                <div className="divide-y divide-gray-50">
+                  {gymNames.map((gymName) => {
+                    const gymLogs = gymGroups[gymName];
+                    const hasMe = gymLogs.some((l) => l.user === currentUser);
+                    // 時間帯はそのグループの最初のもの（複数ある場合は代表）
+                    const slotCounts: Record<string, number> = {};
+                    gymLogs.forEach((l) => {
+                      if (l.time_slot) slotCounts[l.time_slot] = (slotCounts[l.time_slot] || 0) + 1;
+                    });
+                    const dominantSlot = Object.entries(slotCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+                    const slotInfo = TIME_SLOTS.find((s) => s.value === dominantSlot);
 
-                return (
-                  <div
-                    key={log.id}
-                    className={`flex items-center gap-3 px-4 py-3 ${isMe ? "bg-orange-50/30" : ""}`}
-                  >
-                    {/* ユーザーアイコン */}
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm flex-shrink-0"
-                      style={{ backgroundColor: user?.color || "#999" }}
-                    >
-                      {user?.icon || "?"}
-                    </div>
-
-                    {/* 内容 */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-medium text-gray-800 truncate">
-                          {log.gym_name}
-                        </span>
-                        {isMe && (
-                          <span className="text-xs text-orange-500 font-medium flex-shrink-0">
-                            あなた
+                    return (
+                      <div
+                        key={gymName}
+                        className={`px-4 py-3 ${hasMe ? "bg-orange-50/40" : ""}`}
+                      >
+                        {/* ジム名 + 時間帯 */}
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-gray-800">
+                            🏢 {gymName}
                           </span>
-                        )}
-                      </div>
-                      <span className="text-xs text-gray-500">{log.user}</span>
-                    </div>
+                          {slotInfo && (
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <Image
+                                src={slotInfo.icon}
+                                alt={slotInfo.label}
+                                width={16}
+                                height={16}
+                                className="object-contain"
+                              />
+                              <span className="text-xs text-gray-500">{slotInfo.label}</span>
+                            </div>
+                          )}
+                        </div>
 
-                    {/* 時間帯 */}
-                    {slotInfo && (
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <Image
-                          src={slotInfo.icon}
-                          alt={slotInfo.label}
-                          width={18}
-                          height={18}
-                          className="object-contain"
-                        />
-                        <span className="text-xs text-gray-500">{slotInfo.label}</span>
+                        {/* 参加ユーザー一覧（横並び） */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {gymLogs.map((log) => {
+                            const user = userMap[log.user];
+                            const isMe = log.user === currentUser;
+                            return (
+                              <div
+                                key={log.id}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                  isMe
+                                    ? "bg-orange-100 text-orange-700 ring-1 ring-orange-300"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                              >
+                                <span
+                                  className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] flex-shrink-0"
+                                  style={{ backgroundColor: user?.color || "#999" }}
+                                >
+                                  {user?.icon || "?"}
+                                </span>
+                                <span>{log.user}</span>
+                                {isMe && <span className="text-orange-500">★</span>}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         );
       })}

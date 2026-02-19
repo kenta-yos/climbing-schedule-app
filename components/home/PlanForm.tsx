@@ -10,7 +10,7 @@ import { getTodayJST } from "@/lib/utils";
 import { TIME_SLOTS, MAJOR_AREA_ORDER } from "@/lib/constants";
 import type { GymMaster, AreaMaster } from "@/lib/supabase/queries";
 import Image from "next/image";
-import { X, Plus } from "lucide-react";
+import { X } from "lucide-react";
 
 type Props = {
   userName: string;
@@ -69,10 +69,10 @@ export function PlanForm({ userName, gyms, areas, onSuccess, onClose, recentGymN
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-900">クライミングを記録</h2>
+    <div className="flex flex-col" style={{ maxHeight: "80vh" }}>
+      {/* ヘッダー（固定） */}
+      <div className="flex items-center justify-between mb-3 flex-shrink-0">
+        <h2 className="text-lg font-bold text-gray-900">クライミングの予定を入れる</h2>
         <button
           onClick={onClose}
           className="p-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -81,7 +81,8 @@ export function PlanForm({ userName, gyms, areas, onSuccess, onClose, recentGymN
         </button>
       </div>
 
-      <div className="space-y-4 overflow-y-auto flex-1">
+      {/* スクロール可能エリア */}
+      <div className="flex-1 overflow-y-auto space-y-4 pb-2">
         {/* 日付 */}
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1.5">
@@ -169,15 +170,15 @@ export function PlanForm({ userName, gyms, areas, onSuccess, onClose, recentGymN
         </div>
       </div>
 
-      {/* ボタン */}
-      <div className="flex gap-3 mt-4 pt-4 border-t border-gray-100">
+      {/* 固定ボタン（常に下部に表示） */}
+      <div className="flex gap-3 pt-3 border-t border-gray-100 flex-shrink-0">
         <Button
           onClick={() => handleSubmit("予定")}
           disabled={submitting}
           variant="climbing-outline"
           className="flex-1 h-12 text-base"
         >
-          📅 登るよ
+          📅 登るよ（予定）
         </Button>
         <Button
           onClick={() => handleSubmit("実績")}
