@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { addGym, addSetSchedules } from "@/lib/supabase/queries";
+import { addGym, addSetSchedules, updateGymLocation } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { useUserStore } from "@/lib/store/useUserStore";
 import { getTodayJST } from "@/lib/utils";
 import { MAJOR_AREA_ORDER } from "@/lib/constants";
-import { Plus, Trash2, LogOut } from "lucide-react";
+import { Plus, Trash2, LogOut, Navigation, Loader2, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import type { GymMaster, AreaMaster } from "@/lib/supabase/queries";
 
 type Props = {
@@ -21,6 +21,19 @@ type Props = {
 };
 
 type DateRange = { start: string; end: string };
+type LatLng = { lat: number; lng: number } | null;
+
+// 国土地理院API で住所 → lat/lng
+async function geocodeAddress(address: string): Promise<LatLng> {
+  const res = await fetch(
+    `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data || data.length === 0) return null;
+  const [lng, lat] = data[0].geometry.coordinates;
+  return { lat, lng };
+}
 
 export function AdminClient({ gyms, areas, currentUser }: Props) {
   const router = useRouter();
@@ -30,6 +43,10 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
   const [gymName, setGymName] = useState("");
   const [gymUrl, setGymUrl] = useState("");
   const [gymAreaTag, setGymAreaTag] = useState("");
+  const [gymAddress, setGymAddress] = useState("");
+  const [gymGeocoding, setGymGeocoding] = useState(false);
+  const [gymGeoResult, setGymGeoResult] = useState<LatLng>(null);
+  const [gymGeoError, setGymGeoError] = useState("");
   const [submittingGym, setSubmittingGym] = useState(false);
 
   // セットスケジュール登録
@@ -40,12 +57,79 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
   ]);
   const [submittingSchedule, setSubmittingSchedule] = useState(false);
 
+  // 位置情報タブ
+  const [expandedGym, setExpandedGym] = useState<string | null>(null);
+  // gymName → { addressInput, geocoding, geoResult, geoError, gpsLoading, saving }
+  const [locationStates, setLocationStates] = useState<Record<string, {
+    addressInput: string;
+    geocoding: boolean;
+    geoResult: LatLng;
+    geoError: string;
+    gpsLoading: boolean;
+    saving: boolean;
+  }>>({});
+
+  const getLocState = (gymName: string) =>
+    locationStates[gymName] ?? {
+      addressInput: "",
+      geocoding: false,
+      geoResult: null,
+      geoError: "",
+      gpsLoading: false,
+      saving: false,
+    };
+
+  const setLocState = (gymName: string, patch: Partial<ReturnType<typeof getLocState>>) => {
+    setLocationStates((prev) => ({
+      ...prev,
+      [gymName]: { ...getLocState(gymName), ...patch },
+    }));
+  };
+
   const gymsByArea = MAJOR_AREA_ORDER.map((majorArea) => {
     const areaTags = areas.filter((a) => a.major_area === majorArea).map((a) => a.area_tag);
     const areaGyms = gyms.filter((g) => areaTags.includes(g.area_tag));
     return { majorArea, gyms: areaGyms };
   }).filter((g) => g.gyms.length > 0);
 
+  // ---- ジム登録ジオコーディング ----
+  const handleGymGeocode = useCallback(async () => {
+    if (!gymAddress.trim()) return;
+    setGymGeocoding(true);
+    setGymGeoError("");
+    setGymGeoResult(null);
+    const result = await geocodeAddress(gymAddress.trim());
+    if (result) {
+      setGymGeoResult(result);
+    } else {
+      setGymGeoError("住所が見つかりませんでした");
+    }
+    setGymGeocoding(false);
+  }, [gymAddress]);
+
+  // ---- ジム登録GPS ----
+  const handleGymGPS = useCallback(() => {
+    if (!navigator.geolocation) {
+      setGymGeoError("このブラウザは位置情報に対応していません");
+      return;
+    }
+    setGymGeocoding(true);
+    setGymGeoError("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGymGeoResult({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGymAddress("現在地");
+        setGymGeocoding(false);
+      },
+      () => {
+        setGymGeoError("位置情報の取得に失敗しました");
+        setGymGeocoding(false);
+      },
+      { timeout: 10000 }
+    );
+  }, []);
+
+  // ---- ジム登録 ----
   const handleAddGym = async () => {
     if (!gymName.trim()) {
       toast({ title: "ジム名を入力してください", variant: "destructive" });
@@ -57,9 +141,17 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
     }
     setSubmittingGym(true);
     try {
-      await addGym({ gym_name: gymName.trim(), profile_url: gymUrl || null, area_tag: gymAreaTag, created_by: currentUser, lat: null, lng: null });
+      await addGym({
+        gym_name: gymName.trim(),
+        profile_url: gymUrl || null,
+        area_tag: gymAreaTag,
+        created_by: currentUser,
+        lat: gymGeoResult?.lat ?? null,
+        lng: gymGeoResult?.lng ?? null,
+      });
       toast({ title: "ジムを登録しました！", variant: "success" as any });
       setGymName(""); setGymUrl(""); setGymAreaTag("");
+      setGymAddress(""); setGymGeoResult(null); setGymGeoError("");
     } catch {
       toast({ title: "登録に失敗しました", variant: "destructive" });
     } finally {
@@ -67,6 +159,7 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
     }
   };
 
+  // ---- セットスケジュール登録 ----
   const handleAddSchedule = async () => {
     if (!selectedGym) {
       toast({ title: "ジムを選択してください", variant: "destructive" });
@@ -92,6 +185,57 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
     }
   };
 
+  // ---- 位置情報ジオコーディング（既存ジム） ----
+  const handleLocGeocode = useCallback(async (gymName: string) => {
+    const s = getLocState(gymName);
+    if (!s.addressInput.trim() || s.addressInput === "現在地") return;
+    setLocState(gymName, { geocoding: true, geoError: "", geoResult: null });
+    const result = await geocodeAddress(s.addressInput.trim());
+    if (result) {
+      setLocState(gymName, { geocoding: false, geoResult: result });
+    } else {
+      setLocState(gymName, { geocoding: false, geoError: "住所が見つかりませんでした" });
+    }
+  }, [locationStates]);
+
+  // ---- 位置情報GPS（既存ジム） ----
+  const handleLocGPS = useCallback((gymName: string) => {
+    if (!navigator.geolocation) {
+      setLocState(gymName, { geoError: "このブラウザは位置情報に対応していません" });
+      return;
+    }
+    setLocState(gymName, { gpsLoading: true, geoError: "" });
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocState(gymName, {
+          gpsLoading: false,
+          geoResult: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+          addressInput: "現在地",
+        });
+      },
+      () => {
+        setLocState(gymName, { gpsLoading: false, geoError: "位置情報の取得に失敗しました" });
+      },
+      { timeout: 10000 }
+    );
+  }, [locationStates]);
+
+  // ---- 位置情報保存（既存ジム） ----
+  const handleSaveLocation = async (gymName: string) => {
+    const s = getLocState(gymName);
+    if (!s.geoResult) return;
+    setLocState(gymName, { saving: true });
+    try {
+      await updateGymLocation(gymName, s.geoResult.lat, s.geoResult.lng);
+      toast({ title: `${gymName} の位置情報を保存しました`, variant: "success" as any });
+      setLocState(gymName, { saving: false, geoError: "" });
+    } catch {
+      toast({ title: "保存に失敗しました", variant: "destructive" });
+      setLocState(gymName, { saving: false });
+    }
+  };
+
+  // ---- ログアウト ----
   const handleLogout = () => {
     clearUser();
     document.cookie = "user_name=; path=/; max-age=0";
@@ -108,6 +252,7 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
           <TabsList>
             <TabsTrigger value="schedule">📅 セット登録</TabsTrigger>
             <TabsTrigger value="gym">🏢 ジム登録</TabsTrigger>
+            <TabsTrigger value="location">📍 位置情報</TabsTrigger>
           </TabsList>
 
           {/* セットスケジュール登録 */}
@@ -256,6 +401,51 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
                 </div>
               </div>
 
+              {/* 住所入力（ジオコーディング） */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">住所・駅名（任意）</label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="例：東京都渋谷区…、渋谷駅"
+                    value={gymAddress}
+                    onChange={(e) => {
+                      setGymAddress(e.target.value);
+                      if (gymGeoResult) setGymGeoResult(null);
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleGymGeocode(); }}
+                    className="flex-1 text-sm h-9"
+                  />
+                  <button
+                    onClick={handleGymGeocode}
+                    disabled={gymGeocoding || !gymAddress.trim() || gymAddress === "現在地"}
+                    className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
+                  >
+                    {gymGeocoding ? <Loader2 size={14} className="animate-spin" /> : "検索"}
+                  </button>
+                  <button
+                    onClick={handleGymGPS}
+                    disabled={gymGeocoding}
+                    title="現在地を取得"
+                    className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
+                  >
+                    {gymGeocoding
+                      ? <Loader2 size={14} className="animate-spin" />
+                      : <Navigation size={14} />
+                    }
+                  </button>
+                </div>
+                {gymGeoError && <p className="text-xs text-red-400 mt-1">{gymGeoError}</p>}
+                {gymGeoResult && (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <CheckCircle2 size={13} className="text-green-500 flex-shrink-0" />
+                    <span className="text-xs text-green-600 font-medium">
+                      {gymGeoResult.lat.toFixed(5)}, {gymGeoResult.lng.toFixed(5)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <Button
                 onClick={handleAddGym}
                 disabled={submittingGym}
@@ -265,6 +455,117 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
                 {submittingGym ? "登録中..." : "ジムを登録"}
               </Button>
             </div>
+          </TabsContent>
+
+          {/* 位置情報タブ */}
+          <TabsContent value="location" className="space-y-3">
+            <p className="text-xs text-gray-500 px-1">
+              住所・駅名を入力して検索すると、緯度・経度が自動設定されます。
+            </p>
+            {gyms.map((gym) => {
+              const s = getLocState(gym.gym_name);
+              const isExpanded = expandedGym === gym.gym_name;
+              const hasLocation = gym.lat !== null && gym.lng !== null;
+
+              return (
+                <div
+                  key={gym.gym_name}
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+                >
+                  {/* ジム行（タップで展開） */}
+                  <button
+                    onClick={() => setExpandedGym(isExpanded ? null : gym.gym_name)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{gym.gym_name}</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        {hasLocation
+                          ? `📍 ${gym.lat!.toFixed(4)}, ${gym.lng!.toFixed(4)}`
+                          : "位置情報未設定"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {hasLocation && (
+                        <span className="w-2 h-2 rounded-full bg-green-400" />
+                      )}
+                      {isExpanded
+                        ? <ChevronUp size={16} className="text-gray-400" />
+                        : <ChevronDown size={16} className="text-gray-400" />
+                      }
+                    </div>
+                  </button>
+
+                  {/* 展開パネル */}
+                  {isExpanded && (
+                    <div className="px-4 pb-4 space-y-2 border-t border-gray-50 pt-3">
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="住所・駅名を入力（例：渋谷駅）"
+                          value={s.addressInput}
+                          onChange={(e) => {
+                            setLocState(gym.gym_name, {
+                              addressInput: e.target.value,
+                              geoResult: null,
+                              geoError: "",
+                            });
+                          }}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleLocGeocode(gym.gym_name); }}
+                          className="flex-1 text-sm h-9"
+                        />
+                        <button
+                          onClick={() => handleLocGeocode(gym.gym_name)}
+                          disabled={s.geocoding || !s.addressInput.trim() || s.addressInput === "現在地"}
+                          className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
+                        >
+                          {s.geocoding ? <Loader2 size={14} className="animate-spin" /> : "検索"}
+                        </button>
+                        <button
+                          onClick={() => handleLocGPS(gym.gym_name)}
+                          disabled={s.gpsLoading}
+                          title="現在地を取得"
+                          className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
+                        >
+                          {s.gpsLoading
+                            ? <Loader2 size={14} className="animate-spin" />
+                            : <Navigation size={14} />
+                          }
+                        </button>
+                      </div>
+
+                      {s.geoError && (
+                        <p className="text-xs text-red-400">{s.geoError}</p>
+                      )}
+
+                      {s.geoResult && (
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 size={13} className="text-green-500 flex-shrink-0" />
+                          <span className="text-xs text-green-600 font-medium flex-1">
+                            {s.addressInput !== "現在地" ? `${s.addressInput} → ` : "現在地 → "}
+                            {s.geoResult.lat.toFixed(5)}, {s.geoResult.lng.toFixed(5)}
+                          </span>
+                        </div>
+                      )}
+
+                      <Button
+                        onClick={() => handleSaveLocation(gym.gym_name)}
+                        disabled={!s.geoResult || s.saving}
+                        variant="climbing"
+                        className="w-full h-9 text-sm"
+                      >
+                        {s.saving ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 size={14} className="animate-spin" />
+                            保存中...
+                          </span>
+                        ) : "位置情報を保存"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </TabsContent>
         </Tabs>
 

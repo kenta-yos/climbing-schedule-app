@@ -127,6 +127,20 @@ export async function updateClimbingLog(
   if (error) throw error;
 }
 
+// ジムのlat/lng更新
+export async function updateGymLocation(
+  gymName: string,
+  lat: number | null,
+  lng: number | null
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("gym_master")
+    .update({ lat, lng })
+    .eq("gym_name", gymName);
+  if (error) throw error;
+}
+
 // ジム追加
 export async function addGym(gym: Omit<GymMaster, "created_at">): Promise<void> {
   const supabase = createClient();
