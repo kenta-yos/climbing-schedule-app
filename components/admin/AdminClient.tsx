@@ -188,11 +188,10 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
   };
 
   // ---- 位置情報ジオコーディング（既存ジム） ----
-  const handleLocGeocode = async (gName: string) => {
-    const s = getLocState(gName);
-    if (!s.addressInput.trim() || s.addressInput === "現在地") return;
+  const handleLocGeocode = async (gName: string, currentAddress: string) => {
+    if (!currentAddress.trim() || currentAddress === "現在地") return;
     setLocState(gName, { geocoding: true, geoError: "", geoResult: null });
-    const result = await geocodeAddress(s.addressInput.trim());
+    const result = await geocodeAddress(currentAddress.trim());
     if (result) {
       setLocState(gName, { geocoding: false, geoResult: result });
     } else {
@@ -223,12 +222,10 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
   };
 
   // ---- 位置情報保存（既存ジム） ----
-  const handleSaveLocation = async (gymName: string) => {
-    const s = getLocState(gymName);
-    if (!s.geoResult) return;
+  const handleSaveLocation = async (gymName: string, geoResult: { lat: number; lng: number }) => {
     setLocState(gymName, { saving: true });
     try {
-      await updateGymLocation(gymName, s.geoResult.lat, s.geoResult.lng);
+      await updateGymLocation(gymName, geoResult.lat, geoResult.lng);
       toast({ title: `${gymName} の位置情報を保存しました`, variant: "success" as any });
       setLocState(gymName, { saving: false, geoError: "" });
     } catch {
@@ -513,11 +510,11 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
                               geoError: "",
                             });
                           }}
-                          onKeyDown={(e) => { if (e.key === "Enter") handleLocGeocode(gym.gym_name); }}
+                          onKeyDown={(e) => { if (e.key === "Enter") handleLocGeocode(gym.gym_name, s.addressInput); }}
                           className="flex-1 text-sm h-9"
                         />
                         <button
-                          onClick={() => handleLocGeocode(gym.gym_name)}
+                          onClick={() => handleLocGeocode(gym.gym_name, s.addressInput)}
                           disabled={s.geocoding || !s.addressInput.trim() || s.addressInput === "現在地"}
                           className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
                         >
@@ -551,7 +548,7 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
                       )}
 
                       <Button
-                        onClick={() => handleSaveLocation(gym.gym_name)}
+                        onClick={() => s.geoResult && handleSaveLocation(gym.gym_name, s.geoResult)}
                         disabled={!s.geoResult || s.saving}
                         variant="climbing"
                         className="w-full h-9 text-sm"
