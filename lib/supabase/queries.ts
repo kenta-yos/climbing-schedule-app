@@ -115,6 +115,16 @@ export async function deleteClimbingLog(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// クライミングログ更新（日付・ジム名・時間帯）
+export async function updateClimbingLog(
+  id: string,
+  updates: { date?: string; gym_name?: string; time_slot?: "昼" | "夕方" | "夜" | null }
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("climbing_logs").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
 // ジム追加
 export async function addGym(gym: Omit<GymMaster, "created_at">): Promise<void> {
   const supabase = createClient();

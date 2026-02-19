@@ -6,17 +6,24 @@ import type { ClimbingLog, GymMaster } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function PlanPage() {
+type Props = {
+  searchParams: { editId?: string };
+};
+
+export default async function PlanPage({ searchParams }: Props) {
   const cookieStore = cookies();
   const userName = cookieStore.get("user_name")?.value;
   if (!userName) redirect("/");
+  const decodedUser = decodeURIComponent(userName);
 
   const supabase = createClient();
-  const [logsRes, gymsRes] = await Promise.all([
+
+  // 並列フェッチ：直近実績ログ + ジムマスタ + 編集対象ログ（あれば）
+  const [logsRes, gymsRes, editLogRes] = await Promise.all([
     supabase
       .from("climbing_logs")
       .select("*")
-      .eq("user", decodeURIComponent(userName))
+      .eq("user", decodedUser)
       .eq("type", "実績")
       .gte(
         "date",
@@ -24,6 +31,9 @@ export default async function PlanPage() {
       )
       .order("date", { ascending: false }),
     supabase.from("gym_master").select("*").order("gym_name"),
+    searchParams.editId
+      ? supabase.from("climbing_logs").select("*").eq("id", searchParams.editId).single()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   // 直近30日の実績ジム（重複除去・順番保持）
@@ -34,11 +44,17 @@ export default async function PlanPage() {
     }
   }
 
+  // 編集対象ログ：自分のログのみ許可
+  const editLog = editLogRes.data as ClimbingLog | null;
+  const safeEditLog =
+    editLog && editLog.user === decodedUser ? editLog : undefined;
+
   return (
     <PlanPageClient
-      userName={decodeURIComponent(userName)}
+      userName={decodedUser}
       gyms={(gymsRes.data || []) as GymMaster[]}
       recentGymNames={recentGymNames}
+      editLog={safeEditLog}
     />
   );
 }

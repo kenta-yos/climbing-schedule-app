@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { formatMMDD, getNowJST } from "@/lib/utils";
 import { TIME_SLOTS, FUTURE_DAYS } from "@/lib/constants";
+import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
 import type { ClimbingLog, User } from "@/lib/supabase/queries";
 
 type Props = {
@@ -43,14 +45,20 @@ const TIME_SLOT_ORDER: Record<string, number> = { 昼: 0, 夕方: 1, 夜: 2 };
 // 曜日
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
+// ジム表示名
+function gymDisplayName(name: string): string {
+  if (name === GYM_UNDECIDED_LABEL) return "🤷 ジム未定";
+  return `🏢 ${name}`;
+}
+
 export function FuturePlanFeed({ logs, users, currentUser }: Props) {
+  const router = useRouter();
   const now = getNowJST();
   const today = now.toISOString().split("T")[0];
   const cutoff = new Date(now.getTime() + FUTURE_DAYS * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
 
-  // 今日以降FUTURE_DAYS日以内の予定のみ
   const futureLogs = logs
     .filter((l) => l.type === "予定" && l.date >= today && l.date <= cutoff)
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -79,20 +87,12 @@ export function FuturePlanFeed({ logs, users, currentUser }: Props) {
         return (
           <div key={dateStr} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
             {/* 日付ヘッダー */}
-            <div
-              className={`px-4 py-2 flex items-center gap-2 ${
-                isToday ? "climbing-gradient" : "bg-gray-50"
-              }`}
-            >
-              <span
-                className={`text-sm font-bold ${isToday ? "text-white" : "text-gray-700"}`}
-              >
+            <div className={`px-4 py-2 flex items-center gap-2 ${isToday ? "climbing-gradient" : "bg-gray-50"}`}>
+              <span className={`text-sm font-bold ${isToday ? "text-white" : "text-gray-700"}`}>
                 {formatMMDD(dateStr)}（{weekday}）
               </span>
               {isToday && (
-                <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">
-                  今日
-                </span>
+                <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">今日</span>
               )}
             </div>
 
@@ -107,14 +107,11 @@ export function FuturePlanFeed({ logs, users, currentUser }: Props) {
                     const hasMe = gymLogs.some((l) => l.user === currentUser);
 
                     return (
-                      <div
-                        key={gymName}
-                        className={`px-4 py-3 ${hasMe ? "bg-orange-50/40" : ""}`}
-                      >
+                      <div key={gymName} className={`px-4 py-3 ${hasMe ? "bg-orange-50/40" : ""}`}>
                         {/* ジム名 */}
                         <div className="flex items-center mb-2">
                           <span className="text-sm font-semibold text-gray-800">
-                            🏢 {gymName}
+                            {gymDisplayName(gymName)}
                           </span>
                         </div>
 
@@ -154,7 +151,16 @@ export function FuturePlanFeed({ logs, users, currentUser }: Props) {
                                       className="object-contain flex-shrink-0"
                                     />
                                   )}
-                                  {isMe && <span className="text-orange-500">★</span>}
+                                  {/* 自分の予定のみ：編集ボタン */}
+                                  {isMe && (
+                                    <button
+                                      onClick={() => router.push(`/home/plan?editId=${log.id}`)}
+                                      className="ml-0.5 leading-none flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+                                      aria-label="編集"
+                                    >
+                                      ✏️
+                                    </button>
+                                  )}
                                 </div>
                               );
                             })}

@@ -4,27 +4,40 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { addClimbingLog } from "@/lib/supabase/queries";
+import { addClimbingLog, updateClimbingLog, deleteClimbingLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { getTodayJST } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
-import type { GymMaster } from "@/lib/supabase/queries";
+import type { GymMaster, ClimbingLog } from "@/lib/supabase/queries";
 import Image from "next/image";
-import { ChevronLeft, Search, X } from "lucide-react";
+import { ChevronLeft, Search, X, Trash2 } from "lucide-react";
+
+// ジム未定のときの内部値・DB保存値
+export const GYM_UNDECIDED = "__undecided__";
+export const GYM_UNDECIDED_LABEL = "ジム未定";
 
 type Props = {
   userName: string;
   gyms: GymMaster[];
   recentGymNames: string[];
+  editLog?: ClimbingLog; // 編集モード時のみ渡す
 };
 
-export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
+export function PlanPageClient({ userName, gyms, recentGymNames, editLog }: Props) {
   const router = useRouter();
-  const [date, setDate] = useState(getTodayJST());
-  const [timeSlot, setTimeSlot] = useState<string>("夜");
-  const [selectedGym, setSelectedGym] = useState<string>("");
+  const isEdit = !!editLog;
+
+  // 初期値：編集モードなら既存データ、新規なら空
+  const [date, setDate] = useState(editLog ? editLog.date.split("T")[0] : getTodayJST());
+  const [timeSlot, setTimeSlot] = useState<string>(editLog?.time_slot ?? "夜");
+  const [selectedGym, setSelectedGym] = useState<string>(
+    editLog
+      ? (editLog.gym_name === GYM_UNDECIDED_LABEL ? GYM_UNDECIDED : editLog.gym_name)
+      : ""
+  );
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // 検索フィルター
   const filteredGyms = searchQuery.trim()
@@ -44,6 +57,14 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
     setSearchQuery("");
   };
 
+  // 表示ラベル
+  const selectedGymLabel =
+    selectedGym === GYM_UNDECIDED ? GYM_UNDECIDED_LABEL : selectedGym;
+
+  // DB保存用ジム名
+  const gymNameForDB =
+    selectedGym === GYM_UNDECIDED ? GYM_UNDECIDED_LABEL : selectedGym;
+
   const handleSubmit = async (type: "予定" | "実績") => {
     if (!selectedGym) {
       toast({ title: "ジムを選択してください", variant: "destructive" });
@@ -55,41 +76,83 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
     }
     setSubmitting(true);
     try {
-      await addClimbingLog({
-        date,
-        gym_name: selectedGym,
-        user: userName,
-        type,
-        time_slot: timeSlot as "昼" | "夕方" | "夜",
-      });
-      toast({
-        title: type === "予定" ? "📅 予定を登録しました！" : "🧗 実績を登録しました！",
-        variant: "success" as any,
-      });
+      if (isEdit && editLog) {
+        await updateClimbingLog(editLog.id, {
+          date,
+          gym_name: gymNameForDB,
+          time_slot: timeSlot as "昼" | "夕方" | "夜",
+        });
+        toast({ title: "📅 予定を更新しました！", variant: "success" as any });
+      } else {
+        await addClimbingLog({
+          date,
+          gym_name: gymNameForDB,
+          user: userName,
+          type,
+          time_slot: timeSlot as "昼" | "夕方" | "夜",
+        });
+        toast({
+          title: type === "予定" ? "📅 予定を登録しました！" : "🧗 実績を登録しました！",
+          variant: "success" as any,
+        });
+      }
       router.push("/home");
     } catch (err) {
       console.error(err);
-      toast({ title: "登録に失敗しました", variant: "destructive" });
+      toast({ title: isEdit ? "更新に失敗しました" : "登録に失敗しました", variant: "destructive" });
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!editLog) return;
+    setDeleting(true);
+    try {
+      await deleteClimbingLog(editLog.id);
+      toast({ title: "🗑️ 予定を削除しました", variant: "success" as any });
+      router.push("/home");
+    } catch (err) {
+      console.error(err);
+      toast({ title: "削除に失敗しました", variant: "destructive" });
+      setDeleting(false);
     }
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* ヘッダー（固定） safe-area-top対応 */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3" style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}>
+      {/* ヘッダー safe-area-top対応 */}
+      <div
+        className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3"
+        style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
+      >
         <button
           onClick={() => router.back()}
           className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
         >
           <ChevronLeft size={22} className="text-gray-600" />
         </button>
-        <h1 className="text-base font-bold text-gray-900">クライミングの予定を入れる</h1>
+        <h1 className="text-base font-bold text-gray-900 flex-1">
+          {isEdit ? "予定を編集する" : "クライミングの予定を入れる"}
+        </h1>
+        {isEdit && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="p-2 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+          >
+            {deleting
+              ? <div className="w-5 h-5 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
+              : <Trash2 size={20} />
+            }
+          </button>
+        )}
       </div>
 
-      {/* スクロールコンテンツ - 固定ボタン分の余白をsafe area込みで確保 */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6" style={{ paddingBottom: "calc(8rem + env(safe-area-inset-bottom))" }}>
-
+      {/* スクロールコンテンツ */}
+      <div
+        className="flex-1 overflow-y-auto px-4 py-5 space-y-6"
+        style={{ paddingBottom: "calc(8rem + env(safe-area-inset-bottom))" }}
+      >
         {/* 日付 */}
         <section>
           <label className="text-sm font-semibold text-gray-700 block mb-2">
@@ -126,11 +189,7 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
                   height={32}
                   className="object-contain"
                 />
-                <span
-                  className={`text-sm font-medium ${
-                    timeSlot === slot.value ? "text-orange-600" : "text-gray-600"
-                  }`}
-                >
+                <span className={`text-sm font-medium ${timeSlot === slot.value ? "text-orange-600" : "text-gray-600"}`}>
                   {slot.label}
                 </span>
               </button>
@@ -144,11 +203,11 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
             🏢 ジム選択
           </label>
 
-          {/* 選択済み */}
           {selectedGym ? (
+            /* 選択済み */
             <div className="flex items-center gap-3 px-4 py-3 bg-orange-50 border-2 border-orange-300 rounded-2xl">
               <span className="text-sm font-semibold text-orange-700 flex-1">
-                ✅ {selectedGym}
+                ✅ {selectedGymLabel}
               </span>
               <button
                 onClick={() => setSelectedGym("")}
@@ -159,12 +218,18 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
             </div>
           ) : (
             <>
+              {/* ジム未定ボタン */}
+              <button
+                onClick={() => handleSelectGym(GYM_UNDECIDED)}
+                className="w-full text-left px-4 py-3 mb-3 rounded-xl border-2 border-dashed border-gray-300 bg-white text-sm font-medium text-gray-500 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 transition-all duration-150 active:scale-[0.98] flex items-center gap-2"
+              >
+                <span className="text-lg">🤷</span>
+                <span>ジム未定でとりあえず登録</span>
+              </button>
+
               {/* 検索ボックス */}
               <div className="relative mb-4">
-                <Search
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <Input
                   type="text"
                   placeholder="ジム名を検索..."
@@ -193,16 +258,12 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
                         onClick={() => handleSelectGym(gym.gym_name)}
                         className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:border-orange-300 hover:bg-orange-50 transition-all duration-150 active:scale-[0.98]"
                       >
-                        {recentGymNames.includes(gym.gym_name) && (
-                          <span className="mr-1">⭐</span>
-                        )}
+                        {recentGymNames.includes(gym.gym_name) && <span className="mr-1">⭐</span>}
                         {gym.gym_name}
                       </button>
                     ))
                   ) : (
-                    <p className="text-sm text-gray-400 text-center py-6">
-                      該当するジムが見つかりません
-                    </p>
+                    <p className="text-sm text-gray-400 text-center py-6">該当するジムが見つかりません</p>
                   )}
                 </div>
               ) : (
@@ -228,25 +289,41 @@ export function PlanPageClient({ userName, gyms, recentGymNames }: Props) {
         </section>
       </div>
 
-      {/* 登録ボタン（画面最下部に完全固定） safe-area-bottom対応 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4" style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}>
+      {/* 登録/保存ボタン（固定） safe-area-bottom対応 */}
+      <div
+        className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4"
+        style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+      >
         <div className="flex gap-3 max-w-lg mx-auto">
-          <Button
-            onClick={() => handleSubmit("予定")}
-            disabled={submitting}
-            variant="climbing-outline"
-            className="flex-1 h-14 text-base font-semibold"
-          >
-            📅 登るよ（予定）
-          </Button>
-          <Button
-            onClick={() => handleSubmit("実績")}
-            disabled={submitting}
-            variant="climbing"
-            className="flex-1 h-14 text-base font-semibold"
-          >
-            🧗 登った！
-          </Button>
+          {isEdit ? (
+            <Button
+              onClick={() => handleSubmit("予定")}
+              disabled={submitting}
+              variant="climbing"
+              className="flex-1 h-14 text-base font-semibold"
+            >
+              💾 変更を保存
+            </Button>
+          ) : (
+            <>
+              <Button
+                onClick={() => handleSubmit("予定")}
+                disabled={submitting}
+                variant="climbing-outline"
+                className="flex-1 h-14 text-base font-semibold"
+              >
+                📅 登るよ（予定）
+              </Button>
+              <Button
+                onClick={() => handleSubmit("実績")}
+                disabled={submitting}
+                variant="climbing"
+                className="flex-1 h-14 text-base font-semibold"
+              >
+                🧗 登った！
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
