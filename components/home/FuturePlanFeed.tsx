@@ -37,6 +37,9 @@ function groupByGym(logs: ClimbingLog[]): Record<string, ClimbingLog[]> {
   );
 }
 
+// 時間帯の表示順
+const TIME_SLOT_ORDER: Record<string, number> = { 昼: 0, 夕方: 1, 夜: 2 };
+
 // 曜日
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -115,41 +118,46 @@ export function FuturePlanFeed({ logs, users, currentUser }: Props) {
                           </span>
                         </div>
 
-                        {/* 参加ユーザー一覧（横並び） */}
+                        {/* 参加ユーザー一覧（横並び・時間帯順） */}
                         <div className="flex flex-wrap gap-1.5">
-                          {gymLogs.map((log) => {
-                            const user = userMap[log.user];
-                            const isMe = log.user === currentUser;
-                            const userSlot = TIME_SLOTS.find((s) => s.value === log.time_slot);
-                            return (
-                              <div
-                                key={log.id}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                  isMe
-                                    ? "bg-orange-100 text-orange-700 ring-1 ring-orange-300"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
-                              >
-                                <span
-                                  className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] flex-shrink-0"
-                                  style={{ backgroundColor: user?.color || "#999" }}
+                          {[...gymLogs]
+                            .sort((a, b) =>
+                              (TIME_SLOT_ORDER[a.time_slot ?? ""] ?? 99) -
+                              (TIME_SLOT_ORDER[b.time_slot ?? ""] ?? 99)
+                            )
+                            .map((log) => {
+                              const user = userMap[log.user];
+                              const isMe = log.user === currentUser;
+                              const userSlot = TIME_SLOTS.find((s) => s.value === log.time_slot);
+                              return (
+                                <div
+                                  key={log.id}
+                                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                    isMe
+                                      ? "bg-orange-100 text-orange-700 ring-1 ring-orange-300"
+                                      : "bg-gray-100 text-gray-600"
+                                  }`}
                                 >
-                                  {user?.icon || "?"}
-                                </span>
-                                <span>{log.user}</span>
-                                {userSlot && (
-                                  <Image
-                                    src={userSlot.icon}
-                                    alt={userSlot.label}
-                                    width={14}
-                                    height={14}
-                                    className="object-contain flex-shrink-0"
-                                  />
-                                )}
-                                {isMe && <span className="text-orange-500">★</span>}
-                              </div>
-                            );
-                          })}
+                                  <span
+                                    className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] flex-shrink-0"
+                                    style={{ backgroundColor: user?.color || "#999" }}
+                                  >
+                                    {user?.icon || "?"}
+                                  </span>
+                                  <span>{log.user}</span>
+                                  {userSlot && (
+                                    <Image
+                                      src={userSlot.icon}
+                                      alt={userSlot.label}
+                                      width={14}
+                                      height={14}
+                                      className="object-contain flex-shrink-0"
+                                    />
+                                  )}
+                                  {isMe && <span className="text-orange-500">★</span>}
+                                </div>
+                              );
+                            })}
                         </div>
                       </div>
                     );
