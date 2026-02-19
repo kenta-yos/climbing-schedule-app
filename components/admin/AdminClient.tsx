@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -69,20 +69,22 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
     saving: boolean;
   }>>({});
 
-  const getLocState = (gymName: string) =>
-    locationStates[gymName] ?? {
-      addressInput: "",
-      geocoding: false,
-      geoResult: null,
-      geoError: "",
-      gpsLoading: false,
-      saving: false,
-    };
+  const defaultLocState = {
+    addressInput: "",
+    geocoding: false,
+    geoResult: null as LatLng,
+    geoError: "",
+    gpsLoading: false,
+    saving: false,
+  };
 
-  const setLocState = (gymName: string, patch: Partial<ReturnType<typeof getLocState>>) => {
+  const getLocState = (gName: string) =>
+    locationStates[gName] ?? { ...defaultLocState };
+
+  const setLocState = (gName: string, patch: Partial<typeof defaultLocState>) => {
     setLocationStates((prev) => ({
       ...prev,
-      [gymName]: { ...getLocState(gymName), ...patch },
+      [gName]: { ...(prev[gName] ?? { ...defaultLocState }), ...patch },
     }));
   };
 
@@ -93,7 +95,7 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
   }).filter((g) => g.gyms.length > 0);
 
   // ---- ジム登録ジオコーディング ----
-  const handleGymGeocode = useCallback(async () => {
+  const handleGymGeocode = async () => {
     if (!gymAddress.trim()) return;
     setGymGeocoding(true);
     setGymGeoError("");
@@ -105,10 +107,10 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
       setGymGeoError("住所が見つかりませんでした");
     }
     setGymGeocoding(false);
-  }, [gymAddress]);
+  };
 
   // ---- ジム登録GPS ----
-  const handleGymGPS = useCallback(() => {
+  const handleGymGPS = () => {
     if (!navigator.geolocation) {
       setGymGeoError("このブラウザは位置情報に対応していません");
       return;
@@ -127,7 +129,7 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
       },
       { timeout: 10000 }
     );
-  }, []);
+  };
 
   // ---- ジム登録 ----
   const handleAddGym = async () => {
@@ -186,39 +188,39 @@ export function AdminClient({ gyms, areas, currentUser }: Props) {
   };
 
   // ---- 位置情報ジオコーディング（既存ジム） ----
-  const handleLocGeocode = useCallback(async (gymName: string) => {
-    const s = getLocState(gymName);
+  const handleLocGeocode = async (gName: string) => {
+    const s = getLocState(gName);
     if (!s.addressInput.trim() || s.addressInput === "現在地") return;
-    setLocState(gymName, { geocoding: true, geoError: "", geoResult: null });
+    setLocState(gName, { geocoding: true, geoError: "", geoResult: null });
     const result = await geocodeAddress(s.addressInput.trim());
     if (result) {
-      setLocState(gymName, { geocoding: false, geoResult: result });
+      setLocState(gName, { geocoding: false, geoResult: result });
     } else {
-      setLocState(gymName, { geocoding: false, geoError: "住所が見つかりませんでした" });
+      setLocState(gName, { geocoding: false, geoError: "住所が見つかりませんでした" });
     }
-  }, [locationStates]);
+  };
 
   // ---- 位置情報GPS（既存ジム） ----
-  const handleLocGPS = useCallback((gymName: string) => {
+  const handleLocGPS = (gName: string) => {
     if (!navigator.geolocation) {
-      setLocState(gymName, { geoError: "このブラウザは位置情報に対応していません" });
+      setLocState(gName, { geoError: "このブラウザは位置情報に対応していません" });
       return;
     }
-    setLocState(gymName, { gpsLoading: true, geoError: "" });
+    setLocState(gName, { gpsLoading: true, geoError: "" });
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLocState(gymName, {
+        setLocState(gName, {
           gpsLoading: false,
           geoResult: { lat: pos.coords.latitude, lng: pos.coords.longitude },
           addressInput: "現在地",
         });
       },
       () => {
-        setLocState(gymName, { gpsLoading: false, geoError: "位置情報の取得に失敗しました" });
+        setLocState(gName, { gpsLoading: false, geoError: "位置情報の取得に失敗しました" });
       },
       { timeout: 10000 }
     );
-  }, [locationStates]);
+  };
 
   // ---- 位置情報保存（既存ジム） ----
   const handleSaveLocation = async (gymName: string) => {
