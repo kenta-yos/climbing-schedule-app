@@ -147,6 +147,7 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
 
   const now = getNowJST();
   const today = now.toISOString().split("T")[0];
+  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const cutoff = new Date(now.getTime() + FUTURE_DAYS * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0];
@@ -174,17 +175,36 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
         const date = new Date(dateStr + "T00:00:00+09:00");
         const weekday = WEEKDAYS[date.getDay()];
         const isToday = dateStr === today;
+        const isTomorrow = dateStr === tomorrow;
         const dayLogs = grouped[dateStr];
 
+        // カード・ヘッダーのスタイルを日付で切り替え
+        const cardClass = isToday
+          ? "bg-white rounded-2xl overflow-hidden shadow-md border-2 border-orange-300"
+          : isTomorrow
+          ? "bg-white rounded-2xl overflow-hidden shadow-sm border-2 border-blue-200"
+          : "bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100";
+
+        const headerClass = isToday
+          ? "px-4 py-2.5 flex items-center gap-2 climbing-gradient"
+          : isTomorrow
+          ? "px-4 py-2.5 flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500"
+          : "px-4 py-2 flex items-center gap-2 bg-gray-50";
+
+        const dateTextClass = isToday || isTomorrow ? "text-sm font-bold text-white" : "text-sm font-bold text-gray-500";
+
         return (
-          <div key={dateStr} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+          <div key={dateStr} className={cardClass}>
             {/* 日付ヘッダー */}
-            <div className={`px-4 py-2 flex items-center gap-2 ${isToday ? "climbing-gradient" : "bg-gray-50"}`}>
-              <span className={`text-sm font-bold ${isToday ? "text-white" : "text-gray-700"}`}>
+            <div className={headerClass}>
+              <span className={dateTextClass}>
                 {formatMMDD(dateStr)}（{weekday}）
               </span>
               {isToday && (
-                <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">今日</span>
+                <span className="text-xs bg-white/25 text-white px-2 py-0.5 rounded-full font-bold">今日</span>
+              )}
+              {isTomorrow && (
+                <span className="text-xs bg-white/25 text-white px-2 py-0.5 rounded-full font-bold">明日</span>
               )}
             </div>
 
