@@ -1,11 +1,17 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
 import type { ClimbingLog } from "@/lib/supabase/queries";
 
 type Props = {
   logs: ClimbingLog[];
 };
+
+// ジム名の文字数から必要なYAxis幅を計算（1文字あたり約11px、最小80・最大200）
+function calcYAxisWidth(names: string[]): number {
+  const max = Math.max(...names.map((n) => n.length));
+  return Math.min(Math.max(max * 11, 80), 200);
+}
 
 export function GymFrequencyChart({ logs: actuals }: Props) {
   // ジム別集計
@@ -27,24 +33,29 @@ export function GymFrequencyChart({ logs: actuals }: Props) {
     );
   }
 
+  const yAxisWidth = calcYAxisWidth(data.map((d) => d.name));
+
   // グラデーション色（順位によって変化）
   const COLORS = [
     "#FF512F", "#F74B4B", "#E8505B", "#D45867",
     "#BC6274", "#A86B7F", "#94758B", "#807E96",
   ];
 
+  // データが変わったらグラフを再描画させるためkeyにデータのハッシュを使う
+  const chartKey = data.map((d) => `${d.name}:${d.count}`).join("|");
+
   return (
-    <ResponsiveContainer width="100%" height={data.length * 44 + 20}>
+    <ResponsiveContainer key={chartKey} width="100%" height={data.length * 44 + 20}>
       <BarChart
         layout="vertical"
         data={data}
-        margin={{ left: 0, right: 32, top: 4, bottom: 4 }}
+        margin={{ left: 0, right: 40, top: 4, bottom: 4 }}
       >
         <XAxis type="number" hide />
         <YAxis
           type="category"
           dataKey="name"
-          width={100}
+          width={yAxisWidth}
           tick={{ fontSize: 12, fill: "#4B5563" }}
           axisLine={false}
           tickLine={false}
@@ -58,7 +69,13 @@ export function GymFrequencyChart({ logs: actuals }: Props) {
             fontSize: 12,
           }}
         />
-        <Bar dataKey="count" radius={[0, 6, 6, 0]} label={{ position: "right", fontSize: 11, fill: "#6B7280" }}>
+        <Bar dataKey="count" radius={[0, 6, 6, 0]}>
+          <LabelList
+            dataKey="count"
+            position="right"
+            formatter={(v: number) => `${v}回`}
+            style={{ fontSize: 11, fill: "#6B7280" }}
+          />
           {data.map((_, i) => (
             <Cell key={i} fill={COLORS[i] || COLORS[COLORS.length - 1]} />
           ))}
