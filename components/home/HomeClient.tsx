@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FuturePlanFeed } from "@/components/home/FuturePlanFeed";
@@ -19,10 +20,20 @@ type Props = {
 
 export function HomeClient({ initialLogs, users, currentUser }: Props) {
   const router = useRouter();
-  const logs = initialLogs;
+  const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
 
   const now = getNowJST();
   const today = now.toISOString().split("T")[0];
+
+  // 参加登録後にフィードを最新化
+  const handleRefresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/logs");
+      if (res.ok) setLogs(await res.json());
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   return (
     <>
@@ -46,7 +57,12 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
             <span>📅</span>
             <span>みんなの予定（3週間）</span>
           </h2>
-          <FuturePlanFeed logs={logs} users={users} currentUser={currentUser} />
+          <FuturePlanFeed
+            logs={logs}
+            users={users}
+            currentUser={currentUser}
+            onJoined={handleRefresh}
+          />
         </section>
 
         {/* 月間ランキング */}

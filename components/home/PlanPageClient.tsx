@@ -20,10 +20,11 @@ type Props = {
   userName: string;
   gyms: GymMaster[];
   recentGymNames: string[];
-  editLog?: ClimbingLog; // 編集モード時のみ渡す
+  myPlans?: ClimbingLog[]; // 自分の予定ログ（二重登録チェック用）
+  editLog?: ClimbingLog;   // 編集モード時のみ渡す
 };
 
-export function PlanPageClient({ userName, gyms, recentGymNames, editLog }: Props) {
+export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], editLog }: Props) {
   const router = useRouter();
   const isEdit = !!editLog;
 
@@ -84,6 +85,20 @@ export function PlanPageClient({ userName, gyms, recentGymNames, editLog }: Prop
         });
         toast({ title: "📅 予定を更新しました！", variant: "success" as any });
       } else {
+        // 二重登録チェック（予定のみ）
+        if (type === "予定") {
+          const duplicate = myPlans.find(
+            (l) =>
+              l.date.split("T")[0] === date &&
+              l.gym_name === gymNameForDB &&
+              l.time_slot === timeSlot
+          );
+          if (duplicate) {
+            toast({ title: "🙈 同じ予定がもうすでにあるよ！", variant: "destructive" });
+            setSubmitting(false);
+            return;
+          }
+        }
         await addClimbingLog({
           date,
           gym_name: gymNameForDB,

@@ -18,8 +18,8 @@ export default async function PlanPage({ searchParams }: Props) {
 
   const supabase = createClient();
 
-  // 並列フェッチ：直近実績ログ + ジムマスタ + 編集対象ログ（あれば）
-  const [logsRes, gymsRes, editLogRes] = await Promise.all([
+  const [actualsRes, plansRes, gymsRes, editLogRes] = await Promise.all([
+    // 直近30日の実績（よく行くジム用）
     supabase
       .from("climbing_logs")
       .select("*")
@@ -30,6 +30,13 @@ export default async function PlanPage({ searchParams }: Props) {
         new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
       )
       .order("date", { ascending: false }),
+    // 自分の予定ログ全件（二重登録チェック用）
+    supabase
+      .from("climbing_logs")
+      .select("*")
+      .eq("user", decodedUser)
+      .eq("type", "予定")
+      .gte("date", new Date().toISOString().split("T")[0]),
     supabase.from("gym_master").select("*").order("gym_name"),
     searchParams.editId
       ? supabase.from("climbing_logs").select("*").eq("id", searchParams.editId).single()
@@ -38,7 +45,7 @@ export default async function PlanPage({ searchParams }: Props) {
 
   // 直近30日の実績ジム（重複除去・順番保持）
   const recentGymNames: string[] = [];
-  for (const log of (logsRes.data || []) as ClimbingLog[]) {
+  for (const log of (actualsRes.data || []) as ClimbingLog[]) {
     if (!recentGymNames.includes(log.gym_name)) {
       recentGymNames.push(log.gym_name);
     }
@@ -54,6 +61,7 @@ export default async function PlanPage({ searchParams }: Props) {
       userName={decodedUser}
       gyms={(gymsRes.data || []) as GymMaster[]}
       recentGymNames={recentGymNames}
+      myPlans={(plansRes.data || []) as ClimbingLog[]}
       editLog={safeEditLog}
     />
   );
