@@ -4,7 +4,7 @@ import { useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExternalLink } from "lucide-react";
-import { getNowJST, formatMMDD, getMonthOptions } from "@/lib/utils";
+import { getNowJST, getTodayJST, formatMMDD, getMonthOptions } from "@/lib/utils";
 import type { SetSchedule } from "@/lib/supabase/queries";
 
 type Props = {
@@ -17,7 +17,7 @@ export function ScheduleClient({ schedules }: Props) {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const monthOptions = getMonthOptions();
-  const today = now.toISOString().split("T")[0];
+  const today = getTodayJST();
 
   // 選択した月のスケジュール
   const filtered = schedules

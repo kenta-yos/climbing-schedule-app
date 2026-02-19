@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PlanPageClient } from "@/components/home/PlanPageClient";
+import { getTodayJST, getDateOffsetJST } from "@/lib/utils";
 import type { ClimbingLog, GymMaster } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -25,10 +26,7 @@ export default async function PlanPage({ searchParams }: Props) {
       .select("*")
       .eq("user", decodedUser)
       .eq("type", "実績")
-      .gte(
-        "date",
-        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-      )
+      .gte("date", getDateOffsetJST(-30))
       .order("date", { ascending: false }),
     // 自分の予定ログ全件（二重登録チェック用）
     supabase
@@ -36,7 +34,7 @@ export default async function PlanPage({ searchParams }: Props) {
       .select("*")
       .eq("user", decodedUser)
       .eq("type", "予定")
-      .gte("date", new Date().toISOString().split("T")[0]),
+      .gte("date", getTodayJST()),
     supabase.from("gym_master").select("*").order("gym_name"),
     searchParams.editId
       ? supabase.from("climbing_logs").select("*").eq("id", searchParams.editId).single()

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { formatMMDD, getNowJST } from "@/lib/utils";
+import { formatMMDD, getTodayJST, getTomorrowJST, getDateOffsetJST } from "@/lib/utils";
 import { TIME_SLOTS, FUTURE_DAYS } from "@/lib/constants";
 import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
 import { addClimbingLog } from "@/lib/supabase/queries";
@@ -145,12 +145,9 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
   // 展開中のジムキー（"日付|ジム名"）
   const [openJoinKey, setOpenJoinKey] = useState<string | null>(null);
 
-  const now = getNowJST();
-  const today = now.toISOString().split("T")[0];
-  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-  const cutoff = new Date(now.getTime() + FUTURE_DAYS * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .split("T")[0];
+  const today = getTodayJST();
+  const tomorrow = getTomorrowJST();
+  const cutoff = getDateOffsetJST(FUTURE_DAYS);
 
   const futureLogs = logs
     .filter((l) => l.type === "予定" && l.date >= today && l.date <= cutoff)

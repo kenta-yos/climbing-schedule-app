@@ -24,6 +24,17 @@ export function getTodayJST(): string {
   return formatJST(new Date(), "yyyy-MM-dd");
 }
 
+// N日後の日本日付文字列 (YYYY-MM-DD)  ※負数で過去
+export function getDateOffsetJST(offsetDays: number): string {
+  const d = new Date(getNowJST().getTime() + offsetDays * 24 * 60 * 60 * 1000);
+  return tzFormat(toZonedTime(d, TZ), "yyyy-MM-dd", { timeZone: TZ });
+}
+
+// 明日の日本日付文字列 (YYYY-MM-DD)
+export function getTomorrowJST(): string {
+  return getDateOffsetJST(1);
+}
+
 // 今月の開始/終了 (日本時間)
 export function getCurrentMonthRange(): { start: string; end: string } {
   const now = getNowJST();

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ExternalLink, Star } from "lucide-react";
 import { getTopRecommendations } from "@/lib/scoring";
-import { getNowJST, formatMMDD, getTodayJST, daysDiff } from "@/lib/utils";
+import { getNowJST, formatMMDD, getTodayJST, getDateOffsetJST, daysDiff } from "@/lib/utils";
 import { MAJOR_AREA_ORDER } from "@/lib/constants";
 import type { GymMaster, AreaMaster, ClimbingLog, SetSchedule, User } from "@/lib/supabase/queries";
 
@@ -29,8 +29,7 @@ export function GymsClient({
   const [areaFilter, setAreaFilter] = useState<string>("すべて");
 
   const now = getNowJST();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString().split("T")[0];
+  const thirtyDaysAgo = getDateOffsetJST(-30);
 
   // 自分の訪問済みジム
   const visitedGymNames = new Set(

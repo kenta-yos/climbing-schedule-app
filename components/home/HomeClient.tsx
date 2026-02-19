@@ -7,7 +7,7 @@ import { FuturePlanFeed } from "@/components/home/FuturePlanFeed";
 import { MonthlyRanking } from "@/components/home/MonthlyRanking";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { getNowJST } from "@/lib/utils";
+import { getTodayJST } from "@/lib/utils";
 import type { ClimbingLog, GymMaster, AreaMaster, User } from "@/lib/supabase/queries";
 
 type Props = {
@@ -22,8 +22,7 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
   const router = useRouter();
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
 
-  const now = getNowJST();
-  const today = now.toISOString().split("T")[0];
+  const today = getTodayJST();
 
   // 参加登録後にフィードを最新化
   const handleRefresh = useCallback(async () => {
