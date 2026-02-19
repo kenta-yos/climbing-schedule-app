@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Home, BarChart2, Building2, CalendarDays, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,11 +18,16 @@ export function BottomNav() {
   const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
+  // パスが変わったらローディング解除
+  useEffect(() => {
+    setPendingHref(null);
+  }, [pathname]);
+
   // フルスクリーンページではBottomNavを非表示
   if (pathname === "/home/plan") return null;
 
   const handleNav = (href: string) => {
-    if (pathname === href) return; // 同じページなら何もしない
+    if (pathname === href || pendingHref === href) return;
     setPendingHref(href);
     router.push(href);
   };

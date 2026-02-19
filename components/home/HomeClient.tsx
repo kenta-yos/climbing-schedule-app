@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FuturePlanFeed } from "@/components/home/FuturePlanFeed";
 import { MonthlyRanking } from "@/components/home/MonthlyRanking";
@@ -22,8 +22,14 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
   const router = useRouter();
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
 
+  const pathname = usePathname();
   const today = getTodayJST();
   const [navigating, setNavigating] = useState(false);
+
+  // パスが変わったらローディング解除（念のため）
+  useEffect(() => {
+    setNavigating(false);
+  }, [pathname]);
 
   // 参加登録後にフィードを最新化
   const handleRefresh = useCallback(async () => {
