@@ -131,10 +131,10 @@ export function GymsClient({
     return isFinite(d) ? d : null;
   };
 
-  // 最新セット取得
+  // 最新セット取得（targetDate以前のものに限定。未来のスケジュールは無視）
   const getLatestSchedule = (gymName: string): SetSchedule | null => {
     const schedules = setSchedules
-      .filter((s) => s.gym_name === gymName)
+      .filter((s) => s.gym_name === gymName && s.start_date <= targetDate)
       .sort((a, b) => b.start_date.localeCompare(a.start_date));
     return schedules[0] ?? null;
   };

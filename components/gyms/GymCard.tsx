@@ -43,16 +43,21 @@ export function GymCard({
     badges.push({ label: "⌛ ごぶさた", cls: "bg-red-50 text-red-500" });
   }
 
-  // 最終訪問ラベル
+  // 最終訪問ラベル（相対表記）
   const lastVisitLabel = (() => {
-    if (lastVisit == null) return null;
-    if (lastVisitDays === 0) return "今日";
-    if (lastVisitDays === 1) return "昨日";
-    if (lastVisitDays != null && lastVisitDays <= 6)  return `${lastVisitDays}日前`;
-    if (lastVisitDays != null && lastVisitDays <= 60) return `${Math.floor(lastVisitDays / 7)}週間前`;
-    if (lastVisitDays != null)                        return `${Math.floor(lastVisitDays / 30)}ヶ月前`;
-    return null;
+    if (lastVisit == null || lastVisitDays == null) return null;
+    if (lastVisitDays === 0)   return "今日";
+    if (lastVisitDays === 1)   return "昨日";
+    if (lastVisitDays <= 6)    return `${lastVisitDays}日前`;
+    if (lastVisitDays <= 13)   return `${Math.floor(lastVisitDays / 7)}週間前`;
+    if (lastVisitDays <= 30)   return `${Math.floor(lastVisitDays / 7)}週間前`;
+    return `${Math.floor(lastVisitDays / 30)}ヶ月前`;
   })();
+
+  // 最終訪問日の絶対日付（西暦付き YYYY/MM/DD）
+  const lastVisitFull = lastVisit
+    ? lastVisit.replace(/-/g, "/")
+    : null;
 
   return (
     <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${isSub ? "opacity-75" : ""}`}>
@@ -128,10 +133,10 @@ export function GymCard({
         {/* 最終訪問 */}
         <div className="flex items-center gap-1 text-[11px] flex-shrink-0">
           <span>🕐</span>
-          {lastVisitLabel ? (
+          {lastVisitLabel && lastVisitFull ? (
             <span className={lastVisitDays != null && lastVisitDays >= 30 ? "text-red-400 font-medium" : "text-gray-500"}>
               {lastVisitLabel}
-              {lastVisit && <span className="text-gray-300 ml-1">({formatMMDD(lastVisit)})</span>}
+              <span className="text-gray-300 ml-1">({lastVisitFull})</span>
             </span>
           ) : (
             <span className="text-gray-300">未訪問</span>
