@@ -58,6 +58,7 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser }: Props) {
 
   // ---- ジム登録 ----
   const [gymName, setGymName] = useState("");
+  const [gymUrl, setGymUrl] = useState("");
   const [gymAreaTag, setGymAreaTag] = useState("");
   const [gymAddress, setGymAddress] = useState("");
   const [geoResult, setGeoResult] = useState<{ lat: number; lng: number } | null>(null);
@@ -134,7 +135,7 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser }: Props) {
     try {
       await addGym({
         gym_name: gymName.trim(),
-        profile_url: null,
+        profile_url: gymUrl.trim() || null,
         area_tag: gymAreaTag,
         created_by: currentUser,
         lat: geoResult.lat,
@@ -142,6 +143,7 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser }: Props) {
       });
       toast({ title: "ジムを登録しました！", variant: "success" as any });
       setGymName("");
+      setGymUrl("");
       setGymAreaTag("");
       setGymAddress("");
       setGeoResult(null);
@@ -379,6 +381,17 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser }: Props) {
                   value={gymName}
                   onChange={(e) => setGymName(e.target.value)}
                   placeholder="ジム名を入力"
+                />
+              </div>
+
+              {/* Instagram/URL */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Instagram/URL（任意）</label>
+                <Input
+                  value={gymUrl}
+                  onChange={(e) => setGymUrl(e.target.value)}
+                  placeholder="https://www.instagram.com/..."
+                  type="url"
                 />
               </div>
 

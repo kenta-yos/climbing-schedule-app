@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { Home, BarChart2, Building2, CalendarDays, Settings } from "lucide-react";
+import { Home, BarChart2, Building2, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/home", label: "トップ", icon: Home },
   { href: "/dashboard", label: "ログ", icon: BarChart2 },
   { href: "/gyms", label: "ジム", icon: Building2 },
-  { href: "/schedule", label: "セット", icon: CalendarDays },
   { href: "/admin", label: "管理", icon: Settings },
 ];
 
