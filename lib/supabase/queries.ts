@@ -37,7 +37,6 @@ export type SetSchedule = {
   gym_name: string;
   start_date: string;
   end_date: string;
-  post_url: string | null;
   created_by: string | null;
   created_at: string;
 };
@@ -152,6 +151,19 @@ export async function addGym(gym: Omit<GymMaster, "created_at">): Promise<void> 
 export async function addSetSchedules(schedules: Omit<SetSchedule, "id" | "created_at">[]): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("set_schedules").insert(schedules);
+  if (error) throw error;
+}
+
+// 1年以上前のセットスケジュールを削除
+export async function deleteOldSetSchedules(): Promise<void> {
+  const supabase = createClient();
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  const cutoff = oneYearAgo.toISOString().slice(0, 10);
+  const { error } = await supabase
+    .from("set_schedules")
+    .delete()
+    .lt("start_date", cutoff);
   if (error) throw error;
 }
 

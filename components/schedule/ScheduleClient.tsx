@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExternalLink } from "lucide-react";
 import { getNowJST, getTodayJST, formatMMDD, getMonthOptions } from "@/lib/utils";
 import type { SetSchedule } from "@/lib/supabase/queries";
 
@@ -86,17 +85,6 @@ export function ScheduleClient({ schedules }: Props) {
                     </span>
                   </div>
 
-                  {/* リンク */}
-                  {schedule.post_url && (
-                    <a
-                      href={schedule.post_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 text-gray-300 hover:text-blue-400 transition-colors flex-shrink-0"
-                    >
-                      <ExternalLink size={14} />
-                    </a>
-                  )}
                 </div>
               );
             })}
