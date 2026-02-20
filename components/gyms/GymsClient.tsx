@@ -44,6 +44,11 @@ async function geocodeAddress(address: string): Promise<Origin> {
 export function GymsClient({
   gyms, areas, allLogs, myLogs, friendLogs, setSchedules,
 }: Props) {
+  // デバッグ：lat/lngの値を確認
+  if (typeof window !== "undefined") {
+    console.log("[GymsClient] gyms lat/lng:", gyms.map(g => ({ name: g.gym_name, lat: g.lat, lng: g.lng })));
+  }
+
   const [targetDate, setTargetDate] = useState(getTodayJST());
   const [areaFilter, setAreaFilter] = useState<string>("すべて");
   const [sortMode, setSortMode] = useState<SortMode>("score");
