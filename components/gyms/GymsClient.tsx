@@ -26,14 +26,19 @@ type Origin = { lat: number; lng: number } | null;
 
 // 国土地理院API で住所 → lat/lng
 async function geocodeAddress(address: string): Promise<Origin> {
-  const res = await fetch(
-    `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`
-  );
-  if (!res.ok) return null;
-  const data = await res.json();
-  if (!data || data.length === 0) return null;
-  const [lng, lat] = data[0].geometry.coordinates;
-  return { lat, lng };
+  try {
+    const res = await fetch(
+      `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    const [lng, lat] = data[0].geometry.coordinates;
+    if (typeof lat !== "number" || typeof lng !== "number") return null;
+    return { lat, lng };
+  } catch {
+    return null;
+  }
 }
 
 export function GymsClient({
