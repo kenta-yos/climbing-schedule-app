@@ -23,6 +23,10 @@ export default async function GymsPage() {
     supabase.from("users").select("*"),
   ]);
 
+  // デバッグ：Supabaseから返ってきた生データを確認
+  console.log("[GymsPage] gymsRes error:", gymsRes.error);
+  console.log("[GymsPage] first gym raw:", gymsRes.data?.[0]);
+
   const allLogs = (allLogsRes.data || []) as ClimbingLog[];
   const friendLogs = allLogs.filter((l) => l.user !== decodedUser);
 
