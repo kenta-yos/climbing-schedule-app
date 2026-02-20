@@ -1,7 +1,6 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
-import { formatMMDD } from "@/lib/utils";
 import type { GymMaster, ClimbingLog, SetSchedule } from "@/lib/supabase/queries";
 
 type Props = {
@@ -43,21 +42,9 @@ export function GymCard({
     badges.push({ label: "⌛ ごぶさた", cls: "bg-red-50 text-red-500" });
   }
 
-  // 最終訪問ラベル（相対表記）
-  const lastVisitLabel = (() => {
-    if (lastVisit == null || lastVisitDays == null) return null;
-    if (lastVisitDays === 0)   return "今日";
-    if (lastVisitDays === 1)   return "昨日";
-    if (lastVisitDays <= 6)    return `${lastVisitDays}日前`;
-    if (lastVisitDays <= 13)   return `${Math.floor(lastVisitDays / 7)}週間前`;
-    if (lastVisitDays <= 30)   return `${Math.floor(lastVisitDays / 7)}週間前`;
-    return `${Math.floor(lastVisitDays / 30)}ヶ月前`;
-  })();
-
-  // 最終訪問日の絶対日付（西暦付き YYYY/MM/DD）
-  const lastVisitFull = lastVisit
-    ? lastVisit.replace(/-/g, "/")
-    : null;
+  // 最終登攀日（先頭10文字＝YYYY-MM-DD のみ使う）
+  const lastVisitDate = lastVisit ? lastVisit.slice(0, 10) : null;
+  const lastVisitFull = lastVisitDate ? lastVisitDate.replace(/-/g, "/") : null;
 
   return (
     <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${isSub ? "opacity-75" : ""}`}>
@@ -110,13 +97,14 @@ export function GymCard({
 
       {/* フッター */}
       <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
-        {/* セット情報 */}
-        <div className="flex items-center gap-1 text-[11px] text-gray-500 flex-1 min-w-0 truncate">
+        {/* セット情報（完了日のみ） */}
+        <div className="flex items-center gap-1 text-[11px] text-gray-500 flex-1 min-w-0">
           <span className="flex-shrink-0">📅</span>
           {latestSchedule ? (
-            <span className="truncate">
-              {formatMMDD(latestSchedule.start_date)}〜
-              {latestSchedule.end_date ? formatMMDD(latestSchedule.end_date) : ""}
+            <span>
+              {latestSchedule.end_date
+                ? latestSchedule.end_date.slice(0, 10).replace(/-/g, "/")
+                : latestSchedule.start_date.slice(0, 10).replace(/-/g, "/")}
               {setAge != null && (
                 <span className={`ml-1 font-medium ${
                   setAge <= 7 ? "text-orange-500" : setAge <= 14 ? "text-yellow-600" : "text-gray-400"
@@ -130,16 +118,15 @@ export function GymCard({
           )}
         </div>
 
-        {/* 最終訪問 */}
+        {/* 最終登攀日 */}
         <div className="flex items-center gap-1 text-[11px] flex-shrink-0">
           <span>🕐</span>
-          {lastVisitLabel && lastVisitFull ? (
+          {lastVisitFull ? (
             <span className={lastVisitDays != null && lastVisitDays >= 30 ? "text-red-400 font-medium" : "text-gray-500"}>
-              {lastVisitLabel}
-              <span className="text-gray-300 ml-1">({lastVisitFull})</span>
+              {lastVisitFull}
             </span>
           ) : (
-            <span className="text-gray-300">未訪問</span>
+            <span className="text-gray-300">未登攀</span>
           )}
         </div>
       </div>
