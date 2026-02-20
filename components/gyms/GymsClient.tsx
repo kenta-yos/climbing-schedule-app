@@ -28,7 +28,7 @@ const PAGE_SIZE = 8;
 const DEFAULT_AREA = "都内・神奈川";
 
 export function GymsClient({
-  gyms, areas, myLogs, friendLogs, setSchedules,
+  gyms, areas, myLogs, friendLogs, setSchedules, users,
 }: Props) {
   const [targetDate, setTargetDate] = useState(getTodayJST());
   const [origin, setOrigin] = useState<Origin>(null);
@@ -323,6 +323,7 @@ export function GymsClient({
               setAge={setAge ?? undefined}
               lastVisitDays={lastVisitDays ?? undefined}
               friendLogsOnDate={friendLogsOnDate.filter((l) => l.gym_name === gym.gym_name)}
+              users={users}
             />
           ))}
 
@@ -356,6 +357,7 @@ export function GymsClient({
                 setAge={setAge ?? undefined}
                 lastVisitDays={lastVisitDays ?? undefined}
                 friendLogsOnDate={friendLogsOnDate.filter((l) => l.gym_name === gym.gym_name)}
+              users={users}
                 isSub
               />
             ))}

@@ -133,11 +133,16 @@ export function AddressInput({
   // 「検索」ボタン：サジェスト未選択時は GPS 優先の先頭候補を採用
   const handleSearch = async () => {
     if (!value.trim() || value === "現在地") return;
+    // ドロップダウンを即時閉じる（state更新前にローカル変数で現在の候補を保持）
+    const currentCandidates = candidates;
     setShowDropdown(false);
+    setCandidates([]);
 
     // すでに候補あり → 先頭を採用
-    if (candidates.length > 0) {
-      handleSelect(candidates[0]);
+    if (currentCandidates.length > 0) {
+      const best = currentCandidates[0];
+      onChange(best.title);
+      onConfirm({ lat: best.lat, lng: best.lng }, best.title);
       return;
     }
     // まだ候補を取得していない場合はここで取得
@@ -146,7 +151,9 @@ export function AddressInput({
     const sorted = sortByDistance(list);
     setLoading(false);
     if (sorted.length > 0) {
-      handleSelect(sorted[0]);
+      const best = sorted[0];
+      onChange(best.title);
+      onConfirm({ lat: best.lat, lng: best.lng }, best.title);
     } else {
       // 親に空を通知（エラー表示は親が担う）
       onConfirm({ lat: NaN, lng: NaN }, "");

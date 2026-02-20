@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { ExternalLink } from "lucide-react";
-import type { GymMaster, ClimbingLog, SetSchedule } from "@/lib/supabase/queries";
+import { TIME_SLOTS } from "@/lib/constants";
+import type { GymMaster, ClimbingLog, SetSchedule, User } from "@/lib/supabase/queries";
 
 type Props = {
   gym: GymMaster;
@@ -12,6 +14,7 @@ type Props = {
   setAge?: number;
   lastVisitDays?: number;
   friendLogsOnDate: ClimbingLog[];
+  users: User[];
   isSub?: boolean;
 };
 
@@ -25,6 +28,7 @@ export function GymCard({
   setAge,
   lastVisitDays,
   friendLogsOnDate,
+  users,
   isSub = false,
 }: Props) {
 
@@ -45,6 +49,16 @@ export function GymCard({
   // 最終登攀日（先頭10文字＝YYYY-MM-DD のみ使う）
   const lastVisitDate = lastVisit ? lastVisit.slice(0, 10) : null;
   const lastVisitFull = lastVisitDate ? lastVisitDate.replace(/-/g, "/") : null;
+
+  // 時間帯アイコンを取得
+  const getTimeIcon = (timeSlot: string | null): string | null => {
+    if (!timeSlot) return null;
+    return TIME_SLOTS.find((s) => s.value === timeSlot)?.icon ?? null;
+  };
+
+  // ユーザー情報を取得
+  const getUserInfo = (userName: string): User | undefined =>
+    users.find((u) => u.user_name === userName);
 
   return (
     <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${isSub ? "opacity-75" : ""}`}>
@@ -86,11 +100,40 @@ export function GymCard({
                 {b.label}
               </span>
             ))}
-            {friendLogsOnDate.map((l) => (
-              <span key={l.id} className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">
-                👥 {l.user}{l.time_slot ? ` ${l.time_slot}` : ""}
-              </span>
-            ))}
+            {/* 仲間バッジ：ユーザーアイコン + 時間帯アイコン */}
+            {friendLogsOnDate.map((l) => {
+              const user = getUserInfo(l.user);
+              const timeIcon = getTimeIcon(l.time_slot);
+              return (
+                <span
+                  key={l.id}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-purple-50 border border-purple-100"
+                >
+                  {/* ユーザーアイコン */}
+                  {user?.icon ? (
+                    <Image
+                      src={user.icon}
+                      alt={user.user_name}
+                      width={16}
+                      height={16}
+                      className="rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <span className="text-[13px] leading-none">{l.user.slice(0, 1)}</span>
+                  )}
+                  {/* 時間帯アイコン */}
+                  {timeIcon && (
+                    <Image
+                      src={timeIcon}
+                      alt={l.time_slot ?? ""}
+                      width={14}
+                      height={14}
+                      className="object-contain flex-shrink-0"
+                    />
+                  )}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>

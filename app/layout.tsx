@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Go Bouldering Pro",
+  title: "Go Bouldering",
   description: "ボルダリングジム管理・スケジュール共有アプリ",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Go Bouldering Pro",
+    title: "Go Bouldering",
   },
   icons: {
     apple: "/icon-192.png",
