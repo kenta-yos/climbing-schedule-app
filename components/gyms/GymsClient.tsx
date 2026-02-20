@@ -120,8 +120,9 @@ export function GymsClient({
 
   // 距離計算
   const getDistance = (gym: GymMaster): number | null => {
-    if (!origin || gym.lat === null || gym.lng === null) return null;
-    return haversineKm(origin.lat, origin.lng, gym.lat, gym.lng);
+    if (!origin || gym.lat == null || gym.lng == null) return null;
+    const d = haversineKm(origin.lat, origin.lng, gym.lat, gym.lng);
+    return isFinite(d) ? d : null;
   };
 
   // gymMapで素早くアクセス

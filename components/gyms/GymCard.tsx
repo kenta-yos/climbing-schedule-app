@@ -71,7 +71,7 @@ export function GymCard({
             <h3 className="text-sm font-bold text-gray-900 leading-tight">{gym.gym_name}</h3>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[11px] text-gray-400">{gym.area_tag}</span>
-              {distanceKm !== null && (
+              {distanceKm != null && isFinite(distanceKm) && (
                 <span className="text-[11px] font-medium text-blue-500">
                   📍 {distanceKm < 1
                     ? `${Math.round(distanceKm * 1000)}m`
