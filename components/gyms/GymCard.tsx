@@ -50,13 +50,13 @@ export function GymCard({
   const lastVisitDate = lastVisit ? lastVisit.slice(0, 10) : null;
   const lastVisitFull = lastVisitDate ? lastVisitDate.replace(/-/g, "/") : null;
 
-  // 時間帯アイコンを取得
+  // 時間帯アイコンパス（/images/hiru.png 等）
   const getTimeIcon = (timeSlot: string | null): string | null => {
     if (!timeSlot) return null;
     return TIME_SLOTS.find((s) => s.value === timeSlot)?.icon ?? null;
   };
 
-  // ユーザー情報を取得
+  // ユーザー情報（icon は絵文字テキスト、color は hex カラー）
   const getUserInfo = (userName: string): User | undefined =>
     users.find((u) => u.user_name === userName);
 
@@ -100,28 +100,23 @@ export function GymCard({
                 {b.label}
               </span>
             ))}
-            {/* 仲間バッジ：ユーザーアイコン + 時間帯アイコン */}
+            {/* 仲間バッジ：絵文字アイコン（背景色付き丸）＋ 時間帯画像アイコン */}
             {friendLogsOnDate.map((l) => {
               const user = getUserInfo(l.user);
               const timeIcon = getTimeIcon(l.time_slot);
               return (
                 <span
                   key={l.id}
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-purple-50 border border-purple-100"
+                  className="inline-flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-full bg-purple-50 border border-purple-100"
                 >
-                  {/* ユーザーアイコン */}
-                  {user?.icon ? (
-                    <Image
-                      src={user.icon}
-                      alt={user.user_name}
-                      width={16}
-                      height={16}
-                      className="rounded-full object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <span className="text-[13px] leading-none">{l.user.slice(0, 1)}</span>
-                  )}
-                  {/* 時間帯アイコン */}
+                  {/* ユーザーアイコン（絵文字 + カラー背景丸） */}
+                  <span
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] flex-shrink-0"
+                    style={{ backgroundColor: user?.color ?? "#9ca3af" }}
+                  >
+                    {user?.icon ?? l.user.slice(0, 1)}
+                  </span>
+                  {/* 時間帯アイコン（画像） */}
                   {timeIcon && (
                     <Image
                       src={timeIcon}
