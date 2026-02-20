@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { GymMaster, AreaMaster, SetSchedule } from "@/lib/supabase/queries";
+import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,17 @@ export default async function AdminPage() {
     supabase.from("set_schedules").select("*").order("start_date", { ascending: false }),
   ]);
 
+  const decodedUser = decodeURIComponent(userName);
+
+  // ページビュー記録（非同期・fire-and-forget）
+  addPageView(decodedUser, "admin").catch(() => {});
+
   return (
     <AdminClient
       gyms={(gymsRes.data || []) as GymMaster[]}
       areas={(areasRes.data || []) as AreaMaster[]}
       setSchedules={(schedulesRes.data || []) as SetSchedule[]}
-      currentUser={decodeURIComponent(userName)}
+      currentUser={decodedUser}
     />
   );
 }

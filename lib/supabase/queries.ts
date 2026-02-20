@@ -173,3 +173,9 @@ export async function addAccessLog(userName: string): Promise<void> {
   const { error } = await supabase.from("access_logs").insert({ user_name: userName });
   if (error) throw error;
 }
+
+// ページビュー記録（fire-and-forget、エラーは無視）
+export async function addPageView(userName: string, page: string, action?: string): Promise<void> {
+  const supabase = createClient();
+  await supabase.from("page_views").insert({ user_name: userName, page, action: action ?? null });
+}

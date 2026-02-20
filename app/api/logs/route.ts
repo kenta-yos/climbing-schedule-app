@@ -24,6 +24,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { error } = await supabase.from("climbing_logs").insert(body);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // ログ登録のアクション記録（予定 or 実績）
+    if (body.user && body.type) {
+      const action = body.type === "予定" ? "plan_created" : "log_created";
+      supabase.from("page_views").insert({ user_name: body.user, page: "home", action }).then(() => {});
+    }
+
     return NextResponse.json({ success: true }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
