@@ -59,7 +59,7 @@ export function GymsClient({
     setVisibleCount(PAGE_SIZE);
   };
 
-  // GPS取得
+  // GPS取得（maximumAge: 0 でキャッシュを使わず必ず最新位置を取得）
   const handleGPS = useCallback(() => {
     if (!navigator.geolocation) {
       setGeocodeError("位置情報に対応していません");
@@ -77,7 +77,7 @@ export function GymsClient({
         setGeocodeError("位置情報の取得に失敗しました");
         setGpsLoading(false);
       },
-      { timeout: 10000 }
+      { timeout: 10000, maximumAge: 0 }
     );
   }, []);
 
@@ -114,10 +114,10 @@ export function GymsClient({
     return isFinite(d) ? d : null;
   };
 
-  // 最新セット取得（targetDate以前のものに限定。未来のスケジュールは無視）
+  // 最新セット取得（targetDateより前のものに限定。当日(0日目)・未来は無視）
   const getLatestSchedule = (gymName: string): SetSchedule | null => {
     const schedules = setSchedules
-      .filter((s) => s.gym_name === gymName && s.start_date <= targetDate)
+      .filter((s) => s.gym_name === gymName && s.start_date < targetDate)
       .sort((a, b) => b.start_date.localeCompare(a.start_date));
     return schedules[0] ?? null;
   };

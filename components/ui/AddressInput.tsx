@@ -130,9 +130,13 @@ export function AddressInput({
     setCandidates([]);
   };
 
-  // 「検索」ボタン：サジェスト未選択時は GPS 優先の先頭候補を採用
+  // 「検索」ボタン：「現在地」のときは GPS を再取得、それ以外はサジェスト先頭候補を採用
   const handleSearch = async () => {
-    if (!value.trim() || value === "現在地") return;
+    if (!value.trim()) return;
+    if (value === "現在地") {
+      onGpsClick?.();
+      return;
+    }
     // ドロップダウンを即時閉じる（state更新前にローカル変数で現在の候補を保持）
     const currentCandidates = candidates;
     setShowDropdown(false);
@@ -195,7 +199,7 @@ export function AddressInput({
         {/* 検索ボタン */}
         <button
           onClick={handleSearch}
-          disabled={loading || !value.trim() || value === "現在地"}
+          disabled={loading || !value.trim()}
           className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
         >
           検索
