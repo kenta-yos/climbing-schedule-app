@@ -42,7 +42,7 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
   // --- データ取得 ---
   const fetchLogs = useCallback(async () => {
     try {
-      const res = await fetch("/api/logs");
+      const res = await fetch("/api/logs?mode=home");
       if (res.ok) setLogs(await res.json());
     } catch (e) {
       console.error(e);

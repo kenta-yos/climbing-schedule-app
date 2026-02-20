@@ -111,6 +111,7 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
           variant: "success" as any,
         });
       }
+      router.refresh();
       router.push("/home");
     } catch (err) {
       console.error(err);
@@ -125,6 +126,7 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
     try {
       await deleteClimbingLog(editLog.id);
       toast({ title: "🗑️ 予定を削除しました", variant: "success" as any });
+      router.refresh();
       router.push("/home");
     } catch (err) {
       console.error(err);
@@ -239,7 +241,7 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
                 className="w-full text-left px-4 py-3 mb-3 rounded-xl border-2 border-dashed border-gray-300 bg-white text-sm font-medium text-gray-500 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 transition-all duration-150 active:scale-[0.98] flex items-center gap-2"
               >
                 <span className="text-lg">🤷</span>
-                <span>ジム未定でとりあえず登録</span>
+                <span>どこか登ろう〜でとりあえず登録</span>
               </button>
 
               {/* 検索ボックス */}
