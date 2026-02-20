@@ -1,23 +1,30 @@
 "use client";
 
+import Image from "next/image";
 import { useUserStore } from "@/lib/store/useUserStore";
 
 type PageHeaderProps = {
   title: string;
   subtitle?: string;
+  icon?: string; // アイコン画像パス（例："/icon-192.png"）
 };
 
-export function PageHeader({ title, subtitle }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, icon }: PageHeaderProps) {
   const { userName, userColor, userIcon } = useUserStore();
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100" style={{ paddingTop: "env(safe-area-inset-top)" }}>
       <div className="flex items-center justify-between px-4 py-3 max-w-lg mx-auto">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">{title}</h1>
-          {subtitle && (
-            <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+        <div className="flex items-center gap-2">
+          {icon && (
+            <Image src={icon} alt="icon" width={28} height={28} className="rounded-lg flex-shrink-0" />
           )}
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">{title}</h1>
+            {subtitle && (
+              <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>
+            )}
+          </div>
         </div>
         {userName && (
           <div

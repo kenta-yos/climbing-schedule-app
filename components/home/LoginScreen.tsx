@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useUserStore } from "@/lib/store/useUserStore";
 import { addAccessLog } from "@/lib/supabase/queries";
 import type { User } from "@/lib/supabase/queries";
@@ -43,10 +44,10 @@ export function LoginScreen({ users }: Props) {
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-8 bg-gradient-to-br from-orange-50 via-white to-pink-50">
       {/* ロゴ */}
       <div className="mb-8 text-center">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl climbing-gradient shadow-lg mb-4">
-          <span className="text-4xl">🧗</span>
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl shadow-lg mb-4 overflow-hidden">
+          <Image src="/icon-192.png" alt="Go Bouldering" width={80} height={80} className="object-cover" />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Go Bouldering Pro</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Go Bouldering</h1>
         <p className="text-sm text-gray-500 mt-1">ボルダリング管理アプリ</p>
       </div>
 

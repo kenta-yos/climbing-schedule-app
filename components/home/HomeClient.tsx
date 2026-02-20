@@ -140,7 +140,7 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
         </div>
       </div>
 
-      <PageHeader title="Go Bouldering Pro" subtitle={`今日 ${today}`} />
+      <PageHeader title="Go Bouldering" subtitle={`今日 ${today}`} icon="/icon-192.png" />
 
       <div className="px-4 py-4 space-y-6 page-enter">
         {/* 記録ボタン → /home/plan へ遷移 */}
