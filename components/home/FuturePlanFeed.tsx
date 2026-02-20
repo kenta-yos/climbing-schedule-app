@@ -149,8 +149,15 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
 
   const handleEditNavigate = useCallback((logId: string) => {
     setEditingId(logId);
+    router.refresh();
     router.push(`/home/plan?editId=${logId}`);
   }, [router]);
+
+  // 参加登録後：SSRキャッシュもリフレッシュしてからデータ再取得
+  const handleJoined = useCallback(() => {
+    router.refresh();
+    onJoined();
+  }, [router, onJoined]);
 
   const today = getTodayJST();
   const tomorrow = getTomorrowJST();
@@ -308,7 +315,7 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                             onCancel={() => setOpenJoinKey(null)}
                             onJoined={() => {
                               setOpenJoinKey(null);
-                              onJoined();
+                              handleJoined();
                             }}
                           />
                         )}
