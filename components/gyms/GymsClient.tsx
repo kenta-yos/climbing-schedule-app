@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
-import { Navigation, Loader2 } from "lucide-react";
+import { AddressInput } from "@/components/ui/AddressInput";
 import { getTodayJST, haversineKm } from "@/lib/utils";
 import { GymCard } from "@/components/gyms/GymCard";
 import type { GymMaster, AreaMaster, ClimbingLog, SetSchedule, User } from "@/lib/supabase/queries";
@@ -27,29 +27,12 @@ const PAGE_SIZE = 8;
 // 東京・神奈川エリアのmajor_area値
 const DEFAULT_AREA = "都内・神奈川";
 
-async function geocodeAddress(address: string): Promise<Origin> {
-  try {
-    const res = await fetch(
-      `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!Array.isArray(data) || data.length === 0) return null;
-    const [lng, lat] = data[0].geometry.coordinates;
-    if (typeof lat !== "number" || typeof lng !== "number") return null;
-    return { lat, lng };
-  } catch {
-    return null;
-  }
-}
-
 export function GymsClient({
   gyms, areas, myLogs, friendLogs, setSchedules,
 }: Props) {
   const [targetDate, setTargetDate] = useState(getTodayJST());
   const [origin, setOrigin] = useState<Origin>(null);
   const [originInput, setOriginInput] = useState("現在地");
-  const [geocoding, setGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState("");
   const [gpsLoading, setGpsLoading] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -98,20 +81,20 @@ export function GymsClient({
     );
   }, []);
 
-  // 住所ジオコーディング
-  const handleGeocode = useCallback(async () => {
-    if (!originInput.trim() || originInput === "現在地") return;
-    setGeocoding(true);
-    setGeocodeError("");
-    const result = await geocodeAddress(originInput.trim());
-    setGeocoding(false);
-    if (result) {
-      setOrigin(result);
-    } else {
-      setGeocodeError("住所が見つかりませんでした");
-      setOrigin(null);
-    }
-  }, [originInput]);
+  // AddressInput からの確定コールバック
+  const handleAddressConfirm = useCallback(
+    (result: { lat: number; lng: number }, label: string) => {
+      if (!isNaN(result.lat) && !isNaN(result.lng)) {
+        setOrigin(result);
+        setGeocodeError("");
+        if (label) setOriginInput(label);
+      } else {
+        setOrigin(null);
+        setGeocodeError("住所が見つかりませんでした");
+      }
+    },
+    []
+  );
 
   // エリアフィルター
   const filteredGyms = showAll
@@ -173,7 +156,7 @@ export function GymsClient({
       latestSchedule,
       lastVisit,
       setAge: latestSchedule ? daysDiffFromTarget(latestSchedule.start_date) : null,
-      lastVisitDays: lastVisit ? daysDiffFromTarget(lastVisit) : null,
+      lastVisitDays: lastVisit ? daysDiffFromTarget(lastVisit.slice(0, 10)) : null,
     };
   });
 
@@ -192,7 +175,6 @@ export function GymsClient({
     const withSchedule = gymsWithMeta.filter((g) => g.latestSchedule !== null);
     const noSchedule = gymsWithMeta.filter((g) => g.latestSchedule === null);
     const sorted = [...withSchedule].sort((a, b) => {
-      // setAge が小さい（最近セット替え）順
       if (a.setAge == null && b.setAge == null) return 0;
       if (a.setAge == null) return 1;
       if (b.setAge == null) return -1;
@@ -206,7 +188,6 @@ export function GymsClient({
     const visited = gymsWithMeta.filter((g) => g.lastVisit !== null);
     const unvisited = gymsWithMeta.filter((g) => g.lastVisit === null);
     const sorted = [...visited].sort((a, b) => {
-      // lastVisitDays が大きい（長く行ってない）順
       if (a.lastVisitDays == null && b.lastVisitDays == null) return 0;
       if (a.lastVisitDays == null) return 1;
       if (b.lastVisitDays == null) return -1;
@@ -259,46 +240,32 @@ export function GymsClient({
           </div>
 
           {/* 出発地 */}
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-gray-500 w-14 flex-shrink-0">📍 出発地</span>
-            <div className="flex-1 flex gap-2">
-              <Input
-                type="text"
-                placeholder="住所・駅名（例：渋谷駅）"
+          <div className="flex items-start gap-3">
+            <span className="text-xs font-semibold text-gray-500 w-14 flex-shrink-0 pt-2">📍 出発地</span>
+            <div className="flex-1">
+              <AddressInput
                 value={originInput}
-                onChange={(e) => {
-                  setOriginInput(e.target.value);
-                  setOrigin(null);
+                onChange={(v) => {
+                  setOriginInput(v);
+                  // テキストを変更したら確定状態をリセット
+                  if (v !== "現在地") setOrigin(null);
                 }}
-                onKeyDown={(e) => { if (e.key === "Enter") handleGeocode(); }}
-                className="flex-1 text-sm h-9"
+                onConfirm={handleAddressConfirm}
+                gpsOrigin={origin}
+                showGpsButton
+                onGpsClick={handleGPS}
+                gpsLoading={gpsLoading}
+                error={geocodeError}
+                confirmed={!!origin && originInput !== "現在地"}
               />
-              <button
-                onClick={handleGeocode}
-                disabled={geocoding || !originInput.trim() || originInput === "現在地"}
-                className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 text-xs font-medium hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
-              >
-                {geocoding ? <Loader2 size={14} className="animate-spin" /> : "検索"}
-              </button>
-              <button
-                onClick={handleGPS}
-                disabled={gpsLoading}
-                title="現在地を取得"
-                className="px-3 h-9 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 transition-colors flex-shrink-0"
-              >
-                {gpsLoading ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
-              </button>
+              {originInput === "現在地" && origin && (
+                <p className="text-xs text-green-600 mt-1">✅ 現在地を取得しました</p>
+              )}
+              {gpsLoading && (
+                <p className="text-xs text-gray-400 mt-1">現在地を取得中...</p>
+              )}
             </div>
           </div>
-          {geocodeError && <p className="text-xs text-red-400 pl-[68px]">{geocodeError}</p>}
-          {origin && originInput !== "現在地" && (
-            <p className="text-xs text-green-600 pl-[68px]">
-              ✅ 位置情報を設定しました
-            </p>
-          )}
-          {gpsLoading && (
-            <p className="text-xs text-gray-400 pl-[68px]">現在地を取得中...</p>
-          )}
         </div>
 
         {/* 全国表示チェックボックス */}
