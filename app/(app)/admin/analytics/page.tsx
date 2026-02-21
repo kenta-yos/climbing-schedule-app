@@ -53,9 +53,12 @@ export default async function AnalyticsPage() {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - 30);
   const cutoff = cutoffDate.toISOString();
-  const cutoffDateStr = cutoffDate.toISOString().slice(0, 10); // YYYY-MM-DD
+  const cutoffDateStr = cutoffDate.toISOString().slice(0, 10);
 
-  const [accessLogsRes, pageViewsRes, climbingLogsRes] = await Promise.all([
+  // 過去48時間のカットオフ
+  const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+  const [accessLogsRes, pageViewsRes, climbingLogsRes, recentLogsRes] = await Promise.all([
     supabase
       .from("access_logs")
       .select("user_name, created_at")
@@ -73,19 +76,26 @@ export default async function AnalyticsPage() {
       .from("climbing_logs")
       .select("user, type, date")
       .neq("user", adminName),
+    // 直近48時間のページビューのみ（action=nullのページ遷移のみ）
+    supabase
+      .from("page_views")
+      .select("user_name, page, created_at")
+      .gte("created_at", cutoff48h)
+      .neq("user_name", adminName)
+      .is("action", null)
+      .order("created_at", { ascending: false }),
   ]);
 
   const accessLogs = accessLogsRes.data || [];
   const pageViews = pageViewsRes.data || [];
   const climbingLogs = climbingLogsRes.data || [];
+  const recentLogs = recentLogsRes.data || [];
 
   // ページロード（action=null）とアクション記録を分離
-  // page_viewsにはaddPageView（action=null）とtrackAction（action!=null）の両方が混在している
   const pageLoads = pageViews.filter((pv) => !pv.action);
   const actionRecords = pageViews.filter((pv) => !!pv.action);
 
   const days14 = lastNDays(14);
-  // 7日前の日付（lastNDays(8)の最初の要素 = 7日前）
   const sevenDaysAgo = lastNDays(8)[0];
 
   // --- 日別集計 ---
@@ -98,7 +108,7 @@ export default async function AnalyticsPage() {
   }
   const dailyLogins = days14.map((date) => ({ date, count: loginByDay[date] || 0 }));
 
-  // 日別ページビュー数（pageLoadsのみカウント）
+  // 日別ページビュー数（pageLoadsのみ）
   const pvByDay: Record<string, number> = {};
   for (const pv of pageLoads) {
     const d = toJSTDate(pv.created_at);
@@ -130,7 +140,16 @@ export default async function AnalyticsPage() {
   const plansTotal = climbingLogs.filter((l) => l.type === "予定").length;
   const logsTotal = climbingLogs.filter((l) => l.type === "実績").length;
 
-  // ユーザー別サマリー（アクセスログ・ページビュー・クライミングログ全てのユニークユーザー）
+  // ユーザーごとの最終アクセス日時（access_logs と pageLoads の最新を使用）
+  const lastAccessMap: Record<string, string> = {};
+  for (const log of [...accessLogs, ...pageLoads]) {
+    const u = log.user_name;
+    if (!lastAccessMap[u] || log.created_at > lastAccessMap[u]) {
+      lastAccessMap[u] = log.created_at;
+    }
+  }
+
+  // ユーザー別サマリー
   const allUsers = Array.from(
     new Set([
       ...accessLogs.map((l) => l.user_name),
@@ -143,6 +162,7 @@ export default async function AnalyticsPage() {
     .map((user) => ({
       user,
       logins: accessLogs.filter((l) => l.user_name === user).length,
+      lastAccessDate: lastAccessMap[user] ? toJSTDate(lastAccessMap[user]) : "—",
       pvHome: pageLoads.filter((p) => p.user_name === user && p.page === "home").length,
       pvDashboard: pageLoads.filter((p) => p.user_name === user && p.page === "dashboard").length,
       pvGyms: pageLoads.filter((p) => p.user_name === user && p.page === "gyms").length,
@@ -182,6 +202,7 @@ export default async function AnalyticsPage() {
     pageViewCounts,
     actionCounts,
     userStats,
+    recentLogs,
   };
 
   return <AnalyticsDashboard {...props} />;
