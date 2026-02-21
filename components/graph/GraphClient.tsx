@@ -128,13 +128,15 @@ export function GraphClient({ logs, plans, users, currentUser }: Props) {
 
   const positions = useMemo(() => {
     const pos: Record<string, { x: number; y: number }> = {};
+    const myIndex = nodeIds.indexOf(currentUser);
     nodeIds.forEach((id, i) => {
-      const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+      // currentUser が真下（π/2）に来るよう角度をオフセット
+      const angle = (2 * Math.PI * (i - myIndex)) / n + Math.PI / 2;
       pos[id] = { x: CX + CIRCLE_R * Math.cos(angle), y: CY + CIRCLE_R * Math.sin(angle) };
     });
     return pos;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [n, nodeIds.join(",")]);
+  }, [n, nodeIds.join(","), currentUser]);
 
   const maxCount = Math.max(...edges.map((e) => e.count), 1);
 
