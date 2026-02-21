@@ -117,7 +117,9 @@ export default async function AnalyticsPage() {
   const dailyPageViews = days14.map((date) => ({ date, count: pvByDay[date] || 0 }));
 
   // ページ別PV（pageLoadsのみ）
-  const pageCountMap: Record<string, number> = {};
+  const pageCountMap: Record<string, number> = {
+    home: 0, dashboard: 0, gyms: 0, plan: 0, graph: 0,
+  };
   for (const pv of pageLoads) {
     pageCountMap[pv.page] = (pageCountMap[pv.page] || 0) + 1;
   }
