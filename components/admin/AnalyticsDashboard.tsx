@@ -157,6 +157,7 @@ const PAGE_LABELS: Record<string, string> = {
   dashboard: "📊 ダッシュボード",
   gyms: "🏢 ジム一覧",
   plan: "📅 予定入力",
+  graph: "🕸️ つながり",
   admin: "⚙️ 管理",
 };
 
