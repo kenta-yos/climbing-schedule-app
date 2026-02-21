@@ -4,28 +4,55 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { addClimbingLog, updateClimbingLog, deleteClimbingLog } from "@/lib/supabase/queries";
+import {
+  addClimbingLog,
+  updateClimbingLog,
+  deleteClimbingLog,
+  updateClimbingLogsBulk,
+  getConflictingLog,
+} from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { trackAction } from "@/lib/analytics";
-import { getTodayJST } from "@/lib/utils";
+import { getTodayJST, formatMMDD } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
 import type { GymMaster, ClimbingLog } from "@/lib/supabase/queries";
 import Image from "next/image";
 import { ChevronLeft, Search, X, Trash2, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // ジム未定のときの内部値・DB保存値
 export const GYM_UNDECIDED = "__undecided__";
 export const GYM_UNDECIDED_LABEL = "ジム未定";
 
+type ConflictItem = {
+  member: ClimbingLog;
+  conflictLog: ClimbingLog;
+};
+
 type Props = {
   userName: string;
   gyms: GymMaster[];
   recentGymNames: string[];
-  myPlans?: ClimbingLog[]; // 自分の予定ログ（二重登録チェック用）
-  editLog?: ClimbingLog;   // 編集モード時のみ渡す
+  myPlans?: ClimbingLog[];
+  editLog?: ClimbingLog;
+  groupMembers?: ClimbingLog[];
 };
 
-export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], editLog }: Props) {
+export function PlanPageClient({
+  userName,
+  gyms,
+  recentGymNames,
+  myPlans = [],
+  editLog,
+  groupMembers = [],
+}: Props) {
   const router = useRouter();
   const isEdit = !!editLog;
 
@@ -40,6 +67,12 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Dialog 1: グループ全員変更確認
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
+  // Dialog 2: 重複確認
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
 
   // 検索フィルター
   const filteredGyms = searchQuery.trim()
@@ -68,6 +101,22 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
   const gymNameForDB =
     selectedGym === GYM_UNDECIDED ? GYM_UNDECIDED_LABEL : selectedGym;
 
+  // 時間帯の表示ラベル
+  const slotLabel = TIME_SLOTS.find((s) => s.value === timeSlot)?.label ?? timeSlot;
+
+  // 変更があるかチェック（編集モード専用）
+  const hasChanges = (): boolean => {
+    if (!editLog) return false;
+    const origDate = editLog.date.split("T")[0];
+    const origGym =
+      editLog.gym_name === GYM_UNDECIDED_LABEL ? GYM_UNDECIDED : editLog.gym_name;
+    return (
+      date !== origDate ||
+      selectedGym !== origGym ||
+      timeSlot !== (editLog.time_slot ?? "夜")
+    );
+  };
+
   const handleSubmit = async (type: "予定" | "実績") => {
     if (!selectedGym) {
       toast({ title: "ジムを選択してください", variant: "destructive" });
@@ -77,31 +126,31 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
       toast({ title: "日付を選択してください", variant: "destructive" });
       return;
     }
-    setSubmitting(true);
-    try {
-      if (isEdit && editLog) {
-        await updateClimbingLog(editLog.id, {
-          date,
-          gym_name: gymNameForDB,
-          time_slot: timeSlot as "昼" | "夕方" | "夜",
-        });
-        trackAction(userName, "plan", "plan_updated");
-        toast({ title: "📅 予定を更新しました！", variant: "success" as any });
-      } else {
-        // 二重登録チェック（予定のみ）
-        if (type === "予定") {
-          const duplicate = myPlans.find(
-            (l) =>
-              l.date.split("T")[0] === date &&
-              l.gym_name === gymNameForDB &&
-              l.time_slot === timeSlot
-          );
-          if (duplicate) {
-            toast({ title: "🙈 同じ予定がもうすでにあるよ！", variant: "destructive" });
-            setSubmitting(false);
-            return;
-          }
+
+    if (isEdit && editLog) {
+      // 変更がある かつ グループメンバーがいる場合はグループ確認ダイアログを表示
+      if (hasChanges() && groupMembers.length > 0) {
+        setShowGroupDialog(true);
+        return;
+      }
+      // それ以外は自分だけ更新
+      await executeSelfUpdate();
+    } else {
+      // 新規登録
+      if (type === "予定") {
+        const duplicate = myPlans.find(
+          (l) =>
+            l.date.split("T")[0] === date &&
+            l.gym_name === gymNameForDB &&
+            l.time_slot === timeSlot
+        );
+        if (duplicate) {
+          toast({ title: "🙈 同じ予定がもうすでにあるよ！", variant: "destructive" });
+          return;
         }
+      }
+      setSubmitting(true);
+      try {
         await addClimbingLog({
           date,
           gym_name: gymNameForDB,
@@ -113,12 +162,140 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
           title: type === "予定" ? "📅 予定を登録しました！" : "🧗 実績を登録しました！",
           variant: "success" as any,
         });
+        router.refresh();
+        router.push("/home");
+      } catch (err) {
+        console.error(err);
+        toast({ title: "登録に失敗しました", variant: "destructive" });
+        setSubmitting(false);
       }
+    }
+  };
+
+  // 自分だけ更新
+  const executeSelfUpdate = async () => {
+    setSubmitting(true);
+    setShowGroupDialog(false);
+    try {
+      await updateClimbingLog(editLog!.id, {
+        date,
+        gym_name: gymNameForDB,
+        time_slot: timeSlot as "昼" | "夕方" | "夜",
+      });
+      trackAction(userName, "plan", "plan_updated");
+      toast({ title: "📅 予定を更新しました！", variant: "success" as any });
       router.refresh();
       router.push("/home");
     } catch (err) {
       console.error(err);
-      toast({ title: isEdit ? "更新に失敗しました" : "登録に失敗しました", variant: "destructive" });
+      toast({ title: "更新に失敗しました", variant: "destructive" });
+      setSubmitting(false);
+    }
+  };
+
+  // 全員分更新（重複チェックあり）
+  const handleGroupUpdateAll = async () => {
+    setSubmitting(true);
+    setShowGroupDialog(false);
+
+    const updates = {
+      date,
+      gym_name: gymNameForDB,
+      time_slot: timeSlot as "昼" | "夕方" | "夜",
+    };
+
+    try {
+      // グループメンバーの重複チェック（並行）
+      const conflictChecks = await Promise.all(
+        groupMembers.map(async (member) => {
+          const conflictLog = await getConflictingLog(
+            member.user,
+            date,
+            gymNameForDB,
+            timeSlot,
+            member.id
+          );
+          return conflictLog ? { member, conflictLog } : null;
+        })
+      );
+      const conflictsFound = conflictChecks.filter(
+        (c): c is ConflictItem => c !== null
+      );
+
+      if (conflictsFound.length > 0) {
+        // 重複ありの場合、確認ダイアログを表示
+        setConflicts(conflictsFound);
+        setSubmitting(false);
+        setShowConflictDialog(true);
+        return;
+      }
+
+      // 重複なし：自分 + 全メンバー一括更新
+      await updateClimbingLog(editLog!.id, updates);
+      await updateClimbingLogsBulk(groupMembers.map((m) => m.id), updates);
+
+      trackAction(userName, "plan", "plan_updated_group");
+      toast({ title: "📅 全員の予定を更新しました！", variant: "success" as any });
+      router.refresh();
+      router.push("/home");
+    } catch (err) {
+      console.error(err);
+      toast({ title: "更新に失敗しました", variant: "destructive" });
+      setSubmitting(false);
+    }
+  };
+
+  // 重複確認後の処理
+  const handleConflictDecision = async (override: boolean) => {
+    setSubmitting(true);
+    setShowConflictDialog(false);
+
+    const updates = {
+      date,
+      gym_name: gymNameForDB,
+      time_slot: timeSlot as "昼" | "夕方" | "夜",
+    };
+
+    try {
+      // 自分の更新
+      await updateClimbingLog(editLog!.id, updates);
+
+      // 重複しないメンバーを更新
+      const conflictMemberIds = new Set(conflicts.map((c) => c.member.id));
+      const nonConflictMembers = groupMembers.filter(
+        (m) => !conflictMemberIds.has(m.id)
+      );
+      if (nonConflictMembers.length > 0) {
+        await updateClimbingLogsBulk(
+          nonConflictMembers.map((m) => m.id),
+          updates
+        );
+      }
+
+      if (override) {
+        // 重複ログを先に削除してから、メンバーのログを更新
+        for (const { conflictLog } of conflicts) {
+          await deleteClimbingLog(conflictLog.id);
+        }
+        await updateClimbingLogsBulk(
+          conflicts.map((c) => c.member.id),
+          updates
+        );
+        toast({ title: "📅 全員の予定を更新しました！", variant: "success" as any });
+      } else {
+        const skippedNames = conflicts.map((c) => c.member.user).join("、");
+        toast({
+          title: `📅 予定を更新しました（${skippedNames}さんはスキップ）`,
+          variant: "success" as any,
+        });
+      }
+
+      trackAction(userName, "plan", "plan_updated_group");
+      router.refresh();
+      router.push("/home");
+    } catch (err) {
+      console.error(err);
+      toast({ title: "更新に失敗しました", variant: "destructive" });
       setSubmitting(false);
     }
   };
@@ -161,10 +338,11 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
             disabled={deleting}
             className="p-2 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
           >
-            {deleting
-              ? <div className="w-5 h-5 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
-              : <Trash2 size={20} />
-            }
+            {deleting ? (
+              <div className="w-5 h-5 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Trash2 size={20} />
+            )}
           </button>
         )}
       </div>
@@ -210,7 +388,11 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
                   height={32}
                   className="object-contain"
                 />
-                <span className={`text-sm font-medium ${timeSlot === slot.value ? "text-orange-600" : "text-gray-600"}`}>
+                <span
+                  className={`text-sm font-medium ${
+                    timeSlot === slot.value ? "text-orange-600" : "text-gray-600"
+                  }`}
+                >
                   {slot.label}
                 </span>
               </button>
@@ -250,7 +432,10 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
 
               {/* 検索ボックス */}
               <div className="relative mb-4">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search
+                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
                 <Input
                   type="text"
                   placeholder="ジム名を検索..."
@@ -279,12 +464,16 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
                         onClick={() => handleSelectGym(gym.gym_name, "search")}
                         className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:border-orange-300 hover:bg-orange-50 transition-all duration-150 active:scale-[0.98]"
                       >
-                        {recentGymNames.includes(gym.gym_name) && <span className="mr-1">⭐</span>}
+                        {recentGymNames.includes(gym.gym_name) && (
+                          <span className="mr-1">⭐</span>
+                        )}
                         {gym.gym_name}
                       </button>
                     ))
                   ) : (
-                    <p className="text-sm text-gray-400 text-center py-6">該当するジムが見つかりません</p>
+                    <p className="text-sm text-gray-400 text-center py-6">
+                      該当するジムが見つかりません
+                    </p>
                   )}
                 </div>
               ) : (
@@ -324,7 +513,10 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
               className="flex-1 h-14 text-base font-semibold"
             >
               {submitting ? (
-                <><Loader2 size={18} className="animate-spin mr-2" />保存中…</>
+                <>
+                  <Loader2 size={18} className="animate-spin mr-2" />
+                  保存中…
+                </>
               ) : (
                 "💾 変更を保存"
               )}
@@ -338,7 +530,10 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
                 className="flex-1 h-14 text-base font-semibold"
               >
                 {submitting ? (
-                  <><Loader2 size={18} className="animate-spin mr-2" />登録中…</>
+                  <>
+                    <Loader2 size={18} className="animate-spin mr-2" />
+                    登録中…
+                  </>
                 ) : (
                   "📅 登るよ（予定）"
                 )}
@@ -350,7 +545,10 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
                 className="flex-1 h-14 text-base font-semibold"
               >
                 {submitting ? (
-                  <><Loader2 size={18} className="animate-spin mr-2" />登録中…</>
+                  <>
+                    <Loader2 size={18} className="animate-spin mr-2" />
+                    登録中…
+                  </>
                 ) : (
                   "🧗 登った！"
                 )}
@@ -359,6 +557,102 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
           )}
         </div>
       </div>
+
+      {/* Dialog 1: グループ全員変更確認 */}
+      <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>全員の予定を変更しますか？</DialogTitle>
+            <DialogDescription asChild>
+              <div>
+                <p className="mb-3">
+                  以下のメンバーも同じグループで予定を登録しています：
+                </p>
+                <ul className="space-y-1 mb-3">
+                  {groupMembers.map((m) => (
+                    <li key={m.id} className="text-sm font-medium text-gray-700">
+                      👤 {m.user}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm">
+                  自分だけ変えるか、全員分変えるかを選んでください。
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={executeSelfUpdate}
+              disabled={submitting}
+              className="flex-1"
+            >
+              自分だけ変える
+            </Button>
+            <Button
+              variant="climbing"
+              onClick={handleGroupUpdateAll}
+              disabled={submitting}
+              className="flex-1"
+            >
+              {submitting ? (
+                <Loader2 size={16} className="animate-spin mr-2" />
+              ) : null}
+              全員変える
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog 2: 重複確認 */}
+      <Dialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>上書きしますか？</DialogTitle>
+            <DialogDescription asChild>
+              <div>
+                <p className="mb-2">
+                  以下のメンバーは変更後の予定（{formatMMDD(date)}・
+                  {gymNameForDB === GYM_UNDECIDED_LABEL ? "ジム未定" : gymNameForDB}・
+                  {slotLabel}）がすでに登録されています：
+                </p>
+                <ul className="space-y-1 mb-3">
+                  {conflicts.map((c) => (
+                    <li key={c.member.id} className="text-sm font-medium text-gray-700">
+                      👤 {c.member.user}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm text-red-600">
+                  ⚠️ 上書きすると、これらのメンバーの既存の予定は削除されます。
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => handleConflictDecision(false)}
+              disabled={submitting}
+              className="flex-1"
+            >
+              スキップ（変更しない）
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => handleConflictDecision(true)}
+              disabled={submitting}
+              className="flex-1"
+            >
+              {submitting ? (
+                <Loader2 size={16} className="animate-spin mr-2" />
+              ) : null}
+              上書きする
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
