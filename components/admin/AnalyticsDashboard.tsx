@@ -20,6 +20,7 @@ export type AnalyticsProps = {
   userStats: {
     user: string;
     logins: number;
+    lastAccessDate: string;
     pvHome: number;
     pvDashboard: number;
     pvGyms: number;
@@ -29,9 +30,21 @@ export type AnalyticsProps = {
     plansTotal: number;
     logsTotal: number;
   }[];
+  recentLogs: { user_name: string; page: string; created_at: string }[];
 };
 
-type Tab = "overview" | "actions" | "users";
+type Tab = "overview" | "actions" | "users" | "logs";
+
+// JST日時フォーマット（MM/DD HH:mm）
+function formatJST(iso: string): string {
+  return new Date(iso).toLocaleString("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 // 棒グラフ（日別トレンド）
 function BarChart({ data }: { data: { date: string; count: number }[] }) {
@@ -174,9 +187,17 @@ export function AnalyticsDashboard({
   pageViewCounts,
   actionCounts,
   userStats,
+  recentLogs,
 }: AnalyticsProps) {
   const [tab, setTab] = useState<Tab>("overview");
   const { home, plan, gyms, other } = categorizeActions(actionCounts);
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "overview", label: "概要" },
+    { key: "actions", label: "アクション" },
+    { key: "users", label: "ユーザー" },
+    { key: "logs", label: "ログ" },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -191,23 +212,19 @@ export function AnalyticsDashboard({
 
       {/* タブ */}
       <div className="flex border-b border-gray-200 bg-white sticky top-[calc(44px+env(safe-area-inset-top))] z-10">
-        {(["overview", "actions", "users"] as Tab[]).map((t) => {
-          const label =
-            t === "overview" ? "概要" : t === "actions" ? "アクション" : "ユーザー";
-          return (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 text-xs font-medium transition-colors border-b-2 ${
-                tab === t
-                  ? "border-orange-500 text-orange-600"
-                  : "border-transparent text-gray-500"
-              }`}
-            >
-              {label}
-            </button>
-          );
-        })}
+        {tabs.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex-1 py-2.5 text-xs font-medium transition-colors border-b-2 ${
+              tab === key
+                ? "border-orange-500 text-orange-600"
+                : "border-transparent text-gray-500"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="px-4 py-4 space-y-4">
@@ -361,6 +378,7 @@ export function AnalyticsDashboard({
                   }))}
                   color="bg-purple-400"
                 />
+                {/* GPS・位置情報利用率 */}
                 {(() => {
                   const gpsAuto = gyms.find((a) => a.action === "gps_auto")?.count || 0;
                   const gpsBtn = gyms.find((a) => a.action === "gps_button")?.count || 0;
@@ -369,7 +387,7 @@ export function AnalyticsDashboard({
                   if (total === 0) return null;
                   return (
                     <div className="mt-3 pt-3 border-t border-gray-50">
-                      <p className="text-[10px] text-gray-400 mb-2">出発地の設定方法</p>
+                      <p className="text-[10px] text-gray-400 mb-2">出発地の設定方法（位置情報利用率）</p>
                       <div className="flex gap-2 text-xs">
                         <span className="flex-1 text-center">
                           <span className="block text-base font-bold text-blue-500">
@@ -491,61 +509,61 @@ export function AnalyticsDashboard({
             {/* ページビュー内訳（ユーザー別） */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-50">
-                <p className="text-xs font-semibold text-gray-700">
-                  📊 ページ閲覧（過去30日）
+                <p className="text-xs font-semibold text-gray-700">📊 ページ閲覧（過去30日）</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  最終アクセス日・ログイン回数・各ページのビュー数
                 </p>
-                <p className="text-[10px] text-gray-400 mt-0.5">ログイン回数・各ページのビュー数</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="text-left text-[10px] font-semibold text-gray-400 px-4 py-2 sticky left-0 bg-gray-50 min-w-[100px]">
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      <th className="text-left text-[10px] font-semibold text-gray-400 px-3 py-2 sticky left-0 bg-gray-50 min-w-[90px]">
                         ユーザー
+                      </th>
+                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[64px]">
+                        最終アクセス
                       </th>
                       <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[44px]">
                         ログイン
                       </th>
-                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[36px]">
+                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[32px]">
                         🏠
                       </th>
-                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[36px]">
+                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[32px]">
                         📊
                       </th>
-                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[36px]">
+                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[32px]">
                         🏢
                       </th>
-                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[36px]">
+                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[32px]">
                         📅
                       </th>
                     </tr>
-                    <tr className="bg-gray-50 border-b border-gray-100">
-                      <th className="sticky left-0 bg-gray-50" />
-                      <th className="text-right text-[8px] text-gray-300 px-2 pb-1" />
-                      <th className="text-right text-[8px] text-gray-300 px-2 pb-1">ホーム</th>
-                      <th className="text-right text-[8px] text-gray-300 px-2 pb-1">DB</th>
-                      <th className="text-right text-[8px] text-gray-300 px-2 pb-1">ジム</th>
-                      <th className="text-right text-[8px] text-gray-300 px-2 pb-1">予定</th>
-                    </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {userStats.map(({ user, logins, pvHome, pvDashboard, pvGyms, pvPlan }) => (
-                      <tr key={user}>
-                        <td className="px-4 py-2.5 font-medium text-gray-800 sticky left-0 bg-white truncate max-w-[100px]">
-                          {user}
-                        </td>
-                        <td className="px-2 py-2.5 text-right font-bold text-orange-500">
-                          {logins}
-                        </td>
-                        <td className="px-2 py-2.5 text-right text-gray-600">{pvHome}</td>
-                        <td className="px-2 py-2.5 text-right text-gray-600">{pvDashboard}</td>
-                        <td className="px-2 py-2.5 text-right text-gray-600">{pvGyms}</td>
-                        <td className="px-2 py-2.5 text-right text-gray-600">{pvPlan}</td>
-                      </tr>
-                    ))}
+                    {userStats.map(
+                      ({ user, logins, lastAccessDate, pvHome, pvDashboard, pvGyms, pvPlan }) => (
+                        <tr key={user}>
+                          <td className="px-3 py-2.5 font-medium text-gray-800 sticky left-0 bg-white truncate max-w-[90px]">
+                            {user}
+                          </td>
+                          <td className="px-2 py-2.5 text-right text-[10px] text-gray-400 whitespace-nowrap">
+                            {lastAccessDate}
+                          </td>
+                          <td className="px-2 py-2.5 text-right font-bold text-orange-500">
+                            {logins}
+                          </td>
+                          <td className="px-2 py-2.5 text-right text-gray-600">{pvHome}</td>
+                          <td className="px-2 py-2.5 text-right text-gray-600">{pvDashboard}</td>
+                          <td className="px-2 py-2.5 text-right text-gray-600">{pvGyms}</td>
+                          <td className="px-2 py-2.5 text-right text-gray-600">{pvPlan}</td>
+                        </tr>
+                      )
+                    )}
                     {userStats.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="text-center py-8 text-gray-400">
+                        <td colSpan={7} className="text-center py-8 text-gray-400">
                           データなし
                         </td>
                       </tr>
@@ -560,14 +578,14 @@ export function AnalyticsDashboard({
               <div className="px-4 py-3 border-b border-gray-50">
                 <p className="text-xs font-semibold text-gray-700">🧗 クライミング登録数</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">
-                  過去30日の予定・実績登録数（累計）
+                  過去30日の予定・実績（累計）
                 </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100">
-                      <th className="text-left text-[10px] font-semibold text-gray-400 px-4 py-2 sticky left-0 bg-gray-50 min-w-[100px]">
+                      <th className="text-left text-[10px] font-semibold text-gray-400 px-3 py-2 sticky left-0 bg-gray-50 min-w-[90px]">
                         ユーザー
                       </th>
                       <th className="text-right text-[10px] font-semibold text-blue-400 px-2 py-2 min-w-[52px]">
@@ -587,10 +605,13 @@ export function AnalyticsDashboard({
                   <tbody className="divide-y divide-gray-50">
                     {userStats
                       .slice()
-                      .sort((a, b) => b.plansTotal + b.logsTotal - (a.plansTotal + a.logsTotal))
+                      .sort(
+                        (a, b) =>
+                          b.plansTotal + b.logsTotal - (a.plansTotal + a.logsTotal)
+                      )
                       .map(({ user, plans30d, logs30d, plansTotal, logsTotal }) => (
                         <tr key={user}>
-                          <td className="px-4 py-2.5 font-medium text-gray-800 sticky left-0 bg-white truncate max-w-[100px]">
+                          <td className="px-3 py-2.5 font-medium text-gray-800 sticky left-0 bg-white truncate max-w-[90px]">
                             {user}
                           </td>
                           <td className="px-2 py-2.5 text-right font-bold text-blue-500">
@@ -613,6 +634,41 @@ export function AnalyticsDashboard({
                   </tbody>
                 </table>
               </div>
+            </div>
+          </>
+        )}
+
+        {/* ===== ログタブ ===== */}
+        {tab === "logs" && (
+          <>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-50">
+                <p className="text-xs font-semibold text-gray-700">🕐 直近48時間のページビュー</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {recentLogs.length}件 ／ ページ遷移のみ（アクション除く）
+                </p>
+              </div>
+              {recentLogs.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-sm">
+                  データがありません
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-50">
+                  {recentLogs.map((log, i) => (
+                    <div key={i} className="flex items-center px-4 py-2.5 gap-3">
+                      <span className="text-[10px] text-gray-400 whitespace-nowrap w-24 flex-shrink-0">
+                        {formatJST(log.created_at)}
+                      </span>
+                      <span className="text-xs font-medium text-gray-700 flex-1 truncate">
+                        {log.user_name}
+                      </span>
+                      <span className="text-[10px] text-gray-500 flex-shrink-0 whitespace-nowrap">
+                        {PAGE_LABELS[log.page] || log.page}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
