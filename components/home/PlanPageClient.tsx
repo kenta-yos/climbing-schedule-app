@@ -13,6 +13,7 @@ import {
 } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { trackAction } from "@/lib/analytics";
+import { revalidateSchedulePages } from "@/lib/actions";
 import { getTodayJST, formatMMDD } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
 import type { GymMaster, ClimbingLog } from "@/lib/supabase/queries";
@@ -162,7 +163,7 @@ export function PlanPageClient({
           title: type === "予定" ? "📅 予定を登録しました！" : "🧗 実績を登録しました！",
           variant: "success" as any,
         });
-        router.refresh();
+        await revalidateSchedulePages();
         router.push("/home");
       } catch (err) {
         console.error(err);
@@ -184,7 +185,7 @@ export function PlanPageClient({
       });
       trackAction(userName, "plan", "plan_updated");
       toast({ title: "📅 予定を更新しました！", variant: "success" as any });
-      router.refresh();
+      await revalidateSchedulePages();
       router.push("/home");
     } catch (err) {
       console.error(err);
@@ -236,7 +237,7 @@ export function PlanPageClient({
 
       trackAction(userName, "plan", "plan_updated_group");
       toast({ title: "📅 全員の予定を更新しました！", variant: "success" as any });
-      router.refresh();
+      await revalidateSchedulePages();
       router.push("/home");
     } catch (err) {
       console.error(err);
@@ -291,7 +292,7 @@ export function PlanPageClient({
       }
 
       trackAction(userName, "plan", "plan_updated_group");
-      router.refresh();
+      await revalidateSchedulePages();
       router.push("/home");
     } catch (err) {
       console.error(err);
@@ -307,7 +308,7 @@ export function PlanPageClient({
       await deleteClimbingLog(editLog.id);
       trackAction(userName, "plan", "plan_deleted");
       toast({ title: "🗑️ 予定を削除しました", variant: "success" as any });
-      router.refresh();
+      await revalidateSchedulePages();
       router.push("/home");
     } catch (err) {
       console.error(err);
