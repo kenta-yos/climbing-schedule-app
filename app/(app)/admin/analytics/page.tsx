@@ -167,6 +167,7 @@ export default async function AnalyticsPage() {
       pvDashboard: pageLoads.filter((p) => p.user_name === user && p.page === "dashboard").length,
       pvGyms: pageLoads.filter((p) => p.user_name === user && p.page === "gyms").length,
       pvPlan: pageLoads.filter((p) => p.user_name === user && p.page === "plan").length,
+      pvGraph: pageLoads.filter((p) => p.user_name === user && p.page === "graph").length,
       plans30d: climbingLogs.filter(
         (l) => l.user === user && l.type === "予定" && l.date >= cutoffDateStr
       ).length,

@@ -25,6 +25,7 @@ export type AnalyticsProps = {
     pvDashboard: number;
     pvGyms: number;
     pvPlan: number;
+    pvGraph: number;
     plans30d: number;
     logs30d: number;
     plansTotal: number;
@@ -539,11 +540,14 @@ export function AnalyticsDashboard({
                       <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[32px]">
                         📅
                       </th>
+                      <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[32px]">
+                        🕸️
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {userStats.map(
-                      ({ user, logins, lastAccessDate, pvHome, pvDashboard, pvGyms, pvPlan }) => (
+                      ({ user, logins, lastAccessDate, pvHome, pvDashboard, pvGyms, pvPlan, pvGraph }) => (
                         <tr key={user}>
                           <td className="px-3 py-2.5 font-medium text-gray-800 sticky left-0 bg-white truncate max-w-[90px]">
                             {user}
@@ -558,12 +562,13 @@ export function AnalyticsDashboard({
                           <td className="px-2 py-2.5 text-right text-gray-600">{pvDashboard}</td>
                           <td className="px-2 py-2.5 text-right text-gray-600">{pvGyms}</td>
                           <td className="px-2 py-2.5 text-right text-gray-600">{pvPlan}</td>
+                          <td className="px-2 py-2.5 text-right text-gray-600">{pvGraph}</td>
                         </tr>
                       )
                     )}
                     {userStats.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="text-center py-8 text-gray-400">
+                        <td colSpan={8} className="text-center py-8 text-gray-400">
                           データなし
                         </td>
                       </tr>
