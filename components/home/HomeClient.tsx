@@ -57,6 +57,11 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
     setIsRefreshing(false);
   }, [fetchLogs]);
 
+  // --- マウント時の即時取得（編集画面から戻ってきた際などに最新データを確実に表示） ---
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
   // --- バックグラウンドポーリング ---
   useEffect(() => {
     const id = setInterval(() => {

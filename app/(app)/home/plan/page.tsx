@@ -70,7 +70,10 @@ export default async function PlanPage({ searchParams }: Props) {
   }
 
   return (
+    // key を editId（または "new"）にすることで、編集対象が変わるたびに
+    // コンポーネントを完全に再マウントし、フォームの状態をリセットする
     <PlanPageClient
+      key={safeEditLog?.id ?? "new"}
       userName={decodedUser}
       gyms={(gymsRes.data || []) as GymMaster[]}
       recentGymNames={recentGymNames}
