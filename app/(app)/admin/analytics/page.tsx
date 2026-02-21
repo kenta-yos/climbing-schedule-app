@@ -110,12 +110,12 @@ export default async function AnalyticsPage() {
     .sort((a, b) => b.count - a.count);
 
   // ユーザー別サマリー
-  const allUsers = [
-    ...new Set([
+  const allUsers = Array.from(
+    new Set([
       ...accessLogs.map((l) => l.user_name),
       ...pageViews.map((p) => p.user_name),
-    ]),
-  ];
+    ])
+  );
   const userStats = allUsers
     .map((user) => ({
       user,
