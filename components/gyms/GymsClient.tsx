@@ -7,6 +7,7 @@ import { AddressInput } from "@/components/ui/AddressInput";
 import { getTodayJST, haversineKm } from "@/lib/utils";
 import { GymCard } from "@/components/gyms/GymCard";
 import type { GymMaster, AreaMaster, ClimbingLog, SetSchedule, User } from "@/lib/supabase/queries";
+import { trackAction } from "@/lib/analytics";
 
 type Props = {
   gyms: GymMaster[];
@@ -28,7 +29,7 @@ const PAGE_SIZE = 8;
 const DEFAULT_AREA = "都内・神奈川";
 
 export function GymsClient({
-  gyms, areas, myLogs, friendLogs, setSchedules, users,
+  gyms, areas, myLogs, friendLogs, setSchedules, users, currentUser,
 }: Props) {
   const [targetDate, setTargetDate] = useState(getTodayJST());
   const [origin, setOrigin] = useState<Origin>(null);
@@ -46,15 +47,17 @@ export function GymsClient({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        trackAction(currentUser, "gyms", "gps_auto");
         setGpsLoading(false);
       },
       () => setGpsLoading(false),
       { timeout: 10000 }
     );
-  }, []);
+  }, [currentUser]);
 
   // タブ切り替えで件数リセット
   const handleTabChange = (tab: SortTab) => {
+    trackAction(currentUser, "gyms", `sort_${tab}`);
     setSortTab(tab);
     setVisibleCount(PAGE_SIZE);
   };
@@ -71,6 +74,7 @@ export function GymsClient({
       (pos) => {
         setOrigin({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setOriginInput("現在地");
+        trackAction(currentUser, "gyms", "gps_button");
         setGpsLoading(false);
       },
       () => {
@@ -79,7 +83,7 @@ export function GymsClient({
       },
       { timeout: 10000 }
     );
-  }, []);
+  }, [currentUser]);
 
   // AddressInput からの確定コールバック
   const handleAddressConfirm = useCallback(
@@ -88,6 +92,7 @@ export function GymsClient({
         setOrigin(result);
         setGeocodeError("");
         if (label) setOriginInput(label);
+        trackAction(currentUser, "gyms", "address_set");
       } else {
         setOrigin(null);
         setGeocodeError("住所が見つかりませんでした");
@@ -273,7 +278,7 @@ export function GymsClient({
           <input
             type="checkbox"
             checked={showAll}
-            onChange={(e) => { setShowAll(e.target.checked); setVisibleCount(PAGE_SIZE); }}
+            onChange={(e) => { trackAction(currentUser, "gyms", e.target.checked ? "nationwide_on" : "nationwide_off"); setShowAll(e.target.checked); setVisibleCount(PAGE_SIZE); }}
             className="w-4 h-4 accent-orange-500"
           />
           <span className="text-sm text-gray-600">全国のジムを表示する</span>
@@ -330,7 +335,7 @@ export function GymsClient({
           {/* もっと見る */}
           {showMoreMain && (
             <button
-              onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}
+              onClick={() => { trackAction(currentUser, "gyms", "load_more"); setVisibleCount((v) => v + PAGE_SIZE); }}
               className="w-full py-3 text-sm text-orange-500 font-medium bg-white rounded-2xl border border-gray-100 shadow-sm hover:bg-orange-50 transition-colors"
             >
               もっと見る（残り {totalMain - visibleCount} 件）
