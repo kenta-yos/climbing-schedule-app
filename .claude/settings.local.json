@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/yoshiikenta/climbing-schedule-app/.claude/worktrees/priceless-mcclintock log --all --oneline --grep=\"ページビュー\\\\|analytics\\\\|pageview\\\\|log\")",
+      "Bash(git -C /Users/yoshiikenta/climbing-schedule-app/.claude/worktrees/priceless-mcclintock show:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(for component in MonthlyRanking GymCard StatsCard GymFrequencyChart LogHistory)",
+      "Bash(do echo \"=== $component ===\")",
+      "Bash(done)",
+      "Bash(git -C /Users/yoshiikenta/climbing-schedule-app/.claude/worktrees/priceless-mcclintock status)",
+      "Bash(git -C /Users/yoshiikenta/climbing-schedule-app/.claude/worktrees/priceless-mcclintock add -A)",
+      "Bash(git -C:*)"
+    ]
+  }
+}
