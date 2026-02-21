@@ -11,6 +11,7 @@ import {
   updateClimbingLogsBulk,
   getConflictingLog,
   getCompanionConflicts,
+  checkDuplicateLog,
 } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { trackAction } from "@/lib/analytics";
@@ -148,18 +149,16 @@ export function PlanPageClient({
       // それ以外は自分だけ更新
       await executeSelfUpdate();
     } else {
-      // 新規登録
-      if (type === "予定") {
-        const duplicate = myPlans.find(
-          (l) =>
-            l.date.split("T")[0] === date &&
-            l.gym_name === gymNameForDB &&
-            l.time_slot === timeSlot
-        );
-        if (duplicate) {
-          toast({ title: "🙈 同じ予定がもうすでにあるよ！", variant: "destructive" });
-          return;
-        }
+      // 新規登録：自分の重複チェック（予定・実績どちらも）
+      const isDuplicate = await checkDuplicateLog(userName, date, timeSlot, type);
+      if (isDuplicate) {
+        toast({
+          title: type === "予定"
+            ? "🙈 同じ予定がもうすでにあるよ！"
+            : "🙈 同じ日・ジム・時間帯の実績がもうすでにあるよ！",
+          variant: "destructive",
+        });
+        return;
       }
       // 仲間の重複チェック
       if (selectedCompanions.length > 0) {

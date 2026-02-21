@@ -224,6 +224,25 @@ export async function getConflictingLog(
   return data[0];
 }
 
+// 自分自身の重複チェック（同日・同時間帯・同種別）
+export async function checkDuplicateLog(
+  user: string,
+  date: string,
+  timeSlot: string,
+  type: "予定" | "実績"
+): Promise<boolean> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("climbing_logs")
+    .select("id")
+    .eq("user", user)
+    .eq("date", date)
+    .eq("time_slot", timeSlot)
+    .eq("type", type)
+    .limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
 // 仲間の重複チェック（同日・同ジム・同種別・同時間帯）→ 既に持っているユーザー名の配列を返す
 export async function getCompanionConflicts(
   companions: string[],
