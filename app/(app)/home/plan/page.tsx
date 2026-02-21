@@ -54,6 +54,21 @@ export default async function PlanPage({ searchParams }: Props) {
   const safeEditLog =
     editLog && editLog.user === decodedUser ? editLog : undefined;
 
+  // 編集モード かつ 予定ログ の場合、同グループ（同日・同ジム・同時間帯）の他ユーザーのログを取得
+  let groupMembers: ClimbingLog[] = [];
+  if (safeEditLog && safeEditLog.type === "予定" && safeEditLog.time_slot) {
+    const editDate = safeEditLog.date.split("T")[0];
+    const groupRes = await supabase
+      .from("climbing_logs")
+      .select("*")
+      .eq("date", editDate)
+      .eq("gym_name", safeEditLog.gym_name)
+      .eq("time_slot", safeEditLog.time_slot)
+      .eq("type", "予定")
+      .neq("user", decodedUser);
+    groupMembers = (groupRes.data || []) as ClimbingLog[];
+  }
+
   return (
     <PlanPageClient
       userName={decodedUser}
@@ -61,6 +76,7 @@ export default async function PlanPage({ searchParams }: Props) {
       recentGymNames={recentGymNames}
       myPlans={(plansRes.data || []) as ClimbingLog[]}
       editLog={safeEditLog}
+      groupMembers={groupMembers}
     />
   );
 }

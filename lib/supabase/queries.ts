@@ -179,3 +179,60 @@ export async function addPageView(userName: string, page: string, action?: strin
   const supabase = createClient();
   await supabase.from("page_views").insert({ user_name: userName, page, action: action ?? null });
 }
+
+// 同グループ（同日・同ジム・同時間帯）の他ユーザーのログを取得
+export async function getGroupLogs(
+  date: string,
+  gymName: string,
+  timeSlot: string,
+  excludeUser: string
+): Promise<ClimbingLog[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("climbing_logs")
+    .select("*")
+    .eq("date", date)
+    .eq("gym_name", gymName)
+    .eq("time_slot", timeSlot)
+    .eq("type", "予定")
+    .neq("user", excludeUser);
+  if (error) throw error;
+  return data || [];
+}
+
+// 特定ユーザーの変更後日付・ジム・時間帯に既存の予定があるか確認（重複チェック）
+export async function getConflictingLog(
+  user: string,
+  date: string,
+  gymName: string,
+  timeSlot: string,
+  excludeId: string
+): Promise<ClimbingLog | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("climbing_logs")
+    .select("*")
+    .eq("user", user)
+    .eq("date", date)
+    .eq("gym_name", gymName)
+    .eq("time_slot", timeSlot)
+    .eq("type", "予定")
+    .neq("id", excludeId)
+    .limit(1);
+  if (error || !data || data.length === 0) return null;
+  return data[0];
+}
+
+// 複数のログを一括更新
+export async function updateClimbingLogsBulk(
+  ids: string[],
+  updates: { date?: string; gym_name?: string; time_slot?: "昼" | "夕方" | "夜" | null }
+): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("climbing_logs")
+    .update(updates)
+    .in("id", ids);
+  if (error) throw error;
+}
