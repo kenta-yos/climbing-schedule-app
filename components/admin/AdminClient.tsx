@@ -18,6 +18,7 @@ type Props = {
   areas: AreaMaster[];
   setSchedules: SetSchedule[];
   currentUser: string;
+  isAdmin?: boolean;
 };
 
 type DateRange = { start: string; end: string };
@@ -39,7 +40,7 @@ function getMonthRange() {
   return months;
 }
 
-export function AdminClient({ gyms, areas, setSchedules, currentUser }: Props) {
+export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin }: Props) {
   const router = useRouter();
   const clearUser = useUserStore((s) => s.clearUser);
 
@@ -177,6 +178,17 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser }: Props) {
     <>
       <PageHeader title="管理" />
       <div className="px-4 py-4 space-y-4 page-enter">
+
+        {/* 分析ダッシュボードリンク（アドミンのみ） */}
+        {isAdmin && (
+          <a
+            href="/admin/analytics"
+            className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white rounded-2xl shadow-sm hover:bg-gray-800 transition-colors"
+          >
+            <span className="text-sm font-semibold">📊 分析ダッシュボード</span>
+            <span className="text-gray-400 text-xs">→</span>
+          </a>
+        )}
 
         {/* タブ切り替え */}
         <div className="flex rounded-xl border border-gray-200 overflow-hidden bg-white">
