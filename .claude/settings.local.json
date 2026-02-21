@@ -10,7 +10,12 @@
       "Bash(done)",
       "Bash(git -C /Users/yoshiikenta/climbing-schedule-app/.claude/worktrees/priceless-mcclintock status)",
       "Bash(git -C /Users/yoshiikenta/climbing-schedule-app/.claude/worktrees/priceless-mcclintock add -A)",
-      "Bash(git -C:*)"
+      "Bash(git -C:*)",
+      "Bash(gh pr create:*)",
+      "Bash(brew install:*)",
+      "Bash(gh auth status:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(cat:*)"
     ]
   }
 }

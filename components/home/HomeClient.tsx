@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
 import { getTodayJST } from "@/lib/utils";
 import type { ClimbingLog, GymMaster, AreaMaster, User } from "@/lib/supabase/queries";
+import { trackAction } from "@/lib/analytics";
 
 const POLL_INTERVAL = 30_000; // 30秒ごとにバックグラウンド更新
 const PTR_THRESHOLD = 72;     // pull-to-refreshのトリガー距離(px)
@@ -145,7 +146,7 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
       <div className="px-4 py-4 space-y-6 page-enter">
         {/* 記録ボタン → /home/plan へ遷移 */}
         <Button
-          onClick={() => { setNavigating(true); router.push("/home/plan"); }}
+          onClick={() => { trackAction(currentUser, "home", "record_tapped"); setNavigating(true); router.push("/home/plan"); }}
           disabled={navigating}
           variant="climbing"
           size="xl"

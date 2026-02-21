@@ -8,6 +8,7 @@ import { TIME_SLOTS, FUTURE_DAYS } from "@/lib/constants";
 import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
 import { addClimbingLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
+import { trackAction } from "@/lib/analytics";
 import type { ClimbingLog, User } from "@/lib/supabase/queries";
 
 type Props = {
@@ -91,6 +92,7 @@ function JoinPanel({
         time_slot: selectedSlot as "昼" | "夕方" | "夜",
       });
       toast({ title: "📅 参加登録しました！", variant: "success" as any });
+      trackAction(currentUser, "home", "plan_joined");
       onJoined();
     } catch {
       toast({ title: "登録に失敗しました", variant: "destructive" });
@@ -148,10 +150,11 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const handleEditNavigate = useCallback((logId: string) => {
+    trackAction(currentUser, "home", "edit_tapped");
     setEditingId(logId);
     router.refresh();
     router.push(`/home/plan?editId=${logId}`);
-  }, [router]);
+  }, [router, currentUser]);
 
   // 参加登録後：SSRキャッシュもリフレッシュしてからデータ再取得
   const handleJoined = useCallback(() => {
@@ -241,7 +244,7 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                           {/* 自分が未参加のときのみ「+ 参加」ボタン表示 */}
                           {!hasMe && !isJoinOpen && (
                             <button
-                              onClick={() => setOpenJoinKey(joinKey)}
+                              onClick={() => { trackAction(currentUser, "home", "join_tapped"); setOpenJoinKey(joinKey); }}
                               className="flex items-center gap-0.5 px-2 py-0.5 rounded-full border border-orange-300 text-orange-500 text-xs font-semibold hover:bg-orange-50 active:scale-95 transition-all"
                             >
                               <span>＋</span>

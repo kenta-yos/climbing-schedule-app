@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addClimbingLog, updateClimbingLog, deleteClimbingLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
+import { trackAction } from "@/lib/analytics";
 import { getTodayJST } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
 import type { GymMaster, ClimbingLog } from "@/lib/supabase/queries";
@@ -53,7 +54,8 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
     .filter((g): g is GymMaster => !!g)
     .slice(0, 6);
 
-  const handleSelectGym = (gymName: string) => {
+  const handleSelectGym = (gymName: string, source: "undecided" | "recent" | "search") => {
+    trackAction(userName, "plan", `gym_selected_${source}`);
     setSelectedGym(gymName);
     setSearchQuery("");
   };
@@ -83,6 +85,7 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
           gym_name: gymNameForDB,
           time_slot: timeSlot as "昼" | "夕方" | "夜",
         });
+        trackAction(userName, "plan", "plan_updated");
         toast({ title: "📅 予定を更新しました！", variant: "success" as any });
       } else {
         // 二重登録チェック（予定のみ）
@@ -125,6 +128,7 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
     setDeleting(true);
     try {
       await deleteClimbingLog(editLog.id);
+      trackAction(userName, "plan", "plan_deleted");
       toast({ title: "🗑️ 予定を削除しました", variant: "success" as any });
       router.refresh();
       router.push("/home");
@@ -237,7 +241,7 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
             <>
               {/* ジム未定ボタン */}
               <button
-                onClick={() => handleSelectGym(GYM_UNDECIDED)}
+                onClick={() => handleSelectGym(GYM_UNDECIDED, "undecided")}
                 className="w-full text-left px-4 py-3 mb-3 rounded-xl border-2 border-dashed border-gray-300 bg-white text-sm font-medium text-gray-500 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 transition-all duration-150 active:scale-[0.98] flex items-center gap-2"
               >
                 <span className="text-lg">🤷</span>
@@ -272,7 +276,7 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
                     filteredGyms.map((gym) => (
                       <button
                         key={gym.gym_name}
-                        onClick={() => handleSelectGym(gym.gym_name)}
+                        onClick={() => handleSelectGym(gym.gym_name, "search")}
                         className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-700 hover:border-orange-300 hover:bg-orange-50 transition-all duration-150 active:scale-[0.98]"
                       >
                         {recentGymNames.includes(gym.gym_name) && <span className="mr-1">⭐</span>}
@@ -291,7 +295,7 @@ export function PlanPageClient({ userName, gyms, recentGymNames, myPlans = [], e
                       {recentGyms.map((gym) => (
                         <button
                           key={gym.gym_name}
-                          onClick={() => handleSelectGym(gym.gym_name)}
+                          onClick={() => handleSelectGym(gym.gym_name, "recent")}
                           className="w-full text-left px-4 py-3 rounded-xl border border-orange-200 bg-orange-50/60 text-sm font-medium text-gray-700 hover:border-orange-400 hover:bg-orange-50 transition-all duration-150 active:scale-[0.98]"
                         >
                           {gym.gym_name}
