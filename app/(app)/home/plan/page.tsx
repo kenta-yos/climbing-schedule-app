@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PlanPageClient } from "@/components/home/PlanPageClient";
 import { getTodayJST, getDateOffsetJST } from "@/lib/utils";
-import type { ClimbingLog, GymMaster } from "@/lib/supabase/queries";
+import type { ClimbingLog, GymMaster, User } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ export default async function PlanPage({ searchParams }: Props) {
 
   const supabase = createClient();
 
-  const [actualsRes, plansRes, gymsRes, editLogRes] = await Promise.all([
+  const [actualsRes, plansRes, gymsRes, editLogRes, usersRes] = await Promise.all([
     // 直近30日の実績（よく行くジム用）
     supabase
       .from("climbing_logs")
@@ -39,6 +39,7 @@ export default async function PlanPage({ searchParams }: Props) {
     searchParams.editId
       ? supabase.from("climbing_logs").select("*").eq("id", searchParams.editId).single()
       : Promise.resolve({ data: null, error: null }),
+    supabase.from("users").select("*").order("user_name"),
   ]);
 
   // 直近30日の実績ジム（重複除去・順番保持）
@@ -80,6 +81,7 @@ export default async function PlanPage({ searchParams }: Props) {
       myPlans={(plansRes.data || []) as ClimbingLog[]}
       editLog={safeEditLog}
       groupMembers={groupMembers}
+      users={(usersRes.data || []) as User[]}
     />
   );
 }

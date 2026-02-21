@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import type { ClimbingLog, User } from "@/lib/supabase/queries";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { X } from "lucide-react";
 
 // ─── 型定義 ───────────────────────────────────────────────────────────────────
@@ -191,41 +192,38 @@ export function GraphClient({ logs, plans, users, currentUser }: Props) {
   const periodLabel = PERIOD_LABELS.find((p) => p.value === period)?.label ?? "";
 
   return (
-    <div className="flex flex-col">
-      {/* ヘッダー */}
-      <div className="px-4 pt-4 pb-2">
-        <h1 className="text-lg font-bold text-gray-800">つながり</h1>
-        <p className="text-xs text-gray-400 mt-0.5">{formatPeriodLabel(period)}</p>
-      </div>
+    <>
+      <PageHeader title="つながり" subtitle={formatPeriodLabel(period)} />
 
-      {/* 期間セレクター */}
-      <div className="flex gap-1.5 px-4 pb-1">
-        {PERIOD_LABELS.map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => { setPeriod(value); setSelectedNode(null); setSelectedEdge(null); }}
-            className={`text-xs font-medium px-3 py-1 rounded-full transition-all ${
-              period === value ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {n === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-          <p className="text-base font-medium">この期間のデータがありません</p>
-          <p className="text-sm mt-1">期間を変えてみてください</p>
+      <div className="px-4 pt-3 pb-4 space-y-3 page-enter">
+        {/* 期間セレクター */}
+        <div className="flex gap-1.5">
+          {PERIOD_LABELS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => { setPeriod(value); setSelectedNode(null); setSelectedEdge(null); }}
+              className={`text-xs font-medium px-3 py-1 rounded-full transition-all ${
+                period === value ? "bg-orange-500 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-      ) : (
-        <>
-          {/* SVGグラフ（自然な縦横比で最大幅表示） */}
-          <div
-            className="px-1"
-            style={{ touchAction: "pan-y" }}
-            onClick={() => { if (!selectedEdge) setSelectedNode(null); }}
-          >
+
+        {n === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <p className="text-base font-medium">この期間のデータがありません</p>
+            <p className="text-sm mt-1">期間を変えてみてください</p>
+          </div>
+        ) : (
+          <>
+            {/* SVGグラフ（自然な縦横比で最大幅表示・親のpx-4を打ち消して横幅最大化） */}
+            <div
+              className="-mx-4 px-1"
+              style={{ touchAction: "pan-y" }}
+              onClick={() => { if (!selectedEdge) setSelectedNode(null); }}
+            >
             <svg
               viewBox={`0 0 ${W} ${H}`}
               style={{ width: "100%", height: "auto", display: "block", pointerEvents: "none" }}
@@ -302,13 +300,13 @@ export function GraphClient({ logs, plans, users, currentUser }: Props) {
             </svg>
           </div>
 
-          {/* ヒントテキスト */}
-          <p className="text-center text-xs text-gray-400 py-1">
-            {!selectedNode ? "ユーザーをタップ" : "数字をタップでセッション詳細を確認"}
-          </p>
+            {/* ヒントテキスト */}
+            <p className="text-center text-xs text-gray-400 py-1">
+              {!selectedNode ? "ユーザーをタップ" : "数字をタップでセッション詳細を確認"}
+            </p>
 
-          {/* 情報パネル */}
-          <div className="px-3 pb-3">
+            {/* 情報パネル */}
+            <div>
 
             {/* 他ユーザー選択時 */}
             {partnerInfo && selectedNode && selectedNode !== currentUser && (() => {
@@ -385,15 +383,16 @@ export function GraphClient({ logs, plans, users, currentUser }: Props) {
                 )}
               </div>
             )}
-          </div>
-        </>
-      )}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* エッジ詳細シート */}
       {selectedEdge && (
         <EdgeSheet edge={selectedEdge} users={users} onClose={() => setSelectedEdge(null)} />
       )}
-    </div>
+    </>
   );
 }
 

@@ -10,13 +10,14 @@ import {
   deleteClimbingLog,
   updateClimbingLogsBulk,
   getConflictingLog,
+  getCompanionConflicts,
 } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { trackAction } from "@/lib/analytics";
 import { revalidateSchedulePages } from "@/lib/actions";
 import { getTodayJST, formatMMDD } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
-import type { GymMaster, ClimbingLog } from "@/lib/supabase/queries";
+import type { GymMaster, ClimbingLog, User } from "@/lib/supabase/queries";
 import Image from "next/image";
 import { ChevronLeft, Search, X, Trash2, Loader2 } from "lucide-react";
 import {
@@ -44,6 +45,7 @@ type Props = {
   myPlans?: ClimbingLog[];
   editLog?: ClimbingLog;
   groupMembers?: ClimbingLog[];
+  users?: User[];
 };
 
 export function PlanPageClient({
@@ -53,6 +55,7 @@ export function PlanPageClient({
   myPlans = [],
   editLog,
   groupMembers = [],
+  users = [],
 }: Props) {
   const router = useRouter();
   const isEdit = !!editLog;
@@ -68,6 +71,14 @@ export function PlanPageClient({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [selectedCompanions, setSelectedCompanions] = useState<string[]>([]);
+
+  const toggleCompanion = (userId: string) => {
+    setSelectedCompanions((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
 
   // Dialog 1: グループ全員変更確認
   const [showGroupDialog, setShowGroupDialog] = useState(false);
@@ -150,17 +161,34 @@ export function PlanPageClient({
           return;
         }
       }
+      // 仲間の重複チェック
+      if (selectedCompanions.length > 0) {
+        const conflicting = await getCompanionConflicts(
+          selectedCompanions, date, gymNameForDB, type, timeSlot
+        );
+        if (conflicting.length > 0) {
+          toast({
+            title: `${conflicting.join("・")}さんはすでにこの日・ジム・時間帯のログがあります`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
       setSubmitting(true);
       try {
-        await addClimbingLog({
-          date,
-          gym_name: gymNameForDB,
-          user: userName,
-          type,
-          time_slot: timeSlot as "昼" | "夕方" | "夜",
-        });
+        await Promise.all([
+          addClimbingLog({ date, gym_name: gymNameForDB, user: userName, type, time_slot: timeSlot as "昼" | "夕方" | "夜" }),
+          ...selectedCompanions.map((companion) =>
+            addClimbingLog({ date, gym_name: gymNameForDB, user: companion, type, time_slot: timeSlot as "昼" | "夕方" | "夜" })
+          ),
+        ]);
+        const companionMsg = selectedCompanions.length > 0
+          ? `（${selectedCompanions.join("・")}さんと）`
+          : "";
         toast({
-          title: type === "予定" ? "📅 予定を登録しました！" : "🧗 実績を登録しました！",
+          title: type === "予定"
+            ? `📅 予定を登録しました！${companionMsg}`
+            : `🧗 実績を登録しました！${companionMsg}`,
           variant: "success" as any,
         });
         await revalidateSchedulePages();
@@ -498,6 +526,49 @@ export function PlanPageClient({
             </>
           )}
         </section>
+
+        {/* 一緒に登る人（新規登録のみ） */}
+        {!isEdit && users.filter((u) => u.user_name !== userName).length > 0 && (
+          <section>
+            <label className="text-sm font-semibold text-gray-700 block mb-3">
+              👥 一緒に登る人{" "}
+              <span className="text-xs font-normal text-gray-400">（任意）</span>
+            </label>
+            <div className="flex flex-wrap gap-5">
+              {users
+                .filter((u) => u.user_name !== userName)
+                .map((u) => {
+                  const isSelected = selectedCompanions.includes(u.user_name);
+                  return (
+                    <button
+                      key={u.user_name}
+                      type="button"
+                      onClick={() => toggleCompanion(u.user_name)}
+                      className="flex flex-col items-center gap-1.5"
+                    >
+                      <div
+                        className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-150 ${
+                          isSelected
+                            ? "ring-4 ring-orange-400 ring-offset-2 scale-110 shadow-md"
+                            : "opacity-40"
+                        }`}
+                        style={{ backgroundColor: u.color || "#94a3b8" }}
+                      >
+                        {u.icon || "🧗"}
+                      </div>
+                      <span
+                        className={`text-[11px] font-medium leading-none ${
+                          isSelected ? "text-orange-600" : "text-gray-400"
+                        }`}
+                      >
+                        {u.user_name}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* 登録/保存ボタン（固定） safe-area-bottom対応 */}
