@@ -47,6 +47,7 @@ export type AccessLog = {
   created_at: string;
 };
 
+
 // ユーザー一覧取得
 export async function getUsers(): Promise<User[]> {
   const supabase = createClient();
