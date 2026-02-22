@@ -2,7 +2,7 @@ import { HomeClient } from "@/components/home/HomeClient";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { ClimbingLog, GymMaster, AreaMaster, User } from "@/lib/supabase/queries";
+import type { ClimbingLog, GymMaster, AreaMaster, User, Announcement } from "@/lib/supabase/queries";
 import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export default async function HomePage() {
   const cutoffStr = cutoffDate.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" }).replace(/\//g, "-").replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, d) => `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
   const monthStart = todayStr.slice(0, 7) + "-01"; // 今月1日
 
-  const [futurePlansRes, monthlyLogsRes, gymsRes, areasRes, usersRes] = await Promise.all([
+  const [futurePlansRes, monthlyLogsRes, gymsRes, areasRes, usersRes, announcementsRes] = await Promise.all([
     // 今日〜3週間後の予定
     supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", todayStr).lte("date", cutoffStr).order("date", { ascending: true }),
     // 今月の実績（MonthlyRankingに使用）
@@ -31,6 +31,7 @@ export default async function HomePage() {
     supabase.from("gym_master").select("*").order("gym_name"),
     supabase.from("area_master").select("*").order("area_tag"),
     supabase.from("users").select("*").order("user_name"),
+    supabase.from("release_announcements").select("*").gte("display_until", todayStr).order("created_at", { ascending: false }),
   ]);
 
   const initialLogs = [...(futurePlansRes.data || []), ...(monthlyLogsRes.data || [])];
@@ -45,6 +46,7 @@ export default async function HomePage() {
       areas={(areasRes.data || []) as AreaMaster[]}
       users={(usersRes.data || []) as User[]}
       currentUser={decodedUser}
+      announcements={(announcementsRes.data || []) as Announcement[]}
     />
   );
 }

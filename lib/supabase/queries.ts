@@ -47,6 +47,14 @@ export type AccessLog = {
   created_at: string;
 };
 
+export type Announcement = {
+  id: string;
+  content: string;
+  display_until: string;
+  created_by: string;
+  created_at: string;
+};
+
 
 // ユーザー一覧取得
 export async function getUsers(): Promise<User[]> {

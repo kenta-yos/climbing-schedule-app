@@ -2,7 +2,7 @@ import { AdminClient } from "@/components/admin/AdminClient";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { GymMaster, AreaMaster, SetSchedule } from "@/lib/supabase/queries";
+import type { GymMaster, AreaMaster, SetSchedule, Announcement } from "@/lib/supabase/queries";
 import { addPageView } from "@/lib/supabase/queries";
 
 const ADMIN_USER_ID = "8779bd4c-be62-49af-9a74-2fa035079ca9";
@@ -24,11 +24,12 @@ export default async function AdminPage() {
 
   const decodedUser = decodeURIComponent(userName);
 
-  const [gymsRes, areasRes, schedulesRes, adminRes] = await Promise.all([
+  const [gymsRes, areasRes, schedulesRes, adminRes, announcementsRes] = await Promise.all([
     supabase.from("gym_master").select("*").order("gym_name"),
     supabase.from("area_master").select("*").order("major_area"),
     supabase.from("set_schedules").select("*").order("start_date", { ascending: false }),
     supabase.from("users").select("user_name").eq("id", ADMIN_USER_ID).single(),
+    supabase.from("release_announcements").select("*").order("created_at", { ascending: false }),
   ]);
 
   const isAdmin = adminRes.data?.user_name === decodedUser;
@@ -43,6 +44,7 @@ export default async function AdminPage() {
       setSchedules={(schedulesRes.data || []) as SetSchedule[]}
       currentUser={decodedUser}
       isAdmin={isAdmin}
+      announcements={(announcementsRes.data || []) as Announcement[]}
     />
   );
 }

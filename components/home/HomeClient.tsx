@@ -5,10 +5,11 @@ import { useRouter, usePathname } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { FuturePlanFeed } from "@/components/home/FuturePlanFeed";
 import { MonthlyRanking } from "@/components/home/MonthlyRanking";
+import { AnnouncementBanner } from "@/components/home/AnnouncementBanner";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
 import { getTodayJST } from "@/lib/utils";
-import type { ClimbingLog, GymMaster, AreaMaster, User } from "@/lib/supabase/queries";
+import type { ClimbingLog, GymMaster, AreaMaster, User, Announcement } from "@/lib/supabase/queries";
 import { trackAction } from "@/lib/analytics";
 
 const POLL_INTERVAL = 30_000; // 30秒ごとにバックグラウンド更新
@@ -20,9 +21,10 @@ type Props = {
   areas: AreaMaster[];
   users: User[];
   currentUser: string;
+  announcements: Announcement[];
 };
 
-export function HomeClient({ initialLogs, users, currentUser }: Props) {
+export function HomeClient({ initialLogs, users, currentUser, announcements }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
@@ -147,6 +149,8 @@ export function HomeClient({ initialLogs, users, currentUser }: Props) {
       </div>
 
       <PageHeader title="Go Bouldering" subtitle={`今日 ${today}`} icon="/icon-192.png" />
+
+      <AnnouncementBanner announcements={announcements} />
 
       <div className="px-4 py-4 space-y-6 page-enter">
         {/* 記録ボタン → /home/plan へ遷移 */}
