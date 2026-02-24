@@ -289,6 +289,11 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                                       className="object-contain flex-shrink-0"
                                     />
                                   )}
+                                  {log.with_friends && (
+                                    <span className="text-[10px] leading-none flex-shrink-0">
+                                      🙋
+                                    </span>
+                                  )}
                                   {isMe && (
                                     <button
                                       onClick={() => handleEditNavigate(log.id)}
