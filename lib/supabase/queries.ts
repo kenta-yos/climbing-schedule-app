@@ -14,6 +14,7 @@ export type ClimbingLog = {
   user: string;
   type: "予定" | "実績";
   time_slot: "昼" | "夕方" | "夜" | null;
+  with_friends?: boolean | null;
   created_at: string;
 };
 
@@ -125,10 +126,10 @@ export async function deleteClimbingLog(id: string): Promise<void> {
   if (error) throw error;
 }
 
-// クライミングログ更新（日付・ジム名・時間帯）
+// クライミングログ更新（日付・ジム名・時間帯・友人フラグ）
 export async function updateClimbingLog(
   id: string,
-  updates: { date?: string; gym_name?: string; time_slot?: "昼" | "夕方" | "夜" | null }
+  updates: { date?: string; gym_name?: string; time_slot?: "昼" | "夕方" | "夜" | null; with_friends?: boolean }
 ): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("climbing_logs").update(updates).eq("id", id);

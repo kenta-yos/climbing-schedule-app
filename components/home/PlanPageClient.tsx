@@ -9,7 +9,6 @@ import {
   updateClimbingLog,
   deleteClimbingLog,
   updateClimbingLogsBulk,
-  getConflictingLog,
   getCompanionConflicts,
   checkDuplicateLog,
 } from "@/lib/supabase/queries";
@@ -21,23 +20,10 @@ import { TIME_SLOTS } from "@/lib/constants";
 import type { GymMaster, ClimbingLog, User } from "@/lib/supabase/queries";
 import Image from "next/image";
 import { ChevronLeft, Search, X, Trash2, Loader2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 
 // ジム未定のときの内部値・DB保存値
 export const GYM_UNDECIDED = "__undecided__";
 export const GYM_UNDECIDED_LABEL = "ジム未定";
-
-type ConflictItem = {
-  member: ClimbingLog;
-  conflictLog: ClimbingLog;
-};
 
 type Props = {
   userName: string;
@@ -73,19 +59,24 @@ export function PlanPageClient({
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const [selectedCompanions, setSelectedCompanions] = useState<string[]>([]);
+  // 一緒に登る人：編集モードは既存グループメンバーを初期選択
+  const [selectedCompanions, setSelectedCompanions] = useState<string[]>(
+    isEdit ? groupMembers.map((m) => m.user) : []
+  );
+  // 友人（アプリ外）フラグ
+  const [withFriends, setWithFriends] = useState<boolean>(
+    editLog?.with_friends ?? false
+  );
+
+  // 編集モードで元々グループにいたメンバーはロック（外せない）
+  const lockedCompanions = isEdit ? new Set(groupMembers.map((m) => m.user)) : new Set<string>();
 
   const toggleCompanion = (userId: string) => {
+    if (lockedCompanions.has(userId)) return;
     setSelectedCompanions((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
   };
-
-  // Dialog 1: グループ全員変更確認
-  const [showGroupDialog, setShowGroupDialog] = useState(false);
-  // Dialog 2: 重複確認
-  const [showConflictDialog, setShowConflictDialog] = useState(false);
-  const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
 
   // 検索フィルター
   const filteredGyms = searchQuery.trim()
@@ -114,22 +105,6 @@ export function PlanPageClient({
   const gymNameForDB =
     selectedGym === GYM_UNDECIDED ? GYM_UNDECIDED_LABEL : selectedGym;
 
-  // 時間帯の表示ラベル
-  const slotLabel = TIME_SLOTS.find((s) => s.value === timeSlot)?.label ?? timeSlot;
-
-  // 変更があるかチェック（編集モード専用）
-  const hasChanges = (): boolean => {
-    if (!editLog) return false;
-    const origDate = editLog.date.split("T")[0];
-    const origGym =
-      editLog.gym_name === GYM_UNDECIDED_LABEL ? GYM_UNDECIDED : editLog.gym_name;
-    return (
-      date !== origDate ||
-      selectedGym !== origGym ||
-      timeSlot !== (editLog.time_slot ?? "夜")
-    );
-  };
-
   const handleSubmit = async (type: "予定" | "実績") => {
     if (!selectedGym) {
       toast({ title: "ジムを選択してください", variant: "destructive" });
@@ -141,13 +116,72 @@ export function PlanPageClient({
     }
 
     if (isEdit && editLog) {
-      // 変更がある かつ グループメンバーがいる場合はグループ確認ダイアログを表示
-      if (hasChanges() && groupMembers.length > 0) {
-        setShowGroupDialog(true);
-        return;
+      setSubmitting(true);
+      try {
+        // 自分のログを更新
+        await updateClimbingLog(editLog.id, {
+          date,
+          gym_name: gymNameForDB,
+          time_slot: timeSlot as "昼" | "夕方" | "夜",
+          with_friends: withFriends,
+        });
+
+        // 元々のグループメンバーのうち、まだ選択されているメンバーのログも更新
+        const originalGroupByUser: Record<string, ClimbingLog> = {};
+        for (const m of groupMembers) {
+          originalGroupByUser[m.user] = m;
+        }
+        const originalUserNames = groupMembers.map((m) => m.user);
+
+        const stillSelectedFromGroup = groupMembers.filter((m) =>
+          selectedCompanions.includes(m.user)
+        );
+        if (stillSelectedFromGroup.length > 0) {
+          await updateClimbingLogsBulk(
+            stillSelectedFromGroup.map((m) => m.id),
+            { date, gym_name: gymNameForDB, time_slot: timeSlot as "昼" | "夕方" | "夜" }
+          );
+        }
+
+        // 新たに追加された仲間（元グループにいなかった人）のログを作成
+        const newCompanions = selectedCompanions.filter(
+          (name) => !originalUserNames.includes(name)
+        );
+        if (newCompanions.length > 0) {
+          const conflicting = await getCompanionConflicts(
+            newCompanions, date, gymNameForDB, "予定", timeSlot
+          );
+          if (conflicting.length > 0) {
+            toast({
+              title: `${conflicting.join("・")}さんはすでにこの日・ジム・時間帯のログがあります`,
+              variant: "destructive",
+            });
+            setSubmitting(false);
+            return;
+          }
+          await Promise.all(
+            newCompanions.map((companion) =>
+              addClimbingLog({
+                date,
+                gym_name: gymNameForDB,
+                user: companion,
+                type: "予定",
+                time_slot: timeSlot as "昼" | "夕方" | "夜",
+                with_friends: false,
+              })
+            )
+          );
+        }
+
+        trackAction(userName, "plan", "plan_updated");
+        toast({ title: "📅 予定を更新しました！", variant: "success" as any });
+        await revalidateSchedulePages();
+        router.push("/home");
+      } catch (err) {
+        console.error(err);
+        toast({ title: "更新に失敗しました", variant: "destructive" });
+        setSubmitting(false);
       }
-      // それ以外は自分だけ更新
-      await executeSelfUpdate();
     } else {
       // 新規登録：自分の重複チェック（予定・実績どちらも）
       const isDuplicate = await checkDuplicateLog(userName, date, timeSlot, type);
@@ -176,13 +210,30 @@ export function PlanPageClient({
       setSubmitting(true);
       try {
         await Promise.all([
-          addClimbingLog({ date, gym_name: gymNameForDB, user: userName, type, time_slot: timeSlot as "昼" | "夕方" | "夜" }),
+          addClimbingLog({
+            date,
+            gym_name: gymNameForDB,
+            user: userName,
+            type,
+            time_slot: timeSlot as "昼" | "夕方" | "夜",
+            with_friends: withFriends,
+          }),
           ...selectedCompanions.map((companion) =>
-            addClimbingLog({ date, gym_name: gymNameForDB, user: companion, type, time_slot: timeSlot as "昼" | "夕方" | "夜" })
+            addClimbingLog({
+              date,
+              gym_name: gymNameForDB,
+              user: companion,
+              type,
+              time_slot: timeSlot as "昼" | "夕方" | "夜",
+              with_friends: false,
+            })
           ),
         ]);
-        const companionMsg = selectedCompanions.length > 0
-          ? `（${selectedCompanions.join("・")}さんと）`
+        const companionNames: string[] = [];
+        if (selectedCompanions.length > 0) companionNames.push(...selectedCompanions);
+        if (withFriends) companionNames.push("友人");
+        const companionMsg = companionNames.length > 0
+          ? `（${companionNames.join("・")}と）`
           : "";
         toast({
           title: type === "予定"
@@ -197,134 +248,6 @@ export function PlanPageClient({
         toast({ title: "登録に失敗しました", variant: "destructive" });
         setSubmitting(false);
       }
-    }
-  };
-
-  // 自分だけ更新
-  const executeSelfUpdate = async () => {
-    setSubmitting(true);
-    setShowGroupDialog(false);
-    try {
-      await updateClimbingLog(editLog!.id, {
-        date,
-        gym_name: gymNameForDB,
-        time_slot: timeSlot as "昼" | "夕方" | "夜",
-      });
-      trackAction(userName, "plan", "plan_updated");
-      toast({ title: "📅 予定を更新しました！", variant: "success" as any });
-      await revalidateSchedulePages();
-      router.push("/home");
-    } catch (err) {
-      console.error(err);
-      toast({ title: "更新に失敗しました", variant: "destructive" });
-      setSubmitting(false);
-    }
-  };
-
-  // 全員分更新（重複チェックあり）
-  const handleGroupUpdateAll = async () => {
-    setSubmitting(true);
-    setShowGroupDialog(false);
-
-    const updates = {
-      date,
-      gym_name: gymNameForDB,
-      time_slot: timeSlot as "昼" | "夕方" | "夜",
-    };
-
-    try {
-      // グループメンバーの重複チェック（並行）
-      const conflictChecks = await Promise.all(
-        groupMembers.map(async (member) => {
-          const conflictLog = await getConflictingLog(
-            member.user,
-            date,
-            gymNameForDB,
-            timeSlot,
-            member.id
-          );
-          return conflictLog ? { member, conflictLog } : null;
-        })
-      );
-      const conflictsFound = conflictChecks.filter(
-        (c): c is ConflictItem => c !== null
-      );
-
-      if (conflictsFound.length > 0) {
-        // 重複ありの場合、確認ダイアログを表示
-        setConflicts(conflictsFound);
-        setSubmitting(false);
-        setShowConflictDialog(true);
-        return;
-      }
-
-      // 重複なし：自分 + 全メンバー一括更新
-      await updateClimbingLog(editLog!.id, updates);
-      await updateClimbingLogsBulk(groupMembers.map((m) => m.id), updates);
-
-      trackAction(userName, "plan", "plan_updated_group");
-      toast({ title: "📅 全員の予定を更新しました！", variant: "success" as any });
-      await revalidateSchedulePages();
-      router.push("/home");
-    } catch (err) {
-      console.error(err);
-      toast({ title: "更新に失敗しました", variant: "destructive" });
-      setSubmitting(false);
-    }
-  };
-
-  // 重複確認後の処理
-  const handleConflictDecision = async (override: boolean) => {
-    setSubmitting(true);
-    setShowConflictDialog(false);
-
-    const updates = {
-      date,
-      gym_name: gymNameForDB,
-      time_slot: timeSlot as "昼" | "夕方" | "夜",
-    };
-
-    try {
-      // 自分の更新
-      await updateClimbingLog(editLog!.id, updates);
-
-      // 重複しないメンバーを更新
-      const conflictMemberIds = new Set(conflicts.map((c) => c.member.id));
-      const nonConflictMembers = groupMembers.filter(
-        (m) => !conflictMemberIds.has(m.id)
-      );
-      if (nonConflictMembers.length > 0) {
-        await updateClimbingLogsBulk(
-          nonConflictMembers.map((m) => m.id),
-          updates
-        );
-      }
-
-      if (override) {
-        // 重複ログを先に削除してから、メンバーのログを更新
-        for (const { conflictLog } of conflicts) {
-          await deleteClimbingLog(conflictLog.id);
-        }
-        await updateClimbingLogsBulk(
-          conflicts.map((c) => c.member.id),
-          updates
-        );
-        toast({ title: "📅 全員の予定を更新しました！", variant: "success" as any });
-      } else {
-        const skippedNames = conflicts.map((c) => c.member.user).join("、");
-        toast({
-          title: `📅 予定を更新しました（${skippedNames}さんはスキップ）`,
-          variant: "success" as any,
-        });
-      }
-
-      trackAction(userName, "plan", "plan_updated_group");
-      await revalidateSchedulePages();
-      router.push("/home");
-    } catch (err) {
-      console.error(err);
-      toast({ title: "更新に失敗しました", variant: "destructive" });
-      setSubmitting(false);
     }
   };
 
@@ -343,6 +266,10 @@ export function PlanPageClient({
       setDeleting(false);
     }
   };
+
+  // 「一緒に登る人」セクションを表示するか
+  const otherUsers = users.filter((u) => u.user_name !== userName);
+  const showCompanions = otherUsers.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
@@ -526,45 +453,80 @@ export function PlanPageClient({
           )}
         </section>
 
-        {/* 一緒に登る人（新規登録のみ） */}
-        {!isEdit && users.filter((u) => u.user_name !== userName).length > 0 && (
+        {/* 一緒に登る人 */}
+        {showCompanions && (
           <section>
             <label className="text-sm font-semibold text-gray-700 block mb-3">
               👥 一緒に登る人{" "}
               <span className="text-xs font-normal text-gray-400">（任意）</span>
             </label>
             <div className="flex flex-wrap gap-5">
-              {users
-                .filter((u) => u.user_name !== userName)
-                .map((u) => {
-                  const isSelected = selectedCompanions.includes(u.user_name);
-                  return (
-                    <button
-                      key={u.user_name}
-                      type="button"
-                      onClick={() => toggleCompanion(u.user_name)}
-                      className="flex flex-col items-center gap-1.5"
+              {/* アプリ内ユーザー */}
+              {otherUsers.map((u) => {
+                const isSelected = selectedCompanions.includes(u.user_name);
+                const isLocked = lockedCompanions.has(u.user_name);
+                return (
+                  <button
+                    key={u.user_name}
+                    type="button"
+                    onClick={() => toggleCompanion(u.user_name)}
+                    className={`flex flex-col items-center gap-1.5 ${isLocked ? "cursor-default" : ""}`}
+                  >
+                    <div
+                      className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-150 ${
+                        isLocked
+                          ? "ring-2 ring-gray-300 ring-offset-2"
+                          : isSelected
+                          ? "ring-4 ring-orange-400 ring-offset-2 scale-110 shadow-md"
+                          : "opacity-40"
+                      }`}
+                      style={{ backgroundColor: u.color || "#94a3b8" }}
                     >
-                      <div
-                        className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-150 ${
-                          isSelected
-                            ? "ring-4 ring-orange-400 ring-offset-2 scale-110 shadow-md"
-                            : "opacity-40"
-                        }`}
-                        style={{ backgroundColor: u.color || "#94a3b8" }}
-                      >
-                        {u.icon || "🧗"}
-                      </div>
-                      <span
-                        className={`text-[11px] font-medium leading-none ${
-                          isSelected ? "text-orange-600" : "text-gray-400"
-                        }`}
-                      >
-                        {u.user_name}
+                      {u.icon || "🧗"}
+                    </div>
+                    <span
+                      className={`text-[11px] font-medium leading-none ${
+                        isLocked
+                          ? "text-gray-400"
+                          : isSelected
+                          ? "text-orange-600"
+                          : "text-gray-400"
+                      }`}
+                    >
+                      {u.user_name}
+                    </span>
+                    {isLocked && (
+                      <span className="text-[9px] text-gray-300 leading-none -mt-0.5">
+                        参加中
                       </span>
-                    </button>
-                  );
-                })}
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* 友人（アプリ外）トグル */}
+              <button
+                type="button"
+                onClick={() => setWithFriends((prev) => !prev)}
+                className="flex flex-col items-center gap-1.5"
+              >
+                <div
+                  className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-150 bg-gray-100 ${
+                    withFriends
+                      ? "ring-4 ring-orange-400 ring-offset-2 scale-110 shadow-md"
+                      : "opacity-40"
+                  }`}
+                >
+                  🙋
+                </div>
+                <span
+                  className={`text-[11px] font-medium leading-none ${
+                    withFriends ? "text-orange-600" : "text-gray-400"
+                  }`}
+                >
+                  友人
+                </span>
+              </button>
             </div>
           </section>
         )}
@@ -628,102 +590,6 @@ export function PlanPageClient({
           )}
         </div>
       </div>
-
-      {/* Dialog 1: グループ全員変更確認 */}
-      <Dialog open={showGroupDialog} onOpenChange={setShowGroupDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>全員の予定を変更しますか？</DialogTitle>
-            <DialogDescription asChild>
-              <div>
-                <p className="mb-3">
-                  以下のメンバーも同じグループで予定を登録しています：
-                </p>
-                <ul className="space-y-1 mb-3">
-                  {groupMembers.map((m) => (
-                    <li key={m.id} className="text-sm font-medium text-gray-700">
-                      👤 {m.user}
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-sm">
-                  自分だけ変えるか、全員分変えるかを選んでください。
-                </p>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={executeSelfUpdate}
-              disabled={submitting}
-              className="flex-1"
-            >
-              自分だけ変える
-            </Button>
-            <Button
-              variant="climbing"
-              onClick={handleGroupUpdateAll}
-              disabled={submitting}
-              className="flex-1"
-            >
-              {submitting ? (
-                <Loader2 size={16} className="animate-spin mr-2" />
-              ) : null}
-              全員変える
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog 2: 重複確認 */}
-      <Dialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>上書きしますか？</DialogTitle>
-            <DialogDescription asChild>
-              <div>
-                <p className="mb-2">
-                  以下のメンバーは変更後の予定（{formatMMDD(date)}・
-                  {gymNameForDB === GYM_UNDECIDED_LABEL ? "ジム未定" : gymNameForDB}・
-                  {slotLabel}）がすでに登録されています：
-                </p>
-                <ul className="space-y-1 mb-3">
-                  {conflicts.map((c) => (
-                    <li key={c.member.id} className="text-sm font-medium text-gray-700">
-                      👤 {c.member.user}
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-sm text-red-600">
-                  ⚠️ 上書きすると、これらのメンバーの既存の予定は削除されます。
-                </p>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={() => handleConflictDecision(false)}
-              disabled={submitting}
-              className="flex-1"
-            >
-              スキップ（変更しない）
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => handleConflictDecision(true)}
-              disabled={submitting}
-              className="flex-1"
-            >
-              {submitting ? (
-                <Loader2 size={16} className="animate-spin mr-2" />
-              ) : null}
-              上書きする
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

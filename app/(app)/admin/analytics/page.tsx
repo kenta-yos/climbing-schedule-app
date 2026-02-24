@@ -76,13 +76,12 @@ export default async function AnalyticsPage() {
       .from("climbing_logs")
       .select("user, type, date")
       .neq("user", adminName),
-    // 直近48時間のページビューのみ（action=nullのページ遷移のみ）
+    // 直近48時間のページビュー・アクション（全イベント）
     supabase
       .from("page_views")
-      .select("user_name, page, created_at")
+      .select("user_name, page, action, created_at")
       .gte("created_at", cutoff48h)
       .neq("user_name", adminName)
-      .is("action", null)
       .order("created_at", { ascending: false }),
   ]);
 
