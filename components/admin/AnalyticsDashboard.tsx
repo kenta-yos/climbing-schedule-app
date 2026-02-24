@@ -31,7 +31,7 @@ export type AnalyticsProps = {
     plansTotal: number;
     logsTotal: number;
   }[];
-  recentLogs: { user_name: string; page: string; created_at: string }[];
+  recentLogs: { user_name: string; page: string; action: string | null; created_at: string }[];
 };
 
 type Tab = "overview" | "actions" | "users" | "logs";
@@ -649,9 +649,9 @@ export function AnalyticsDashboard({
           <>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-50">
-                <p className="text-xs font-semibold text-gray-700">🕐 直近48時間のページビュー</p>
+                <p className="text-xs font-semibold text-gray-700">🕐 直近48時間のイベントログ</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">
-                  {recentLogs.length}件 ／ ページ遷移のみ（アクション除く）
+                  {recentLogs.length}件 ／ ページ遷移 + アクション
                 </p>
               </div>
               {recentLogs.length === 0 ? (
@@ -665,12 +665,21 @@ export function AnalyticsDashboard({
                       <span className="text-[10px] text-gray-400 whitespace-nowrap w-24 flex-shrink-0">
                         {formatJST(log.created_at)}
                       </span>
-                      <span className="text-xs font-medium text-gray-700 flex-1 truncate">
+                      <span className="text-xs font-medium text-gray-700 w-20 flex-shrink-0 truncate">
                         {log.user_name}
                       </span>
                       <span className="text-[10px] text-gray-500 flex-shrink-0 whitespace-nowrap">
                         {PAGE_LABELS[log.page] || log.page}
                       </span>
+                      {log.action ? (
+                        <span className="text-[10px] text-orange-500 flex-shrink-0 whitespace-nowrap truncate ml-auto">
+                          {ACTION_LABELS[log.action] || log.action}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-300 flex-shrink-0 ml-auto">
+                          ページ遷移
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
