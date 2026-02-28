@@ -19,7 +19,8 @@ type GymSummary = {
 const DEFAULT_SHOW = 6;
 
 function formatDateYMD(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-");
+  const datePart = dateStr.slice(0, 10); // "YYYY-MM-DD" 部分のみ取得
+  const [y, m, d] = datePart.split("-");
   return `${y}/${Number(m)}/${Number(d)}`;
 }
 

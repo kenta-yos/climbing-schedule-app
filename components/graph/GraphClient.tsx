@@ -113,7 +113,10 @@ export function GraphClient({ logs, plans, users, currentUser }: Props) {
 
   const filteredLogs = useMemo(() => {
     const { start, end } = getPeriodRange(period);
-    return logs.filter((l) => l.date >= start && l.date <= end);
+    return logs.filter((l) => {
+      const d = l.date.slice(0, 10);
+      return d >= start && d <= end;
+    });
   }, [logs, period]);
 
   const edges     = useMemo(() => buildEdges(filteredLogs), [filteredLogs]);
