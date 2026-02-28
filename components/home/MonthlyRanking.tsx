@@ -97,13 +97,20 @@ function UserLogDetail({
 
 export function MonthlyRanking({ logs, users, currentUser }: Props) {
   const [openUser, setOpenUser] = useState<string | null>(null);
+  const [tab, setTab] = useState<"thisMonth" | "lastMonth">("thisMonth");
 
   const now = getNowJST();
   const year = now.getFullYear();
   const month = now.getMonth();
-  const monthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const thisMonthStr = `${year}-${String(month + 1).padStart(2, "0")}`;
 
-  // 今月の実績のみ
+  // 先月
+  const lastMonthDate = new Date(year, month - 1, 1);
+  const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, "0")}`;
+
+  const monthStr = tab === "thisMonth" ? thisMonthStr : lastMonthStr;
+
+  // 選択月の実績のみ
   const thisMonthLogs = logs.filter(
     (l) => l.type === "実績" && l.date.startsWith(monthStr)
   );
@@ -114,11 +121,42 @@ export function MonthlyRanking({ logs, users, currentUser }: Props) {
     countMap[l.user] = (countMap[l.user] || 0) + 1;
   });
 
+  const tabLabel = tab === "thisMonth" ? "今月" : "先月";
+
+  // タブUI
+  const tabBar = (
+    <div className="flex bg-gray-100 rounded-xl p-1 mb-3">
+      <button
+        className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+          tab === "thisMonth"
+            ? "bg-white text-orange-600 shadow-sm"
+            : "text-gray-500"
+        }`}
+        onClick={() => { setTab("thisMonth"); setOpenUser(null); }}
+      >
+        今月
+      </button>
+      <button
+        className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+          tab === "lastMonth"
+            ? "bg-white text-orange-600 shadow-sm"
+            : "text-gray-500"
+        }`}
+        onClick={() => { setTab("lastMonth"); setOpenUser(null); }}
+      >
+        先月
+      </button>
+    </div>
+  );
+
   if (Object.keys(countMap).length === 0) {
     return (
-      <div className="text-center py-6 text-gray-400">
-        <div className="text-3xl mb-2">🏆</div>
-        <p className="text-sm">今月はまだ実績がありません</p>
+      <div>
+        {tabBar}
+        <div className="text-center py-6 text-gray-400">
+          <div className="text-3xl mb-2">🏆</div>
+          <p className="text-sm">{tabLabel}はまだ実績がありません</p>
+        </div>
       </div>
     );
   }
@@ -137,7 +175,9 @@ export function MonthlyRanking({ logs, users, currentUser }: Props) {
   });
 
   return (
-    <div className="space-y-2">
+    <div>
+      {tabBar}
+      <div className="space-y-2">
       {ranked.map(({ userName, count, rank, user }) => {
         const isMe = userName === currentUser;
         const medal = RANK_MEDALS[rank];
@@ -212,6 +252,7 @@ export function MonthlyRanking({ logs, users, currentUser }: Props) {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

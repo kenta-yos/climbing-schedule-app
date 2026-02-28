@@ -186,7 +186,7 @@ export function HomeClient({ initialLogs, users, currentUser, announcements }: P
         <section>
           <h2 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
             <span>🏆</span>
-            <span>CLIMB-BAKA AWARD（今月）</span>
+            <span>CLIMB-BAKA AWARD</span>
           </h2>
           <MonthlyRanking logs={logs} users={users} currentUser={currentUser} />
         </section>

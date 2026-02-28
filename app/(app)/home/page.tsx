@@ -21,7 +21,10 @@ export default async function HomePage() {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() + 21);
   const cutoffStr = cutoffDate.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" }).replace(/\//g, "-").replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, d) => `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
-  const monthStart = todayStr.slice(0, 7) + "-01"; // 今月1日
+  // 先月1日（ランキングの先月タブ用）
+  const nowDate = new Date();
+  const lastMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() - 1, 1);
+  const monthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`;
 
   const [futurePlansRes, monthlyLogsRes, gymsRes, areasRes, usersRes, announcementsRes] = await Promise.all([
     // 今日〜3週間後の予定

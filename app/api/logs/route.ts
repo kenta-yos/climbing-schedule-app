@@ -17,7 +17,9 @@ export async function GET(request: NextRequest) {
           .replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, day) => `${y}-${m.padStart(2,"0")}-${day.padStart(2,"0")}`);
       const today = toJST(now);
       const cutoff = toJST(new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000));
-      const monthStart = today.slice(0, 7) + "-01";
+      // 先月1日から取得（ランキングの先月タブ用）
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const monthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`;
 
       const [plansRes, logsRes] = await Promise.all([
         supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", today).lte("date", cutoff).order("date", { ascending: true }),
