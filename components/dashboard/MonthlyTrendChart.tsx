@@ -68,7 +68,10 @@ export function MonthlyTrendChart({ logs }: Props) {
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3">月別クライミング推移</h3>
+      <div className="flex items-baseline justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-700">月別クライミング推移</h3>
+        <span className="text-[10px] text-gray-400">タップでジム内訳を表示</span>
+      </div>
       <ResponsiveContainer width="100%" height={180}>
         <BarChart data={data} margin={{ top: 16, right: 8, left: 8, bottom: 0 }}>
           <XAxis

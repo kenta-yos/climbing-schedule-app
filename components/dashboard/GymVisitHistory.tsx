@@ -93,7 +93,7 @@ export function GymVisitHistory({ logs }: Props) {
             key={gym.gymName}
             className="bg-gray-50 rounded-xl p-3 border border-gray-100"
           >
-            <div className="text-sm font-semibold text-gray-800 truncate">{gym.gymName}</div>
+            <div className="text-sm font-semibold text-gray-800 break-words leading-snug">{gym.gymName}</div>
             <div className="flex items-center gap-1.5 mt-1">
               <span className="text-lg font-bold text-orange-500">{gym.totalCount}</span>
               <span className="text-xs text-gray-500">回</span>
