@@ -69,7 +69,7 @@ export function GymVisitHistory({ logs }: Props) {
       daysSinceLastVisit: daysDiff(lastDate, today),
     }));
     if (sortMode === "lastVisit") {
-      return list.sort((a, b) => b.lastVisit.localeCompare(a.lastVisit));
+      return list.sort((a, b) => a.lastVisit.localeCompare(b.lastVisit));
     }
     return list.sort((a, b) => b.totalCount - a.totalCount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,7 +106,7 @@ export function GymVisitHistory({ logs }: Props) {
             }`}
             onClick={() => { setSortMode("count"); setExpanded(false); }}
           >
-            回数順
+            よくいく順
           </button>
           <button
             className={`text-[10px] font-semibold px-2 py-1 rounded-md transition-all ${
@@ -116,7 +116,7 @@ export function GymVisitHistory({ logs }: Props) {
             }`}
             onClick={() => { setSortMode("lastVisit"); setExpanded(false); }}
           >
-            最終訪問順
+            ごぶさた順
           </button>
         </div>
       </div>
