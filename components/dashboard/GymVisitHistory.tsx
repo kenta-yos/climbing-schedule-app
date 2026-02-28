@@ -18,17 +18,22 @@ type GymSummary = {
 
 const DEFAULT_SHOW = 6;
 
+function formatDateYMD(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-");
+  return `${y}/${Number(m)}/${Number(d)}`;
+}
+
 function StalenessBadge({ days }: { days: number }) {
   if (days < 30) return null;
   if (days < 60) {
     return (
-      <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+      <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
         {days}日前
       </span>
     );
   }
   return (
-    <span className="text-[10px] font-medium text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">
+    <span className="text-[10px] font-medium text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
       {days}日前
     </span>
   );
@@ -89,15 +94,15 @@ export function GymVisitHistory({ logs }: Props) {
             className="bg-gray-50 rounded-xl p-3 border border-gray-100"
           >
             <div className="text-sm font-semibold text-gray-800 truncate">{gym.gymName}</div>
-            <div className="flex items-baseline gap-1 mt-1">
+            <div className="flex items-center gap-1.5 mt-1">
               <span className="text-lg font-bold text-orange-500">{gym.totalCount}</span>
               <span className="text-xs text-gray-500">回</span>
-            </div>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="text-[10px] text-gray-400">
-                最終 {gym.lastVisit.replace(/-/g, "/")}
-              </span>
               <StalenessBadge days={gym.daysSinceLastVisit} />
+            </div>
+            <div className="mt-1">
+              <span className="text-[10px] text-gray-400 block">
+                最終訪問日 {formatDateYMD(gym.lastVisit)}
+              </span>
             </div>
           </div>
         ))}
