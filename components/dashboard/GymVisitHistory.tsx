@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Building2 } from "lucide-react";
 import { getTodayJST, daysDiff } from "@/lib/utils";
 import type { ClimbingLog } from "@/lib/supabase/queries";
@@ -12,14 +12,16 @@ type Props = {
 type GymSummary = {
   gymName: string;
   totalCount: number;
-  lastVisit: string; // YYYY-MM-DD
+  lastVisit: string;
   daysSinceLastVisit: number;
 };
+
+type SortMode = "count" | "lastVisit";
 
 const DEFAULT_SHOW = 6;
 
 function formatDateYMD(dateStr: string): string {
-  const datePart = dateStr.slice(0, 10); // "YYYY-MM-DD" 部分のみ取得
+  const datePart = dateStr.slice(0, 10);
   const [y, m, d] = datePart.split("-");
   return `${y}/${Number(m)}/${Number(d)}`;
 }
@@ -28,13 +30,13 @@ function StalenessBadge({ days }: { days: number }) {
   if (days < 30) return null;
   if (days < 60) {
     return (
-      <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
         {days}日前
       </span>
     );
   }
   return (
-    <span className="text-[10px] font-medium text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+    <span className="text-[10px] font-bold text-red-700 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded-full whitespace-nowrap">
       {days}日前
     </span>
   );
@@ -42,6 +44,7 @@ function StalenessBadge({ days }: { days: number }) {
 
 export function GymVisitHistory({ logs }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("count");
   const today = getTodayJST();
 
   const actuals = logs.filter((l) => l.type === "実績");
@@ -58,14 +61,19 @@ export function GymVisitHistory({ logs }: Props) {
     }
   });
 
-  const gyms: GymSummary[] = Object.entries(gymMap)
-    .map(([gymName, { count, lastDate }]) => ({
+  const gyms: GymSummary[] = useMemo(() => {
+    const list = Object.entries(gymMap).map(([gymName, { count, lastDate }]) => ({
       gymName,
       totalCount: count,
       lastVisit: lastDate,
       daysSinceLastVisit: daysDiff(lastDate, today),
-    }))
-    .sort((a, b) => b.totalCount - a.totalCount);
+    }));
+    if (sortMode === "lastVisit") {
+      return list.sort((a, b) => b.lastVisit.localeCompare(a.lastVisit));
+    }
+    return list.sort((a, b) => b.totalCount - a.totalCount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortMode, JSON.stringify(gymMap), today]);
 
   if (gyms.length === 0) {
     return (
@@ -84,10 +92,34 @@ export function GymVisitHistory({ logs }: Props) {
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-      <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-        <Building2 size={15} className="text-orange-500" />
-        ジム訪問履歴
-      </h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+          <Building2 size={15} className="text-orange-500" />
+          ジム訪問履歴
+        </h3>
+        <div className="flex bg-gray-100 rounded-lg p-0.5">
+          <button
+            className={`text-[10px] font-semibold px-2 py-1 rounded-md transition-all ${
+              sortMode === "count"
+                ? "bg-white text-orange-600 shadow-sm"
+                : "text-gray-500"
+            }`}
+            onClick={() => { setSortMode("count"); setExpanded(false); }}
+          >
+            回数順
+          </button>
+          <button
+            className={`text-[10px] font-semibold px-2 py-1 rounded-md transition-all ${
+              sortMode === "lastVisit"
+                ? "bg-white text-orange-600 shadow-sm"
+                : "text-gray-500"
+            }`}
+            onClick={() => { setSortMode("lastVisit"); setExpanded(false); }}
+          >
+            最終訪問順
+          </button>
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         {visible.map((gym) => (
           <div
@@ -100,8 +132,8 @@ export function GymVisitHistory({ logs }: Props) {
               <span className="text-xs text-gray-500">回</span>
               <StalenessBadge days={gym.daysSinceLastVisit} />
             </div>
-            <div className="mt-1">
-              <span className="text-[10px] text-gray-400 block">
+            <div className="mt-1.5">
+              <span className="text-[11px] text-gray-500 font-medium block">
                 最終訪問日 {formatDateYMD(gym.lastVisit)}
               </span>
             </div>
