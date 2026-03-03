@@ -149,18 +149,22 @@ function categorizeActions(actionCounts: { action: string; count: number }[]) {
 
 // ─── ログタブ用: アクション詳細をパース ──────────────────────────────────────
 
-function parseActionDetail(action: string): { base: string; detail: string | null } {
+type ActionDetail = {
+  base: string;
+  date: string | null;
+  gym: string | null;
+  companions: string | null;
+};
+
+function parseActionDetail(action: string): ActionDetail {
   const parts = action.split("|");
-  if (parts.length === 1) return { base: action, detail: null };
   const base = parts[0];
-  const date = parts[1] || "";
-  const gym = parts[2] || "";
-  const companions = parts[3] || "";
-  let detail = "";
-  if (date) detail += date.slice(5); // MM-DD
-  if (gym) detail += ` ${gym}`;
-  if (companions) detail += ` (${companions})`;
-  return { base, detail: detail.trim() || null };
+  return {
+    base,
+    date: parts[1] || null,
+    gym: parts[2] || null,
+    companions: parts[3] || null,
+  };
 }
 
 // ─── メイン ──────────────────────────────────────────────────────────────────
@@ -236,25 +240,33 @@ export function AnalyticsDashboard({
               ) : (
                 <div className="divide-y divide-gray-50 max-h-[50vh] overflow-y-auto">
                   {climbingActions.map((log, i) => {
-                    const { base, detail } = parseActionDetail(log.action);
+                    const parsed = parseActionDetail(log.action);
                     return (
-                      <div key={i} className="flex items-start px-4 py-2.5 gap-2">
-                        <span className="text-[10px] text-gray-400 whitespace-nowrap w-[88px] flex-shrink-0 pt-0.5">
-                          {formatJST(log.created_at)}
-                        </span>
-                        <span className="text-xs font-medium text-gray-700 w-16 flex-shrink-0 truncate pt-0.5">
-                          {log.user_name}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-medium text-orange-600">
-                            {ACTION_LABELS[base] || base}
+                      <div key={i} className="px-4 py-2.5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] text-gray-400 whitespace-nowrap">
+                            {formatJST(log.created_at)}
                           </span>
-                          {detail && (
-                            <span className="text-[10px] text-gray-400 ml-1">
-                              {detail}
-                            </span>
-                          )}
+                          <span className="text-xs font-medium text-gray-700 truncate">
+                            {log.user_name}
+                          </span>
+                          <span className="text-[10px] font-medium text-orange-600 whitespace-nowrap">
+                            {ACTION_LABELS[parsed.base] || parsed.base}
+                          </span>
                         </div>
+                        {(parsed.date || parsed.gym || parsed.companions) && (
+                          <div className="flex items-center gap-2 text-[10px] text-gray-500 pl-1 flex-wrap">
+                            {parsed.date && (
+                              <span>📅 {parsed.date.slice(5).replace("-", "/")}</span>
+                            )}
+                            {parsed.gym && (
+                              <span className="font-medium text-gray-600">🏢 {parsed.gym}</span>
+                            )}
+                            {parsed.companions && (
+                              <span>👥 {parsed.companions}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -265,7 +277,7 @@ export function AnalyticsDashboard({
             {/* イベントログ（7日） */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-50">
-                <p className="text-xs font-semibold text-gray-700">直近7日間のイベントログ</p>
+                <p className="text-xs font-semibold text-gray-700">直近48時間のイベントログ</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">
                   {recentLogs.length}件 ／ ページ遷移 + アクション
                 </p>
@@ -277,6 +289,9 @@ export function AnalyticsDashboard({
                   {recentLogs.map((log, i) => {
                     const parsed = log.action ? parseActionDetail(log.action) : null;
                     const isClimbAction = parsed && ["plan_created", "log_created", "plan_updated", "plan_deleted"].includes(parsed.base);
+                    const detailText = parsed
+                      ? [parsed.date?.slice(5).replace("-", "/"), parsed.gym, parsed.companions ? `(${parsed.companions})` : null].filter(Boolean).join(" ")
+                      : null;
                     return (
                       <div key={i} className={`flex items-start px-4 py-2.5 gap-2 ${isClimbAction ? "bg-orange-50/50" : ""}`}>
                         <span className="text-[10px] text-gray-400 whitespace-nowrap w-[88px] flex-shrink-0 pt-0.5">
@@ -294,9 +309,9 @@ export function AnalyticsDashboard({
                               <span className={`text-[10px] font-medium ${isClimbAction ? "text-orange-600" : "text-blue-500"}`}>
                                 {ACTION_LABELS[parsed.base] || parsed.base}
                               </span>
-                              {parsed.detail && (
+                              {detailText && (
                                 <span className="text-[10px] text-gray-400 ml-1">
-                                  {parsed.detail}
+                                  {detailText}
                                 </span>
                               )}
                             </div>

@@ -50,8 +50,8 @@ export default async function AnalyticsPage() {
   cutoffDate.setDate(cutoffDate.getDate() - 30);
   const cutoff = cutoffDate.toISOString();
 
-  // ログタブ用: 7日分
-  const cutoff7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  // ログタブ用: 48時間
+  const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
   const [accessLogsRes, pageViewsRes, recentLogsRes] = await Promise.all([
     supabase
@@ -70,7 +70,7 @@ export default async function AnalyticsPage() {
     supabase
       .from("page_views")
       .select("user_name, page, action, created_at")
-      .gte("created_at", cutoff7d)
+      .gte("created_at", cutoff48h)
       .neq("user_name", adminName)
       .order("created_at", { ascending: false }),
   ]);
