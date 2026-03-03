@@ -50,8 +50,9 @@ export async function POST(request: NextRequest) {
 
     // ログ登録のアクション記録（予定 or 実績）
     if (body.user && body.type) {
-      const action = body.type === "予定" ? "plan_created" : "log_created";
-      supabase.from("page_views").insert({ user_name: body.user, page: "home", action }).then(() => {});
+      const base = body.type === "予定" ? "plan_created" : "log_created";
+      const detail = body.date && body.gym_name ? `${base}|${body.date}|${body.gym_name}` : base;
+      supabase.from("page_views").insert({ user_name: body.user, page: "plan", action: detail }).then(() => {});
     }
 
     return NextResponse.json({ success: true }, { status: 201 });

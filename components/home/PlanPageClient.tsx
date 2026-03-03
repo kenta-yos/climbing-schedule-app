@@ -173,7 +173,7 @@ export function PlanPageClient({
           );
         }
 
-        trackAction(userName, "plan", "plan_updated");
+        trackAction(userName, "plan", `plan_updated|${date}|${gymNameForDB}|${selectedCompanions.join(",")}`);
         toast({ title: "📅 予定を更新しました！", variant: "success" as any });
         await revalidateSchedulePages();
         router.push("/home");
@@ -256,7 +256,7 @@ export function PlanPageClient({
     setDeleting(true);
     try {
       await deleteClimbingLog(editLog.id);
-      trackAction(userName, "plan", "plan_deleted");
+      trackAction(userName, "plan", `plan_deleted|${editLog.date.split("T")[0]}|${editLog.gym_name}`);
       toast({ title: "🗑️ 予定を削除しました", variant: "success" as any });
       await revalidateSchedulePages();
       router.push("/home");

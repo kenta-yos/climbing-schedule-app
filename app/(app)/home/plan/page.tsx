@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PlanPageClient } from "@/components/home/PlanPageClient";
 import { getTodayJST, getDateOffsetJST } from "@/lib/utils";
+import { addPageView } from "@/lib/supabase/queries";
 import type { ClimbingLog, GymMaster, User } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,8 @@ export default async function PlanPage({ searchParams }: Props) {
       .neq("user", decodedUser);
     groupMembers = (groupRes.data || []) as ClimbingLog[];
   }
+
+  addPageView(decodedUser, "plan").catch(() => {});
 
   return (
     // key を editId（または "new"）にすることで、編集対象が変わるたびに
