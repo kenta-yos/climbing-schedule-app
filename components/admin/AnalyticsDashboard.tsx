@@ -107,7 +107,7 @@ const PAGE_LABELS: Record<string, string> = {
 
 const ACTION_LABELS: Record<string, string> = {
   // トップ
-  record_tapped: "記録ボタン押下",
+  record_tapped: "予定入力画面へ遷移",
   join_tapped: "参加ボタン押下",
   plan_joined: "参加確定",
   edit_tapped: "編集ボタン押下",
