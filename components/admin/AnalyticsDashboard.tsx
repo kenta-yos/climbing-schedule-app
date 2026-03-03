@@ -6,8 +6,6 @@ export type AnalyticsProps = {
   summary: {
     totalAccess: number;
     totalPageViews: number;
-    uniqueUsers30d: number;
-    uniqueUsers7d: number;
   };
   dailyAccess: { date: string; count: number }[];
   dailyPageViews: { date: string; count: number }[];
@@ -24,6 +22,7 @@ export type AnalyticsProps = {
     pvGraph: number;
   }[];
   recentLogs: { user_name: string; page: string; action: string | null; created_at: string }[];
+  climbingActions: { user_name: string; action: string; created_at: string }[];
 };
 
 type Tab = "logs" | "actions" | "users";
@@ -43,16 +42,27 @@ function formatJST(iso: string): string {
 function BarChart({ data }: { data: { date: string; count: number }[] }) {
   const max = Math.max(...data.map((d) => d.count), 1);
   return (
-    <div className="flex items-end gap-0.5 h-24 w-full">
-      {data.map(({ date, count }) => (
-        <div key={date} className="flex-1 flex flex-col items-center gap-0.5">
-          <div
-            className="w-full bg-orange-400 rounded-t-sm transition-all"
-            style={{ height: `${(count / max) * 100}%`, minHeight: count > 0 ? 2 : 0 }}
-          />
-          <span className="text-[7px] text-gray-400 leading-none">{date.slice(5)}</span>
-        </div>
-      ))}
+    <div className="space-y-1">
+      <div className="flex items-end gap-0.5 h-20 w-full">
+        {data.map(({ date, count }) => (
+          <div key={date} className="flex-1 h-full flex flex-col items-center justify-end">
+            {count > 0 && (
+              <span className="text-[7px] text-gray-500 font-medium mb-0.5">{count}</span>
+            )}
+            <div
+              className="w-full bg-orange-400 rounded-t-sm"
+              style={{ height: `${(count / max) * 100}%`, minHeight: count > 0 ? 2 : 0 }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-0.5">
+        {data.map(({ date }) => (
+          <div key={date} className="flex-1 text-center">
+            <span className="text-[7px] text-gray-400 leading-none">{date.slice(5)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -134,10 +144,7 @@ function categorizeActions(actionCounts: { action: string; count: number }[]) {
      "gps_auto", "gps_button", "address_set",
      "nationwide_on", "nationwide_off", "load_more"].includes(a.action)
   );
-  const other = actionCounts.filter(
-    (a) => ![...home, ...plan, ...gyms].find((x) => x.action === a.action)
-  );
-  return { home, plan, gyms, other };
+  return { home, plan, gyms };
 }
 
 // ─── ログタブ用: アクション詳細をパース ──────────────────────────────────────
@@ -166,9 +173,10 @@ export function AnalyticsDashboard({
   actionCounts,
   userStats,
   recentLogs,
+  climbingActions,
 }: AnalyticsProps) {
   const [tab, setTab] = useState<Tab>("logs");
-  const { home, plan, gyms, other } = categorizeActions(actionCounts);
+  const { home, plan, gyms } = categorizeActions(actionCounts);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "logs", label: "ログ" },
@@ -189,11 +197,9 @@ export function AnalyticsDashboard({
 
       {/* サマリーカード（常時表示） */}
       <div className="px-4 pt-3 pb-1">
-        <div className="grid grid-cols-4 gap-2">
-          <SummaryCard label="アクセス" value={summary.totalAccess} color="text-orange-500" />
-          <SummaryCard label="PV" value={summary.totalPageViews} />
-          <SummaryCard label="AU(30d)" value={summary.uniqueUsers30d} color="text-blue-500" />
-          <SummaryCard label="AU(7d)" value={summary.uniqueUsers7d} color="text-blue-500" />
+        <div className="grid grid-cols-2 gap-2">
+          <SummaryCard label="アクセス（30日）" value={summary.totalAccess} color="text-orange-500" />
+          <SummaryCard label="PV（30日）" value={summary.totalPageViews} />
         </div>
       </div>
 
@@ -217,6 +223,46 @@ export function AnalyticsDashboard({
         {/* ===== ログタブ ===== */}
         {tab === "logs" && (
           <>
+            {/* 予定操作ログ（30日） */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-50">
+                <p className="text-xs font-semibold text-gray-700">予定・実績の操作ログ</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {climbingActions.length}件 ／ 過去30日
+                </p>
+              </div>
+              {climbingActions.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-sm">データがありません</div>
+              ) : (
+                <div className="divide-y divide-gray-50 max-h-[50vh] overflow-y-auto">
+                  {climbingActions.map((log, i) => {
+                    const { base, detail } = parseActionDetail(log.action);
+                    return (
+                      <div key={i} className="flex items-start px-4 py-2.5 gap-2">
+                        <span className="text-[10px] text-gray-400 whitespace-nowrap w-[88px] flex-shrink-0 pt-0.5">
+                          {formatJST(log.created_at)}
+                        </span>
+                        <span className="text-xs font-medium text-gray-700 w-16 flex-shrink-0 truncate pt-0.5">
+                          {log.user_name}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[10px] font-medium text-orange-600">
+                            {ACTION_LABELS[base] || base}
+                          </span>
+                          {detail && (
+                            <span className="text-[10px] text-gray-400 ml-1">
+                              {detail}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* イベントログ（7日） */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-50">
                 <p className="text-xs font-semibold text-gray-700">直近7日間のイベントログ</p>
@@ -320,16 +366,6 @@ export function AnalyticsDashboard({
                 <HBarChart
                   items={gyms.map(({ action, count }) => ({ label: ACTION_LABELS[action] || action, count }))}
                   color="bg-purple-400"
-                />
-              </div>
-            )}
-
-            {/* その他 */}
-            {other.length > 0 && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <p className="text-xs font-semibold text-gray-700 mb-3">その他</p>
-                <HBarChart
-                  items={other.map(({ action, count }) => ({ label: ACTION_LABELS[action] || action, count }))}
                 />
               </div>
             )}

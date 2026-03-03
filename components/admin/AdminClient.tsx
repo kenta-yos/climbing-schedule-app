@@ -10,7 +10,7 @@ import { addGym, addSetSchedules } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { useUserStore } from "@/lib/store/useUserStore";
 import { getTodayJST } from "@/lib/utils";
-import { Plus, Trash2, LogOut, CheckCircle2, ChevronDown, ChevronUp, Search, X, Megaphone } from "lucide-react";
+import { Plus, Trash2, LogOut, CheckCircle2, ChevronDown, ChevronUp, Search, X, Megaphone, Loader2 } from "lucide-react";
 import type { GymMaster, AreaMaster, SetSchedule, Announcement } from "@/lib/supabase/queries";
 
 type Props = {
@@ -47,6 +47,7 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
 
   // タブ管理（adminは"notice"タブも利用可能）
   const [tab, setTab] = useState<"schedule" | "gym" | "notice">("schedule");
+  const [navigatingAnalytics, setNavigatingAnalytics] = useState(false);
 
   // ---- お知らせ登録 ----
   const [noticeContent, setNoticeContent] = useState("");
@@ -239,10 +240,15 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
         {isAdmin && (
           <a
             href="/admin/analytics"
-            className="flex items-center justify-between px-4 py-3 bg-gray-900 text-white rounded-2xl shadow-sm hover:bg-gray-800 transition-colors"
+            onClick={() => setNavigatingAnalytics(true)}
+            className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm hover:bg-gray-50 transition-colors"
           >
-            <span className="text-sm font-semibold">📊 分析ダッシュボード</span>
-            <span className="text-gray-400 text-xs">→</span>
+            <span className="text-sm font-semibold text-gray-800">📊 分析ダッシュボード</span>
+            {navigatingAnalytics ? (
+              <Loader2 size={16} className="text-gray-400 animate-spin" />
+            ) : (
+              <span className="text-gray-400 text-xs">→</span>
+            )}
           </a>
         )}
 

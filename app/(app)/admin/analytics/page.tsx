@@ -83,7 +83,6 @@ export default async function AnalyticsPage() {
   const actionRecords = pageViews.filter((pv) => !!pv.action);
 
   const days14 = lastNDays(14);
-  const sevenDaysAgo = lastNDays(8)[0];
 
   // --- 日別アクセス数 ---
   const accessByDay: Record<string, number> = {};
@@ -150,20 +149,20 @@ export default async function AnalyticsPage() {
     }))
     .sort((a, b) => b.accessCount - a.accessCount);
 
-  // サマリー
-  const uniqueUsers30d = new Set(accessLogs.map((l) => l.user_name)).size;
-  const uniqueUsers7d = new Set(
-    accessLogs
-      .filter((l) => toJSTDate(l.created_at) >= sevenDaysAgo)
-      .map((l) => l.user_name)
-  ).size;
+  // --- 予定操作ログ（30日分） ---
+  const CLIMBING_ACTIONS = ["plan_created", "log_created", "plan_updated", "plan_deleted"];
+  const climbingActions = actionRecords
+    .filter((pv) => CLIMBING_ACTIONS.includes(pv.action.split("|")[0]))
+    .map((pv) => ({
+      user_name: pv.user_name,
+      action: pv.action,
+      created_at: pv.created_at,
+    }));
 
   const props: AnalyticsProps = {
     summary: {
       totalAccess: accessLogs.length,
       totalPageViews: pageLoads.length,
-      uniqueUsers30d,
-      uniqueUsers7d,
     },
     dailyAccess,
     dailyPageViews,
@@ -171,6 +170,7 @@ export default async function AnalyticsPage() {
     actionCounts,
     userStats,
     recentLogs,
+    climbingActions,
   };
 
   return <AnalyticsDashboard {...props} />;
