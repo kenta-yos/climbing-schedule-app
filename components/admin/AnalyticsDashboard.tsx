@@ -184,7 +184,7 @@ export function AnalyticsDashboard({
   const { home, plan, gyms } = categorizeActions(actionCounts);
 
   const tabs: { key: Tab; label: string }[] = [
-    { key: "logs", label: "ログ" },
+    { key: "logs", label: "記録ログ" },
     { key: "actions", label: "アクション" },
     { key: "users", label: "ユーザー" },
   ];
@@ -278,7 +278,7 @@ export function AnalyticsDashboard({
             {/* イベントログ（7日） */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-50">
-                <p className="text-xs font-semibold text-gray-700">直近48時間のイベントログ</p>
+                <p className="text-xs font-semibold text-gray-700">直近7日間のイベントログ</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">
                   {recentLogs.length}件 ／ ページ遷移 + アクション
                 </p>
