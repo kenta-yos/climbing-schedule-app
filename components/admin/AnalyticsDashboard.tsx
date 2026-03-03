@@ -26,7 +26,7 @@ export type AnalyticsProps = {
   climbingActions: { user_name: string; action: string; created_at: string }[];
 };
 
-type Tab = "logs" | "actions" | "users";
+type Tab = "events" | "logs" | "actions" | "users";
 
 function formatJST(iso: string): string {
   return new Date(iso).toLocaleString("ja-JP", {
@@ -180,10 +180,11 @@ export function AnalyticsDashboard({
   recentLogs,
   climbingActions,
 }: AnalyticsProps) {
-  const [tab, setTab] = useState<Tab>("logs");
+  const [tab, setTab] = useState<Tab>("events");
   const { home, plan, gyms } = categorizeActions(actionCounts);
 
   const tabs: { key: Tab; label: string }[] = [
+    { key: "events", label: "ログ" },
     { key: "logs", label: "記録ログ" },
     { key: "actions", label: "アクション" },
     { key: "users", label: "ユーザー" },
@@ -225,108 +226,107 @@ export function AnalyticsDashboard({
 
       <div className="px-4 py-4 space-y-4">
 
-        {/* ===== ログタブ ===== */}
-        {tab === "logs" && (
-          <>
-            {/* 予定操作ログ（30日） */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-50">
-                <p className="text-xs font-semibold text-gray-700">予定・実績の操作ログ</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  {climbingActions.length}件 ／ 過去30日
-                </p>
-              </div>
-              {climbingActions.length === 0 ? (
-                <div className="text-center py-10 text-gray-400 text-sm">データがありません</div>
-              ) : (
-                <div className="divide-y divide-gray-50 max-h-[50vh] overflow-y-auto">
-                  {climbingActions.map((log, i) => {
-                    const parsed = parseActionDetail(log.action);
-                    return (
-                      <div key={i} className="px-4 py-2.5">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[10px] text-gray-400 whitespace-nowrap">
-                            {formatJST(log.created_at)}
-                          </span>
-                          <span className="text-xs font-medium text-gray-700 truncate">
-                            {log.user_name}
-                          </span>
-                          <span className="text-[10px] font-medium text-orange-600 whitespace-nowrap">
-                            {ACTION_LABELS[parsed.base] || parsed.base}
-                          </span>
-                        </div>
-                        {(parsed.date || parsed.gym || parsed.companions) && (
-                          <div className="flex items-center gap-2 text-[10px] text-gray-500 pl-1 flex-wrap">
-                            {parsed.date && (
-                              <span>📅 {parsed.date.slice(5).replace("-", "/")}</span>
-                            )}
-                            {parsed.gym && (
-                              <span className="font-medium text-gray-600">🏢 {parsed.gym}</span>
-                            )}
-                            {parsed.companions && (
-                              <span>👥 {parsed.companions}</span>
+        {/* ===== ログタブ（メイン） ===== */}
+        {tab === "events" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-50">
+              <p className="text-xs font-semibold text-gray-700">直近48時間のログ</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                {recentLogs.length}件 ／ ページ遷移 + アクション
+              </p>
+            </div>
+            {recentLogs.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 text-sm">データがありません</div>
+            ) : (
+              <div className="divide-y divide-gray-50 max-h-[80vh] overflow-y-auto">
+                {recentLogs.map((log, i) => {
+                  const parsed = log.action ? parseActionDetail(log.action) : null;
+                  const isClimbAction = parsed && ["plan_created", "log_created", "plan_updated", "plan_deleted"].includes(parsed.base);
+                  const detailText = parsed
+                    ? [parsed.date?.slice(5).replace("-", "/"), parsed.gym, parsed.companions ? `(${parsed.companions})` : null].filter(Boolean).join(" ")
+                    : null;
+                  return (
+                    <div key={i} className={`flex items-start px-4 py-2.5 gap-2 ${isClimbAction ? "bg-orange-50/50" : ""}`}>
+                      <span className="text-[10px] text-gray-400 whitespace-nowrap w-[88px] flex-shrink-0 pt-0.5">
+                        {formatJST(log.created_at)}
+                      </span>
+                      <span className="text-xs font-medium text-gray-700 w-16 flex-shrink-0 truncate pt-0.5">
+                        {log.user_name}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[10px] text-gray-500 whitespace-nowrap">
+                          {PAGE_LABELS[log.page] || log.page}
+                        </span>
+                        {parsed ? (
+                          <div>
+                            <span className={`text-[10px] font-medium ${isClimbAction ? "text-orange-600" : "text-blue-500"}`}>
+                              {ACTION_LABELS[parsed.base] || parsed.base}
+                            </span>
+                            {detailText && (
+                              <span className="text-[10px] text-gray-400 ml-1">
+                                {detailText}
+                              </span>
                             )}
                           </div>
+                        ) : (
+                          <div className="text-[10px] text-gray-300">ページ遷移</div>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* イベントログ（7日） */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-50">
-                <p className="text-xs font-semibold text-gray-700">直近7日間のイベントログ</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  {recentLogs.length}件 ／ ページ遷移 + アクション
-                </p>
+                    </div>
+                  );
+                })}
               </div>
-              {recentLogs.length === 0 ? (
-                <div className="text-center py-10 text-gray-400 text-sm">データがありません</div>
-              ) : (
-                <div className="divide-y divide-gray-50 max-h-[70vh] overflow-y-auto">
-                  {recentLogs.map((log, i) => {
-                    const parsed = log.action ? parseActionDetail(log.action) : null;
-                    const isClimbAction = parsed && ["plan_created", "log_created", "plan_updated", "plan_deleted"].includes(parsed.base);
-                    const detailText = parsed
-                      ? [parsed.date?.slice(5).replace("-", "/"), parsed.gym, parsed.companions ? `(${parsed.companions})` : null].filter(Boolean).join(" ")
-                      : null;
-                    return (
-                      <div key={i} className={`flex items-start px-4 py-2.5 gap-2 ${isClimbAction ? "bg-orange-50/50" : ""}`}>
-                        <span className="text-[10px] text-gray-400 whitespace-nowrap w-[88px] flex-shrink-0 pt-0.5">
+            )}
+          </div>
+        )}
+
+        {/* ===== 記録ログタブ ===== */}
+        {tab === "logs" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-50">
+              <p className="text-xs font-semibold text-gray-700">予定・実績の操作ログ</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                {climbingActions.length}件 ／ 過去30日
+              </p>
+            </div>
+            {climbingActions.length === 0 ? (
+              <div className="text-center py-10 text-gray-400 text-sm">データがありません</div>
+            ) : (
+              <div className="divide-y divide-gray-50 max-h-[80vh] overflow-y-auto">
+                {climbingActions.map((log, i) => {
+                  const parsed = parseActionDetail(log.action);
+                  return (
+                    <div key={i} className="px-4 py-2.5">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] text-gray-400 whitespace-nowrap">
                           {formatJST(log.created_at)}
                         </span>
-                        <span className="text-xs font-medium text-gray-700 w-16 flex-shrink-0 truncate pt-0.5">
+                        <span className="text-xs font-medium text-gray-700 truncate">
                           {log.user_name}
                         </span>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] text-gray-500 whitespace-nowrap">
-                            {PAGE_LABELS[log.page] || log.page}
-                          </span>
-                          {parsed ? (
-                            <div>
-                              <span className={`text-[10px] font-medium ${isClimbAction ? "text-orange-600" : "text-blue-500"}`}>
-                                {ACTION_LABELS[parsed.base] || parsed.base}
-                              </span>
-                              {detailText && (
-                                <span className="text-[10px] text-gray-400 ml-1">
-                                  {detailText}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="text-[10px] text-gray-300">ページ遷移</div>
+                        <span className="text-[10px] font-medium text-orange-600 whitespace-nowrap">
+                          {ACTION_LABELS[parsed.base] || parsed.base}
+                        </span>
+                      </div>
+                      {(parsed.date || parsed.gym || parsed.companions) && (
+                        <div className="flex items-center gap-2 text-[10px] text-gray-500 pl-1 flex-wrap">
+                          {parsed.date && (
+                            <span>📅 {parsed.date.slice(5).replace("-", "/")}</span>
+                          )}
+                          {parsed.gym && (
+                            <span className="font-medium text-gray-600">🏢 {parsed.gym}</span>
+                          )}
+                          {parsed.companions && (
+                            <span>👥 {parsed.companions}</span>
                           )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
 
         {/* ===== アクションタブ ===== */}
