@@ -4,10 +4,10 @@ import { useState } from "react";
 
 export type AnalyticsProps = {
   summary: {
-    totalAccess: number;
     totalPageViews: number;
+    uniqueUsers: number;
   };
-  dailyAccess: { date: string; count: number }[];
+  dailyActiveUsers: { date: string; count: number }[];
   dailyPageViews: { date: string; count: number }[];
   pageViewCounts: { page: string; count: number }[];
   actionCounts: { action: string; count: number }[];
@@ -20,6 +20,7 @@ export type AnalyticsProps = {
     pvGyms: number;
     pvPlan: number;
     pvGraph: number;
+    pvAdmin: number;
   }[];
   recentLogs: { user_name: string; page: string; action: string | null; created_at: string }[];
   climbingActions: { user_name: string; action: string; created_at: string }[];
@@ -171,7 +172,7 @@ function parseActionDetail(action: string): ActionDetail {
 
 export function AnalyticsDashboard({
   summary,
-  dailyAccess,
+  dailyActiveUsers,
   dailyPageViews,
   pageViewCounts,
   actionCounts,
@@ -202,8 +203,8 @@ export function AnalyticsDashboard({
       {/* サマリーカード（常時表示） */}
       <div className="px-4 pt-3 pb-1">
         <div className="grid grid-cols-2 gap-2">
-          <SummaryCard label="アクセス（30日）" value={summary.totalAccess} color="text-orange-500" />
-          <SummaryCard label="PV（30日）" value={summary.totalPageViews} />
+          <SummaryCard label="PV（30日）" value={summary.totalPageViews} color="text-orange-500" />
+          <SummaryCard label="ユーザー数（30日）" value={summary.uniqueUsers} color="text-blue-500" />
         </div>
       </div>
 
@@ -333,8 +334,8 @@ export function AnalyticsDashboard({
           <>
             {/* 日別トレンド */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <p className="text-xs font-semibold text-gray-700 mb-3">日別アクセス数（14日）</p>
-              <BarChart data={dailyAccess} />
+              <p className="text-xs font-semibold text-gray-700 mb-3">日別アクティブユーザー数（14日）</p>
+              <BarChart data={dailyActiveUsers} />
             </div>
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <p className="text-xs font-semibold text-gray-700 mb-3">日別ページビュー（14日）</p>
@@ -395,9 +396,9 @@ export function AnalyticsDashboard({
         {tab === "users" && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-50">
-              <p className="text-xs font-semibold text-gray-700">ユーザー別アクセス（過去30日）</p>
+              <p className="text-xs font-semibold text-gray-700">ユーザー別PV（過去30日）</p>
               <p className="text-[10px] text-gray-400 mt-0.5">
-                アクセス回数・最終アクセス日・各ページのビュー数
+                PV数・最終アクセス日・各ページのビュー数
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -407,8 +408,8 @@ export function AnalyticsDashboard({
                     <th className="text-left text-[10px] font-semibold text-gray-400 px-3 py-2 sticky left-0 bg-gray-50 min-w-[80px]">
                       ユーザー
                     </th>
-                    <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[44px]">
-                      アクセス
+                    <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[36px]">
+                      PV
                     </th>
                     <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[64px]">
                       最終
@@ -428,10 +429,13 @@ export function AnalyticsDashboard({
                     <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[28px]">
                       🔗
                     </th>
+                    <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[28px]">
+                      ⚙️
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {userStats.map(({ user, accessCount, lastAccessDate, pvHome, pvDashboard, pvGyms, pvPlan, pvGraph }) => (
+                  {userStats.map(({ user, accessCount, lastAccessDate, pvHome, pvDashboard, pvGyms, pvPlan, pvGraph, pvAdmin }) => (
                     <tr key={user}>
                       <td className="px-3 py-2.5 font-medium text-gray-800 sticky left-0 bg-white truncate max-w-[80px]">
                         {user}
@@ -445,11 +449,12 @@ export function AnalyticsDashboard({
                       <td className="px-2 py-2.5 text-right text-gray-600">{pvGyms}</td>
                       <td className="px-2 py-2.5 text-right text-gray-600">{pvPlan}</td>
                       <td className="px-2 py-2.5 text-right text-gray-600">{pvGraph}</td>
+                      <td className="px-2 py-2.5 text-right text-gray-600">{pvAdmin}</td>
                     </tr>
                   ))}
                   {userStats.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="text-center py-8 text-gray-400">データなし</td>
+                      <td colSpan={9} className="text-center py-8 text-gray-400">データなし</td>
                     </tr>
                   )}
                 </tbody>
