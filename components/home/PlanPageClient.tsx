@@ -232,6 +232,8 @@ export function PlanPageClient({
         const companionNames: string[] = [];
         if (selectedCompanions.length > 0) companionNames.push(...selectedCompanions);
         if (withFriends) companionNames.push("友人");
+        const base = type === "予定" ? "plan_created" : "log_created";
+        trackAction(userName, "plan", `${base}|${date}|${gymNameForDB}|${companionNames.join(",")}`);
         const companionMsg = companionNames.length > 0
           ? `（${companionNames.join("・")}と）`
           : "";
