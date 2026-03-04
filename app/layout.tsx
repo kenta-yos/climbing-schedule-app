@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { SplashHider } from "@/components/SplashHider";
 
 export const metadata: Metadata = {
   title: "Go Bouldering",
@@ -73,22 +74,7 @@ export default function RootLayout({
             style={{ borderRadius: 24 }}
           />
         </div>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){
-                var s=document.getElementById('splash');
-                if(!s)return;
-                window.addEventListener('load',function(){
-                  setTimeout(function(){
-                    s.style.opacity='0';
-                    setTimeout(function(){s.remove()},400);
-                  },300);
-                });
-              })();
-            `,
-          }}
-        />
+        <SplashHider />
         {children}
       </body>
     </html>
