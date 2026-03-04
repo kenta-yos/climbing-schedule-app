@@ -142,7 +142,7 @@ export default async function AnalyticsPage() {
     .sort((a, b) => b.accessCount - a.accessCount);
 
   // --- 予定操作ログ（30日分） ---
-  const CLIMBING_ACTIONS = ["plan_created", "log_created", "plan_updated", "plan_deleted"];
+  const CLIMBING_ACTIONS = ["plan_created", "log_created", "plan_updated", "plan_deleted", "plan_joined"];
   const climbingActions = actionRecords
     .filter((pv) => CLIMBING_ACTIONS.includes(pv.action.split("|")[0]))
     .map((pv) => ({

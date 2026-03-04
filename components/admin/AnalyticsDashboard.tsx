@@ -241,7 +241,7 @@ export function AnalyticsDashboard({
               <div className="divide-y divide-gray-50 max-h-[80vh] overflow-y-auto">
                 {recentLogs.map((log, i) => {
                   const parsed = log.action ? parseActionDetail(log.action) : null;
-                  const isClimbAction = parsed && ["plan_created", "log_created", "plan_updated", "plan_deleted"].includes(parsed.base);
+                  const isClimbAction = parsed && ["plan_created", "log_created", "plan_updated", "plan_deleted", "plan_joined"].includes(parsed.base);
                   const detailText = parsed
                     ? [parsed.date?.slice(5).replace("-", "/"), parsed.gym, parsed.companions ? `(${parsed.companions})` : null].filter(Boolean).join(" ")
                     : null;
