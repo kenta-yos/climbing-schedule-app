@@ -69,8 +69,8 @@ export default function RootLayout({
           <img
             src="/icon-512.png"
             alt=""
-            width={120}
-            height={120}
+            width={160}
+            height={160}
             style={{ borderRadius: 24 }}
           />
         </div>
