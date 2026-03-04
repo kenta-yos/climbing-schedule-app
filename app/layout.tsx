@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { SplashHider } from "@/components/SplashHider";
 
 export const metadata: Metadata = {
   title: "Go Bouldering",
@@ -52,29 +51,6 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-gray-50">
-        {/* スプラッシュスクリーン: JS読み込み前から表示、Reactマウント後にフェードアウト */}
-        <div
-          id="splash"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#ffffff",
-            transition: "opacity 0.4s ease-out",
-          }}
-        >
-          <img
-            src="/icon-512.png"
-            alt=""
-            width={160}
-            height={160}
-            style={{ borderRadius: 24 }}
-          />
-        </div>
-        <SplashHider />
         {children}
       </body>
     </html>
