@@ -50,7 +50,47 @@ export default function RootLayout({
           content="black-translucent"
         />
       </head>
-      <body className="min-h-screen bg-gray-50">{children}</body>
+      <body className="min-h-screen bg-gray-50">
+        {/* スプラッシュスクリーン: JS読み込み前から表示、Reactマウント後にフェードアウト */}
+        <div
+          id="splash"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#ffffff",
+            transition: "opacity 0.4s ease-out",
+          }}
+        >
+          <img
+            src="/icon-512.png"
+            alt=""
+            width={120}
+            height={120}
+            style={{ borderRadius: 24 }}
+          />
+        </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                var s=document.getElementById('splash');
+                if(!s)return;
+                window.addEventListener('load',function(){
+                  setTimeout(function(){
+                    s.style.opacity='0';
+                    setTimeout(function(){s.remove()},400);
+                  },300);
+                });
+              })();
+            `,
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
