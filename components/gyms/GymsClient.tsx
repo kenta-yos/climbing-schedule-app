@@ -128,6 +128,14 @@ export function GymsClient({
     return schedules[0] ?? null;
   };
 
+  // 次のセットスケジュール取得（targetDateより後のもの）
+  const getNextSchedule = (gymName: string): SetSchedule | null => {
+    const schedules = setSchedules
+      .filter((s) => s.gym_name === gymName && s.start_date > targetDate)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date));
+    return schedules[0] ?? null;
+  };
+
   // 最終訪問日取得（自分）
   const getLastVisit = (gymName: string): string | null => {
     const visits = myLogs
@@ -148,18 +156,21 @@ export function GymsClient({
     gym: GymMaster;
     distanceKm: number | null;
     latestSchedule: SetSchedule | null;
+    nextSchedule: SetSchedule | null;
     lastVisit: string | null;
-    setAge: number | null;      // targetDateからセット開始日まで何日経過
+    setAge: number | null;      // targetDateからセット完了日まで何日経過
     lastVisitDays: number | null; // targetDateから最終訪問まで何日経過
   };
 
   const gymsWithMeta: GymWithMeta[] = filteredGyms.map((gym) => {
     const latestSchedule = getLatestSchedule(gym.gym_name);
+    const nextSchedule = getNextSchedule(gym.gym_name);
     const lastVisit = getLastVisit(gym.gym_name);
     return {
       gym,
       distanceKm: getDistance(gym),
       latestSchedule,
+      nextSchedule,
       lastVisit,
       setAge: latestSchedule ? daysDiffFromTarget(latestSchedule.end_date) : null,
       lastVisitDays: lastVisit ? daysDiffFromTarget(lastVisit.slice(0, 10)) : null,
@@ -326,13 +337,14 @@ export function GymsClient({
 
         {/* ジムカードリスト（メイン） */}
         <div className="space-y-3">
-          {visibleMain.map(({ gym, distanceKm, latestSchedule, lastVisit, setAge, lastVisitDays }) => (
+          {visibleMain.map(({ gym, distanceKm, latestSchedule, nextSchedule, lastVisit, setAge, lastVisitDays }) => (
             <GymCard
               key={gym.gym_name}
               gym={gym}
               targetDate={targetDate}
               distanceKm={distanceKm}
               latestSchedule={latestSchedule ?? undefined}
+              nextSchedule={nextSchedule ?? undefined}
               lastVisit={lastVisit ?? undefined}
               setAge={setAge ?? undefined}
               lastVisitDays={lastVisitDays ?? undefined}
@@ -360,18 +372,19 @@ export function GymsClient({
               <span className="text-xs text-gray-400 font-medium flex-shrink-0">{subLabel}（{currentSub.length}件）</span>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
-            {currentSub.map(({ gym, distanceKm, latestSchedule, lastVisit, setAge, lastVisitDays }) => (
+            {currentSub.map(({ gym, distanceKm, latestSchedule, nextSchedule, lastVisit, setAge, lastVisitDays }) => (
               <GymCard
                 key={gym.gym_name}
                 gym={gym}
                 targetDate={targetDate}
                 distanceKm={distanceKm}
                 latestSchedule={latestSchedule ?? undefined}
+                nextSchedule={nextSchedule ?? undefined}
                 lastVisit={lastVisit ?? undefined}
                 setAge={setAge ?? undefined}
                 lastVisitDays={lastVisitDays ?? undefined}
                 friendLogsOnDate={friendLogsOnDate.filter((l) => l.gym_name === gym.gym_name)}
-              users={users}
+                users={users}
                 isSub
               />
             ))}

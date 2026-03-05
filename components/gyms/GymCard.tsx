@@ -10,6 +10,7 @@ type Props = {
   targetDate: string;
   distanceKm?: number | null;
   latestSchedule?: SetSchedule;
+  nextSchedule?: SetSchedule;
   lastVisit?: string;
   setAge?: number;
   lastVisitDays?: number;
@@ -24,6 +25,7 @@ export function GymCard({
   gym,
   distanceKm,
   latestSchedule,
+  nextSchedule,
   lastVisit,
   setAge,
   lastVisitDays,
@@ -134,39 +136,52 @@ export function GymCard({
       </div>
 
       {/* フッター */}
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
-        {/* セット情報（完了日のみ） */}
-        <div className="flex items-center gap-1 text-[11px] text-gray-500 flex-1 min-w-0">
-          <span className="flex-shrink-0">📅</span>
-          {latestSchedule ? (
-            <span>
-              {latestSchedule.end_date
-                ? latestSchedule.end_date.slice(0, 10).replace(/-/g, "/")
-                : latestSchedule.start_date.slice(0, 10).replace(/-/g, "/")}
-              {setAge != null && (
-                <span className={`ml-1 font-medium ${
-                  setAge <= 7 ? "text-orange-500" : setAge <= 14 ? "text-yellow-600" : "text-gray-400"
-                }`}>
-                  ({setAge}日目)
-                </span>
-              )}
-            </span>
-          ) : (
-            <span className="text-gray-300">スケジュール未登録</span>
-          )}
+      <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 space-y-1">
+        <div className="flex items-center gap-3">
+          {/* セット情報（完了日のみ） */}
+          <div className="flex items-center gap-1 text-[11px] text-gray-500 flex-1 min-w-0">
+            <span className="flex-shrink-0">📅</span>
+            {latestSchedule ? (
+              <span>
+                {latestSchedule.end_date
+                  ? latestSchedule.end_date.slice(0, 10).replace(/-/g, "/")
+                  : latestSchedule.start_date.slice(0, 10).replace(/-/g, "/")}
+                {setAge != null && (
+                  <span className={`ml-1 font-medium ${
+                    setAge <= 7 ? "text-orange-500" : setAge <= 14 ? "text-yellow-600" : "text-gray-400"
+                  }`}>
+                    ({setAge}日目)
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span className="text-gray-300">スケジュール未登録</span>
+            )}
+          </div>
+
+          {/* 最終登攀日 */}
+          <div className="flex items-center gap-1 text-[11px] flex-shrink-0">
+            <span>🕐</span>
+            {lastVisitFull ? (
+              <span className={lastVisitDays != null && lastVisitDays >= 30 ? "text-red-400 font-medium" : "text-gray-500"}>
+                {lastVisitFull}
+              </span>
+            ) : (
+              <span className="text-gray-300">未登攀</span>
+            )}
+          </div>
         </div>
 
-        {/* 最終登攀日 */}
-        <div className="flex items-center gap-1 text-[11px] flex-shrink-0">
-          <span>🕐</span>
-          {lastVisitFull ? (
-            <span className={lastVisitDays != null && lastVisitDays >= 30 ? "text-red-400 font-medium" : "text-gray-500"}>
-              {lastVisitFull}
+        {/* 次のセット日 */}
+        {nextSchedule && (
+          <div className="flex items-center gap-1 text-[11px] text-blue-500">
+            <span className="flex-shrink-0">🔜</span>
+            <span className="font-medium">
+              次のセット {nextSchedule.start_date.slice(5, 10).replace("-", "/")}
+              〜{nextSchedule.end_date.slice(5, 10).replace("-", "/")}
             </span>
-          ) : (
-            <span className="text-gray-300">未登攀</span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
