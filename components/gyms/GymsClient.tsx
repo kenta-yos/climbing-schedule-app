@@ -160,7 +160,7 @@ export function GymsClient({
       distanceKm: getDistance(gym),
       latestSchedule,
       lastVisit,
-      setAge: latestSchedule ? daysDiffFromTarget(latestSchedule.start_date) : null,
+      setAge: latestSchedule ? daysDiffFromTarget(latestSchedule.end_date) : null,
       lastVisitDays: lastVisit ? daysDiffFromTarget(lastVisit.slice(0, 10)) : null,
     };
   });
