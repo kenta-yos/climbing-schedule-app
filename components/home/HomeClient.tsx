@@ -7,7 +7,8 @@ import { FuturePlanFeed } from "@/components/home/FuturePlanFeed";
 import { MonthlyRanking } from "@/components/home/MonthlyRanking";
 import { AnnouncementBanner } from "@/components/home/AnnouncementBanner";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Instagram } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
+import { SnsIcon } from "@/components/ui/SnsIcon";
 import { getTodayJST } from "@/lib/utils";
 import type { ClimbingLog, GymMaster, AreaMaster, User, Announcement } from "@/lib/supabase/queries";
 import { trackAction } from "@/lib/analytics";
@@ -192,7 +193,7 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
                       <span className={`text-xs font-bold ${s.daysSinceNew <= 7 ? "text-orange-500" : "text-yellow-600"}`}>
                         {s.daysSinceNew}日目
                       </span>
-                      {s.profile_url && <Instagram size={14} className="text-gray-300" />}
+                      {s.profile_url && <SnsIcon url={s.profile_url} size={14} className="text-gray-300" />}
                     </div>
                   </>
                 );

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Instagram } from "lucide-react";
+import { SnsIcon } from "@/components/ui/SnsIcon";
 import { TIME_SLOTS } from "@/lib/constants";
 import type { GymMaster, ClimbingLog, SetSchedule, User } from "@/lib/supabase/queries";
 
@@ -87,7 +87,7 @@ export function GymCard({
               className="p-1.5 text-gray-300 hover:text-blue-400 transition-colors flex-shrink-0 -mt-0.5"
               onClick={(e) => e.stopPropagation()}
             >
-              <Instagram size={14} />
+              <SnsIcon url={gym.profile_url} size={14} />
             </a>
           )}
         </div>
