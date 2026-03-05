@@ -17,9 +17,12 @@ export default function HomeLoading() {
         <div className="h-14 bg-gray-200 rounded-xl" />
 
         {/* 新セット情報スケルトン */}
-        <div className="flex gap-2">
-          <div className="h-7 w-36 bg-gray-200 rounded-full" />
-          <div className="h-7 w-40 bg-gray-200 rounded-full" />
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
+          <div className="h-3 w-24 bg-gray-200 rounded" />
+          <div className="space-y-2">
+            <div className="flex justify-between"><div className="h-4 w-28 bg-gray-200 rounded" /><div className="h-4 w-12 bg-gray-200 rounded" /></div>
+            <div className="flex justify-between"><div className="h-4 w-32 bg-gray-200 rounded" /><div className="h-4 w-12 bg-gray-200 rounded" /></div>
+          </div>
         </div>
 
         {/* みんなの予定セクション */}

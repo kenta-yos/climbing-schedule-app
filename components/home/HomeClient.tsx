@@ -7,7 +7,7 @@ import { FuturePlanFeed } from "@/components/home/FuturePlanFeed";
 import { MonthlyRanking } from "@/components/home/MonthlyRanking";
 import { AnnouncementBanner } from "@/components/home/AnnouncementBanner";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, ChevronRight } from "lucide-react";
 import { getTodayJST } from "@/lib/utils";
 import type { ClimbingLog, GymMaster, AreaMaster, User, Announcement } from "@/lib/supabase/queries";
 import { trackAction } from "@/lib/analytics";
@@ -177,34 +177,43 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
 
         {/* 新セット情報 */}
         {newSets.length > 0 && (
-          <section>
-            <h2 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
-              <span>🔥</span>
-              <span>最近の新セット</span>
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {newSets.map((s) =>
-                s.profile_url ? (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-4 pt-3 pb-2">
+              <h3 className="text-xs font-bold text-gray-500 tracking-wide">🔥 最近の新セット</h3>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {newSets.map((s) => {
+                const inner = (
+                  <>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-semibold text-gray-800 truncate">{s.gym_name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <span className={`text-xs font-bold ${s.daysSinceNew <= 7 ? "text-orange-500" : "text-yellow-600"}`}>
+                        {s.daysSinceNew}日目
+                      </span>
+                      {s.profile_url && <ChevronRight size={14} className="text-gray-300" />}
+                    </div>
+                  </>
+                );
+                return s.profile_url ? (
                   <a
                     key={s.gym_name}
                     href={s.profile_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs bg-orange-50 border border-orange-200 rounded-full px-3 py-1 text-orange-700 hover:bg-orange-100 transition-colors"
+                    className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors"
                   >
-                    {s.gym_name} 新セット{s.daysSinceNew}日目
+                    {inner}
                   </a>
                 ) : (
-                  <span
-                    key={s.gym_name}
-                    className="text-xs bg-orange-50 border border-orange-200 rounded-full px-3 py-1 text-orange-700"
-                  >
-                    {s.gym_name} 新セット{s.daysSinceNew}日目
-                  </span>
-                )
-              )}
+                  <div key={s.gym_name} className="flex items-center justify-between px-4 py-2.5">
+                    {inner}
+                  </div>
+                );
+              })}
             </div>
-          </section>
+          </div>
         )}
 
         {/* 予定フィード */}
