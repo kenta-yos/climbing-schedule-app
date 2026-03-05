@@ -7,7 +7,11 @@ import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function GymsPage() {
+export default async function GymsPage({
+  searchParams,
+}: {
+  searchParams: { sort?: string };
+}) {
   const cookieStore = cookies();
   const userName = cookieStore.get("user_name")?.value;
   if (!userName) redirect("/");
@@ -40,6 +44,7 @@ export default async function GymsPage() {
       setSchedules={(schedulesRes.data || []) as SetSchedule[]}
       users={(usersRes.data || []) as User[]}
       currentUser={decodedUser}
+      initialSort={searchParams.sort === "freshset" ? "freshset" : searchParams.sort === "overdue" ? "overdue" : undefined}
     />
   );
 }

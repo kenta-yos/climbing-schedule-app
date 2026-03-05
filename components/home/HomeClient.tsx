@@ -213,6 +213,12 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
                 );
               })}
             </div>
+            <a
+              href="/gyms?sort=freshset"
+              className="block text-center text-xs text-gray-400 font-medium py-2 hover:text-orange-500 transition-colors border-t border-gray-100"
+            >
+              もっと見る →
+            </a>
           </div>
         )}
 

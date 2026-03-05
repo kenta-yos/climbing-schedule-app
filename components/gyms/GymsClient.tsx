@@ -18,6 +18,7 @@ type Props = {
   setSchedules: SetSchedule[];
   users: User[];
   currentUser: string;
+  initialSort?: SortTab;
 };
 
 type SortTab = "distance" | "freshset" | "overdue";
@@ -29,7 +30,7 @@ const PAGE_SIZE = 8;
 const DEFAULT_AREA = "都内・神奈川";
 
 export function GymsClient({
-  gyms, areas, myLogs, friendLogs, setSchedules, users, currentUser,
+  gyms, areas, myLogs, friendLogs, setSchedules, users, currentUser, initialSort,
 }: Props) {
   const [targetDate, setTargetDate] = useState(getTodayJST());
   const [origin, setOrigin] = useState<Origin>(null);
@@ -37,7 +38,7 @@ export function GymsClient({
   const [geocodeError, setGeocodeError] = useState("");
   const [gpsLoading, setGpsLoading] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [sortTab, setSortTab] = useState<SortTab>("distance");
+  const [sortTab, setSortTab] = useState<SortTab>(initialSort ?? "distance");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // 起動時に現在地を自動取得
