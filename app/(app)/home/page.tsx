@@ -60,7 +60,8 @@ export default async function HomePage() {
     .map(([gym_name, end_date]) => {
       const endDate = new Date(end_date + "T00:00:00+09:00");
       const daysSinceNew = Math.floor((todayDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24));
-      return { gym_name, daysSinceNew };
+      const gym = ((gymsRes.data || []) as GymMaster[]).find((g) => g.gym_name === gym_name);
+      return { gym_name, daysSinceNew, profile_url: gym?.profile_url ?? null };
     })
     .sort((a, b) => a.daysSinceNew - b.daysSinceNew)
     .slice(0, 3);

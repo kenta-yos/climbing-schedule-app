@@ -18,6 +18,7 @@ const PTR_THRESHOLD = 72;     // pull-to-refreshのトリガー距離(px)
 type NewSetInfo = {
   gym_name: string;
   daysSinceNew: number;
+  profile_url: string | null;
 };
 
 type Props = {
@@ -176,16 +177,34 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
 
         {/* 新セット情報 */}
         {newSets.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {newSets.map((s) => (
-              <span
-                key={s.gym_name}
-                className="text-xs bg-orange-50 border border-orange-200 rounded-full px-3 py-1 text-orange-700"
-              >
-                🔥 {s.gym_name} 新セット{s.daysSinceNew}日目
-              </span>
-            ))}
-          </div>
+          <section>
+            <h2 className="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+              <span>🔥</span>
+              <span>最近の新セット</span>
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {newSets.map((s) =>
+                s.profile_url ? (
+                  <a
+                    key={s.gym_name}
+                    href={s.profile_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs bg-orange-50 border border-orange-200 rounded-full px-3 py-1 text-orange-700 hover:bg-orange-100 transition-colors"
+                  >
+                    {s.gym_name} 新セット{s.daysSinceNew}日目
+                  </a>
+                ) : (
+                  <span
+                    key={s.gym_name}
+                    className="text-xs bg-orange-50 border border-orange-200 rounded-full px-3 py-1 text-orange-700"
+                  >
+                    {s.gym_name} 新セット{s.daysSinceNew}日目
+                  </span>
+                )
+              )}
+            </div>
+          </section>
         )}
 
         {/* 予定フィード */}
