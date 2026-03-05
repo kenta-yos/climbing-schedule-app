@@ -173,13 +173,18 @@ export function GymCard({
         </div>
 
         {/* 次のセット日 */}
-        {nextSchedule && (
+        {nextSchedule ? (
           <div className="flex items-center gap-1 text-[11px] text-blue-500">
             <span className="flex-shrink-0">🔜</span>
             <span className="font-medium">
               次のセット {nextSchedule.start_date.slice(5, 10).replace("-", "/")}
               〜{nextSchedule.end_date.slice(5, 10).replace("-", "/")}
             </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 text-[11px]">
+            <span className="flex-shrink-0">⚠️</span>
+            <span className="font-semibold text-amber-600">次のセット未登録</span>
           </div>
         )}
       </div>

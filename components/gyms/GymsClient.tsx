@@ -187,25 +187,14 @@ export function GymsClient({
     });
   };
 
-  // 今月のスケジュールがあるかチェック（end_dateが対象月内のレコードがあるか）
-  const hasScheduleInCurrentMonth = (gymName: string): boolean => {
-    const targetMonth = targetDate.slice(0, 7); // "YYYY-MM"
-    return setSchedules.some(
-      (s) => s.gym_name === gymName && s.end_date.slice(0, 7) === targetMonth
-    );
-  };
-
-  // 新セット順（セットあり優先、今月スケジュール未登録は別枠）
-  const sortByFreshSet = (): { main: GymWithMeta[]; noSchedule: GymWithMeta[] } => {
-    const withSchedule = gymsWithMeta.filter((g) => hasScheduleInCurrentMonth(g.gym.gym_name));
-    const noSchedule = gymsWithMeta.filter((g) => !hasScheduleInCurrentMonth(g.gym.gym_name));
-    const sorted = [...withSchedule].sort((a, b) => {
+  // 新セット順（セットが新しい順、スケジュールなしは末尾）
+  const sortByFreshSet = (): GymWithMeta[] => {
+    return [...gymsWithMeta].sort((a, b) => {
       if (a.setAge == null && b.setAge == null) return 0;
       if (a.setAge == null) return 1;
       if (b.setAge == null) return -1;
       return a.setAge - b.setAge;
     });
-    return { main: sorted, noSchedule };
   };
 
   // ご無沙汰順（訪問済み優先、未訪問は別枠）
@@ -223,23 +212,21 @@ export function GymsClient({
 
   // 表示用データ
   const distanceSorted = sortByDistance();
-  const { main: freshSetMain, noSchedule } = sortByFreshSet();
+  const freshSetSorted = sortByFreshSet();
   const { main: overdueMain, unvisited } = sortByOverdue();
 
   // 現在のタブの主リスト
   const currentMain =
     sortTab === "distance" ? distanceSorted
-    : sortTab === "freshset" ? freshSetMain
+    : sortTab === "freshset" ? freshSetSorted
     : overdueMain;
 
   const currentSub =
-    sortTab === "freshset" ? noSchedule
-    : sortTab === "overdue" ? unvisited
+    sortTab === "overdue" ? unvisited
     : [];
 
   const subLabel =
-    sortTab === "freshset" ? "📋 今月スケジュール未登録"
-    : sortTab === "overdue" ? "🆕 未訪問ジム"
+    sortTab === "overdue" ? "🆕 未訪問ジム"
     : "";
 
   const totalMain = currentMain.length;
