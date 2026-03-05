@@ -37,7 +37,8 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
   const pathname = usePathname();
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
   const today = getTodayJST();
-  const [navigating, setNavigating] = useState(false);
+  const [navigatingRecord, setNavigatingRecord] = useState(false);
+  const [navigatingMore, setNavigatingMore] = useState(false);
 
   // pull-to-refresh state
   const [pullY, setPullY] = useState(0);         // 引っ張り量(px)
@@ -47,7 +48,8 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
 
   // パスが変わったらnavigatingを解除
   useEffect(() => {
-    setNavigating(false);
+    setNavigatingRecord(false);
+    setNavigatingMore(false);
   }, [pathname]);
 
   // --- データ取得 ---
@@ -163,13 +165,13 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
       <div className="px-4 py-4 space-y-6 page-enter">
         {/* 記録ボタン → /home/plan へ遷移 */}
         <Button
-          onClick={() => { trackAction(currentUser, "home", "record_tapped"); setNavigating(true); router.push("/home/plan"); }}
-          disabled={navigating}
+          onClick={() => { trackAction(currentUser, "home", "record_tapped"); setNavigatingRecord(true); router.push("/home/plan"); }}
+          disabled={navigatingRecord}
           variant="climbing"
           size="xl"
           className="w-full flex items-center gap-2"
         >
-          {navigating ? (
+          {navigatingRecord ? (
             <><Loader2 size={20} className="animate-spin" />移動中…</>
           ) : (
             <><Plus size={22} />クライミングを記録する</>
@@ -215,11 +217,11 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
               })}
             </div>
             <button
-              onClick={() => { setNavigating(true); router.push("/gyms?sort=freshset"); }}
-              disabled={navigating}
+              onClick={() => { setNavigatingMore(true); router.push("/gyms?sort=freshset"); }}
+              disabled={navigatingMore}
               className="block w-full text-center text-xs text-gray-400 font-medium py-2 hover:text-orange-500 transition-colors border-t border-gray-100"
             >
-              {navigating ? "移動中…" : "もっと見る →"}
+              {navigatingMore ? "移動中…" : "もっと見る →"}
             </button>
           </div>
         )}
