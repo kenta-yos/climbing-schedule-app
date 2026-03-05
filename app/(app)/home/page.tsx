@@ -2,7 +2,7 @@ import { HomeClient } from "@/components/home/HomeClient";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { ClimbingLog, GymMaster, AreaMaster, User, Announcement } from "@/lib/supabase/queries";
+import type { ClimbingLog, GymMaster, AreaMaster, User, Announcement, SetSchedule } from "@/lib/supabase/queries";
 import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,12 @@ export default async function HomePage() {
   const lastMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() - 1, 1);
   const monthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`;
 
-  const [futurePlansRes, monthlyLogsRes, gymsRes, areasRes, usersRes, announcementsRes] = await Promise.all([
+  // 新セット用: 14日前の日付
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+  const fourteenDaysAgoStr = fourteenDaysAgo.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" }).replace(/\//g, "-").replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, d) => `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
+
+  const [futurePlansRes, monthlyLogsRes, gymsRes, areasRes, usersRes, announcementsRes, setSchedulesRes] = await Promise.all([
     // 今日〜3週間後の予定
     supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", todayStr).lte("date", cutoffStr).order("date", { ascending: true }),
     // 今月の実績（MonthlyRankingに使用）
@@ -35,9 +40,30 @@ export default async function HomePage() {
     supabase.from("area_master").select("*").order("area_tag"),
     supabase.from("users").select("*").order("user_name"),
     supabase.from("release_announcements").select("*").gte("display_until", todayStr).order("created_at", { ascending: false }),
+    // 新セット情報: end_dateが直近14日以内のスケジュール
+    supabase.from("set_schedules").select("*").gte("end_date", fourteenDaysAgoStr).lte("end_date", todayStr).order("end_date", { ascending: false }),
   ]);
 
   const initialLogs = [...(futurePlansRes.data || []), ...(monthlyLogsRes.data || [])];
+
+  // 新セット情報を計算: ジムごとに最新end_dateを取得 → daysSinceNew = today - end_date
+  const schedules = (setSchedulesRes.data || []) as SetSchedule[];
+  const latestByGym = new Map<string, string>();
+  for (const s of schedules) {
+    const existing = latestByGym.get(s.gym_name);
+    if (!existing || s.end_date > existing) {
+      latestByGym.set(s.gym_name, s.end_date);
+    }
+  }
+  const todayDate = new Date(todayStr + "T00:00:00+09:00");
+  const newSets = Array.from(latestByGym.entries())
+    .map(([gym_name, end_date]) => {
+      const endDate = new Date(end_date + "T00:00:00+09:00");
+      const daysSinceNew = Math.floor((todayDate.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24));
+      return { gym_name, daysSinceNew };
+    })
+    .sort((a, b) => a.daysSinceNew - b.daysSinceNew)
+    .slice(0, 3);
 
   // ページビュー記録（非同期・fire-and-forget）
   addPageView(decodedUser, "home").catch(() => {});
@@ -50,6 +76,7 @@ export default async function HomePage() {
       users={(usersRes.data || []) as User[]}
       currentUser={decodedUser}
       announcements={(announcementsRes.data || []) as Announcement[]}
+      newSets={newSets}
     />
   );
 }

@@ -175,10 +175,18 @@ export function GymsClient({
     });
   };
 
-  // 新セット順（セットあり優先、セットなしは別枠）
+  // 今月のスケジュールがあるかチェック（end_dateが対象月内のレコードがあるか）
+  const hasScheduleInCurrentMonth = (gymName: string): boolean => {
+    const targetMonth = targetDate.slice(0, 7); // "YYYY-MM"
+    return setSchedules.some(
+      (s) => s.gym_name === gymName && s.end_date.slice(0, 7) === targetMonth
+    );
+  };
+
+  // 新セット順（セットあり優先、今月スケジュール未登録は別枠）
   const sortByFreshSet = (): { main: GymWithMeta[]; noSchedule: GymWithMeta[] } => {
-    const withSchedule = gymsWithMeta.filter((g) => g.latestSchedule !== null);
-    const noSchedule = gymsWithMeta.filter((g) => g.latestSchedule === null);
+    const withSchedule = gymsWithMeta.filter((g) => hasScheduleInCurrentMonth(g.gym.gym_name));
+    const noSchedule = gymsWithMeta.filter((g) => !hasScheduleInCurrentMonth(g.gym.gym_name));
     const sorted = [...withSchedule].sort((a, b) => {
       if (a.setAge == null && b.setAge == null) return 0;
       if (a.setAge == null) return 1;
@@ -218,7 +226,7 @@ export function GymsClient({
     : [];
 
   const subLabel =
-    sortTab === "freshset" ? "📋 スケジュール未登録"
+    sortTab === "freshset" ? "📋 今月スケジュール未登録"
     : sortTab === "overdue" ? "🆕 未訪問ジム"
     : "";
 

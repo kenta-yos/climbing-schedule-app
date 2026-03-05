@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getNowJST } from "@/lib/utils";
-import type { ClimbingLog, User } from "@/lib/supabase/queries";
+import type { ClimbingLog, User, GymMaster } from "@/lib/supabase/queries";
 import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export default async function DashboardPage() {
   const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`;
 
   // 並列でデータ取得
-  const [myLogsRes, rankingLogsRes, usersRes] = await Promise.all([
+  const [myLogsRes, rankingLogsRes, usersRes, gymsRes] = await Promise.all([
     // 自分の全ログ（予定+実績）
     supabase
       .from("climbing_logs")
@@ -39,6 +39,8 @@ export default async function DashboardPage() {
       .order("date", { ascending: false }),
     // ユーザー一覧
     supabase.from("users").select("*").order("user_name"),
+    // ジムマスター
+    supabase.from("gym_master").select("*").order("gym_name"),
   ]);
 
   // ページビュー記録（非同期・fire-and-forget）
@@ -49,6 +51,7 @@ export default async function DashboardPage() {
       initialLogs={(myLogsRes.data || []) as ClimbingLog[]}
       rankingLogs={(rankingLogsRes.data || []) as ClimbingLog[]}
       users={(usersRes.data || []) as User[]}
+      gyms={(gymsRes.data || []) as GymMaster[]}
       currentUser={decodedUser}
     />
   );

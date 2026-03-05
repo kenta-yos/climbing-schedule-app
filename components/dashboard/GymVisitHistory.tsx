@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Building2 } from "lucide-react";
+import { Building2, ExternalLink } from "lucide-react";
 import { getTodayJST, daysDiff } from "@/lib/utils";
-import type { ClimbingLog } from "@/lib/supabase/queries";
+import type { ClimbingLog, GymMaster } from "@/lib/supabase/queries";
 
 type Props = {
   logs: ClimbingLog[];
+  gyms: GymMaster[];
 };
 
 type GymSummary = {
@@ -42,7 +43,9 @@ function StalenessBadge({ days }: { days: number }) {
   );
 }
 
-export function GymVisitHistory({ logs }: Props) {
+export function GymVisitHistory({ logs, gyms: gymMasters }: Props) {
+  const gymUrlMap = new Map(gymMasters.filter((g) => g.profile_url).map((g) => [g.gym_name, g.profile_url!]));
+
   const [expanded, setExpanded] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("count");
   const today = getTodayJST();
@@ -126,7 +129,21 @@ export function GymVisitHistory({ logs }: Props) {
             key={gym.gymName}
             className="bg-gray-50 rounded-xl p-3 border border-gray-100"
           >
-            <div className="text-sm font-semibold text-gray-800 break-words leading-snug">{gym.gymName}</div>
+            <div className="text-sm font-semibold text-gray-800 break-words leading-snug">
+              {gymUrlMap.has(gym.gymName) ? (
+                <a
+                  href={gymUrlMap.get(gym.gymName)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 hover:text-blue-500 transition-colors"
+                >
+                  {gym.gymName}
+                  <ExternalLink size={12} className="text-gray-300 flex-shrink-0" />
+                </a>
+              ) : (
+                gym.gymName
+              )}
+            </div>
             <div className="flex items-center gap-1.5 mt-1">
               <span className="text-lg font-bold text-orange-500">{gym.totalCount}</span>
               <span className="text-xs text-gray-500">回</span>

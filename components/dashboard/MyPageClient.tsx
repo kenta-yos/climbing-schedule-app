@@ -7,16 +7,17 @@ import { UpcomingPlans } from "@/components/dashboard/UpcomingPlans";
 import { MonthlyTrendChart } from "@/components/dashboard/MonthlyTrendChart";
 import { GymVisitHistory } from "@/components/dashboard/GymVisitHistory";
 import { MyRecordsAccordion } from "@/components/dashboard/MyRecordsAccordion";
-import type { ClimbingLog, User } from "@/lib/supabase/queries";
+import type { ClimbingLog, User, GymMaster } from "@/lib/supabase/queries";
 
 type Props = {
   initialLogs: ClimbingLog[];
   rankingLogs: ClimbingLog[];
   users: User[];
+  gyms: GymMaster[];
   currentUser: string;
 };
 
-export function MyPageClient({ initialLogs, rankingLogs, users, currentUser }: Props) {
+export function MyPageClient({ initialLogs, rankingLogs, users, gyms, currentUser }: Props) {
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
 
   const handleDeleted = useCallback(async () => {
@@ -39,7 +40,7 @@ export function MyPageClient({ initialLogs, rankingLogs, users, currentUser }: P
         />
         <UpcomingPlans logs={logs} onDeleted={handleDeleted} />
         <MonthlyTrendChart logs={logs} />
-        <GymVisitHistory logs={logs} />
+        <GymVisitHistory logs={logs} gyms={gyms} />
         <MyRecordsAccordion
           logs={logs}
           currentUser={currentUser}

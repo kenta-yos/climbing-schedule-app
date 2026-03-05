@@ -16,6 +16,12 @@ export default function HomeLoading() {
         {/* 記録ボタン */}
         <div className="h-14 bg-gray-200 rounded-xl" />
 
+        {/* 新セット情報スケルトン */}
+        <div className="flex gap-2">
+          <div className="h-7 w-36 bg-gray-200 rounded-full" />
+          <div className="h-7 w-40 bg-gray-200 rounded-full" />
+        </div>
+
         {/* みんなの予定セクション */}
         <div>
           <div className="h-5 w-48 bg-gray-200 rounded mb-3" />

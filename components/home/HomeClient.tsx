@@ -15,6 +15,11 @@ import { trackAction } from "@/lib/analytics";
 const POLL_INTERVAL = 30_000; // 30秒ごとにバックグラウンド更新
 const PTR_THRESHOLD = 72;     // pull-to-refreshのトリガー距離(px)
 
+type NewSetInfo = {
+  gym_name: string;
+  daysSinceNew: number;
+};
+
 type Props = {
   initialLogs: ClimbingLog[];
   gyms: GymMaster[];
@@ -22,9 +27,10 @@ type Props = {
   users: User[];
   currentUser: string;
   announcements: Announcement[];
+  newSets: NewSetInfo[];
 };
 
-export function HomeClient({ initialLogs, users, currentUser, announcements }: Props) {
+export function HomeClient({ initialLogs, users, currentUser, announcements, newSets }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
@@ -167,6 +173,20 @@ export function HomeClient({ initialLogs, users, currentUser, announcements }: P
             <><Plus size={22} />クライミングを記録する</>
           )}
         </Button>
+
+        {/* 新セット情報 */}
+        {newSets.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {newSets.map((s) => (
+              <span
+                key={s.gym_name}
+                className="text-xs bg-orange-50 border border-orange-200 rounded-full px-3 py-1 text-orange-700"
+              >
+                🔥 {s.gym_name} 新セット{s.daysSinceNew}日目
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* 予定フィード */}
         <section>
