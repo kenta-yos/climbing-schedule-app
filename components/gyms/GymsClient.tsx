@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { AddressInput } from "@/components/ui/AddressInput";
@@ -40,6 +40,23 @@ export function GymsClient({
   const [showAll, setShowAll] = useState(false);
   const [sortTab, setSortTab] = useState<SortTab>(initialSort ?? "distance");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // 無限スクロール用
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount((v) => v + PAGE_SIZE);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  });
 
   // 起動時に現在地を自動取得
   useEffect(() => {
@@ -340,15 +357,8 @@ export function GymsClient({
             />
           ))}
 
-          {/* もっと見る */}
-          {showMoreMain && (
-            <button
-              onClick={() => { trackAction(currentUser, "gyms", "load_more"); setVisibleCount((v) => v + PAGE_SIZE); }}
-              className="w-full py-3 text-sm text-orange-500 font-medium bg-white rounded-2xl border border-gray-100 shadow-sm hover:bg-orange-50 transition-colors"
-            >
-              もっと見る（残り {totalMain - visibleCount} 件）
-            </button>
-          )}
+          {/* 無限スクロール sentinel */}
+          {showMoreMain && <div ref={sentinelRef} className="h-10" />}
         </div>
 
         {/* サブリスト（スケジュール未登録 / 未訪問） */}
