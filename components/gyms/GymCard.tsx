@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ExternalLink } from "lucide-react";
+import { Instagram } from "lucide-react";
 import { TIME_SLOTS } from "@/lib/constants";
 import type { GymMaster, ClimbingLog, SetSchedule, User } from "@/lib/supabase/queries";
 
@@ -87,7 +87,7 @@ export function GymCard({
               className="p-1.5 text-gray-300 hover:text-blue-400 transition-colors flex-shrink-0 -mt-0.5"
               onClick={(e) => e.stopPropagation()}
             >
-              <ExternalLink size={14} />
+              <Instagram size={14} />
             </a>
           )}
         </div>

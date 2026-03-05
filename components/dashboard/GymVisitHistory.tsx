@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Building2, ExternalLink } from "lucide-react";
+import { Building2, Instagram } from "lucide-react";
 import { getTodayJST, daysDiff } from "@/lib/utils";
 import type { ClimbingLog, GymMaster } from "@/lib/supabase/queries";
 
@@ -138,7 +138,7 @@ export function GymVisitHistory({ logs, gyms: gymMasters }: Props) {
                   className="inline-flex items-center gap-1 hover:text-blue-500 transition-colors"
                 >
                   {gym.gymName}
-                  <ExternalLink size={12} className="text-gray-300 flex-shrink-0" />
+                  <Instagram size={12} className="text-gray-300 flex-shrink-0" />
                 </a>
               ) : (
                 gym.gymName
