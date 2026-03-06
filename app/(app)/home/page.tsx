@@ -63,6 +63,7 @@ export default async function HomePage() {
       const gym = ((gymsRes.data || []) as GymMaster[]).find((g) => g.gym_name === gym_name);
       return { gym_name, daysSinceNew, profile_url: gym?.profile_url ?? null };
     })
+    .filter((s) => s.daysSinceNew >= 1)
     .sort((a, b) => a.daysSinceNew - b.daysSinceNew)
     .slice(0, 3);
 
