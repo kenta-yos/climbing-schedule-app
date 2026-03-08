@@ -230,7 +230,7 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
         <section>
           <h2 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
             <span>📅</span>
-            <span>みんなの予定（3週間）</span>
+            <span>みんなの予定</span>
           </h2>
           <FuturePlanFeed
             logs={logs}

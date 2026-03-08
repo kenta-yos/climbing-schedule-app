@@ -16,11 +16,8 @@ export default async function HomePage() {
 
   const supabase = createClient();
 
-  // トップページは「今日以降3週間分の予定」と「今月の実績」のみ取得
+  // トップページは「今日以降の全予定」と「今月の実績」を取得
   const todayStr = new Date().toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" }).replace(/\//g, "-").replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, d) => `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() + 21);
-  const cutoffStr = cutoffDate.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" }).replace(/\//g, "-").replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, d) => `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
   // 先月1日（ランキングの先月タブ用）
   const nowDate = new Date();
   const lastMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() - 1, 1);
@@ -32,8 +29,8 @@ export default async function HomePage() {
   const fourteenDaysAgoStr = fourteenDaysAgo.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" }).replace(/\//g, "-").replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, d) => `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
 
   const [futurePlansRes, monthlyLogsRes, gymsRes, areasRes, usersRes, announcementsRes, setSchedulesRes] = await Promise.all([
-    // 今日〜3週間後の予定
-    supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", todayStr).lte("date", cutoffStr).order("date", { ascending: true }),
+    // 今日以降の全予定
+    supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", todayStr).order("date", { ascending: true }),
     // 今月の実績（MonthlyRankingに使用）
     supabase.from("climbing_logs").select("*").eq("type", "実績").gte("date", monthStart).order("date", { ascending: false }),
     supabase.from("gym_master").select("*").order("gym_name"),
