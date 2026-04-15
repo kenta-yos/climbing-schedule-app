@@ -67,6 +67,10 @@ export function PlanPageClient({
   const [withFriends, setWithFriends] = useState<boolean>(
     editLog?.with_friends ?? false
   );
+  // ご飯にも行くフラグ
+  const [joinDinner, setJoinDinner] = useState<boolean>(
+    editLog?.join_dinner ?? false
+  );
 
   // 編集モードで元々グループにいたメンバーはロック（外せない）
   const lockedCompanions = isEdit ? new Set(groupMembers.map((m) => m.user)) : new Set<string>();
@@ -124,6 +128,7 @@ export function PlanPageClient({
           gym_name: gymNameForDB,
           time_slot: timeSlot as "昼" | "夕方" | "夜",
           with_friends: withFriends,
+          join_dinner: joinDinner,
         });
 
         // 元々のグループメンバーのうち、まだ選択されているメンバーのログも更新
@@ -217,6 +222,7 @@ export function PlanPageClient({
             type,
             time_slot: timeSlot as "昼" | "夕方" | "夜",
             with_friends: withFriends,
+            join_dinner: joinDinner,
           }),
           ...selectedCompanions.map((companion) =>
             addClimbingLog({
@@ -532,6 +538,31 @@ export function PlanPageClient({
             </div>
           </section>
         )}
+
+        {/* ご飯にも行く */}
+        <section>
+          <button
+            type="button"
+            onClick={() => setJoinDinner((prev) => !prev)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-all duration-150 active:scale-[0.98] ${
+              joinDinner
+                ? "border-orange-400 bg-orange-50"
+                : "border-gray-200 bg-white"
+            }`}
+          >
+            <span className="text-2xl">🍚</span>
+            <span className={`flex-1 text-left text-sm font-semibold ${joinDinner ? "text-orange-600" : "text-gray-600"}`}>
+              ご飯にも行く
+            </span>
+            <span
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                joinDinner ? "border-orange-400 bg-orange-400" : "border-gray-300 bg-white"
+              }`}
+            >
+              {joinDinner && <span className="text-white text-xs leading-none">✓</span>}
+            </span>
+          </button>
+        </section>
       </div>
 
       {/* 登録/保存ボタン（固定） safe-area-bottom対応 */}

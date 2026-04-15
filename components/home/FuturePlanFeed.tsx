@@ -61,6 +61,7 @@ function JoinPanel({
   onJoined: () => void;
 }) {
   const [selectedSlot, setSelectedSlot] = useState<string>("夜");
+  const [joinDinner, setJoinDinner] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleJoin = async () => {
@@ -90,6 +91,7 @@ function JoinPanel({
         user: currentUser,
         type: "予定",
         time_slot: selectedSlot as "昼" | "夕方" | "夜",
+        join_dinner: joinDinner,
       });
       toast({ title: "📅 参加登録しました！", variant: "success" as any });
       trackAction(currentUser, "home", `plan_joined|${date}|${gymName}`);
@@ -122,6 +124,26 @@ function JoinPanel({
           </button>
         ))}
       </div>
+      {/* ご飯にも行く */}
+      <button
+        type="button"
+        onClick={() => setJoinDinner((prev) => !prev)}
+        className={`w-full flex items-center gap-2 px-3 py-1.5 mb-2 rounded-xl border transition-all active:scale-95 ${
+          joinDinner ? "border-orange-400 bg-orange-50" : "border-gray-200 bg-white"
+        }`}
+      >
+        <span className="text-base leading-none">🍚</span>
+        <span className={`flex-1 text-left text-[11px] font-semibold ${joinDinner ? "text-orange-600" : "text-gray-500"}`}>
+          ご飯にも行く
+        </span>
+        <span
+          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+            joinDinner ? "border-orange-400 bg-orange-400" : "border-gray-300 bg-white"
+          }`}
+        >
+          {joinDinner && <span className="text-white text-[9px] leading-none">✓</span>}
+        </span>
+      </button>
       {/* 確定・キャンセル */}
       <div className="flex gap-2">
         <button
@@ -292,6 +314,11 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                                   {log.with_friends && (
                                     <span className="text-[10px] leading-none flex-shrink-0">
                                       🙋
+                                    </span>
+                                  )}
+                                  {log.join_dinner && (
+                                    <span className="text-[10px] leading-none flex-shrink-0">
+                                      🍚
                                     </span>
                                   )}
                                   {isMe && (
