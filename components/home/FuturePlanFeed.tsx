@@ -316,11 +316,6 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                                       🙋
                                     </span>
                                   )}
-                                  {log.join_dinner && (
-                                    <span className="text-[10px] leading-none flex-shrink-0">
-                                      🍚
-                                    </span>
-                                  )}
                                   {isMe && (
                                     <button
                                       onClick={() => handleEditNavigate(log.id)}
@@ -339,6 +334,35 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                               );
                             })}
                         </div>
+
+                        {/* ご飯の参加状況 */}
+                        {(() => {
+                          const dinnerGoing = gymLogs.filter((l) => l.join_dinner);
+                          if (dinnerGoing.length === 0) return null;
+                          return (
+                            <div className="mt-2 px-2.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-1.5 flex-wrap">
+                              <span className="text-sm leading-none">🍚</span>
+                              <span className="text-[11px] font-bold text-amber-700">ご飯：</span>
+                              {dinnerGoing.map((log) => {
+                                const user = userMap[log.user];
+                                return (
+                                  <span
+                                    key={log.id}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white text-[11px] font-medium text-amber-800 ring-1 ring-amber-300"
+                                  >
+                                    <span
+                                      className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-white text-[9px] flex-shrink-0"
+                                      style={{ backgroundColor: user?.color || "#999" }}
+                                    >
+                                      {user?.icon || "?"}
+                                    </span>
+                                    {log.user}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
 
                         {/* 参加ミニパネル */}
                         {isJoinOpen && (
