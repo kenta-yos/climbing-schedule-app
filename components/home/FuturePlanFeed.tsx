@@ -3,8 +3,8 @@
 import { useState, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { formatMMDD, getTodayJST, getTomorrowJST, getDateOffsetJST } from "@/lib/utils";
-import { TIME_SLOTS, FUTURE_DAYS } from "@/lib/constants";
+import { formatMMDD, getTodayJST, getTomorrowJST } from "@/lib/utils";
+import { TIME_SLOTS } from "@/lib/constants";
 import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
 import { addClimbingLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
@@ -186,10 +186,8 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
 
   const today = getTodayJST();
   const tomorrow = getTomorrowJST();
-  const cutoff = getDateOffsetJST(FUTURE_DAYS);
-
   const futureLogs = logs
-    .filter((l) => l.type === "予定" && l.date >= today && l.date <= cutoff)
+    .filter((l) => l.type === "予定" && l.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const userMap = Object.fromEntries(users.map((u) => [u.user_name, u]));
