@@ -366,7 +366,7 @@ export function PlanPageClient({
         {/* ジム選択 */}
         <section>
           <label className="text-sm font-semibold text-gray-700 block mb-2">
-            🏢 ジム選択
+            🧗 ジム選択
           </label>
 
           {selectedGym ? (

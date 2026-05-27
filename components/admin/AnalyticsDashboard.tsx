@@ -99,7 +99,7 @@ function SummaryCard({ label, value, color = "text-gray-800" }: { label: string;
 const PAGE_LABELS: Record<string, string> = {
   home: "🏠 トップ",
   dashboard: "👤 マイページ",
-  gyms: "🏢 ジム",
+  gyms: "🧗 ジム",
   plan: "📝 予定入力",
   graph: "🔗 つながり",
   admin: "⚙️ 管理",
@@ -314,7 +314,7 @@ export function AnalyticsDashboard({
                             <span>📅 {parsed.date.slice(5).replace("-", "/")}</span>
                           )}
                           {parsed.gym && (
-                            <span className="font-medium text-gray-600">🏢 {parsed.gym}</span>
+                            <span className="font-medium text-gray-600">🧗 {parsed.gym}</span>
                           )}
                           {parsed.companions && (
                             <span>👥 {parsed.companions}</span>
@@ -378,7 +378,7 @@ export function AnalyticsDashboard({
             {/* ジムページ */}
             {gyms.length > 0 && (
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <p className="text-xs font-semibold text-gray-700 mb-3">🏢 ジムページの操作</p>
+                <p className="text-xs font-semibold text-gray-700 mb-3">🧗 ジムページの操作</p>
                 <HBarChart
                   items={gyms.map(({ action, count }) => ({ label: ACTION_LABELS[action] || action, count }))}
                   color="bg-purple-400"
@@ -421,7 +421,7 @@ export function AnalyticsDashboard({
                       👤
                     </th>
                     <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[28px]">
-                      🏢
+                      🧗
                     </th>
                     <th className="text-right text-[10px] font-semibold text-gray-400 px-2 py-2 min-w-[28px]">
                       📝

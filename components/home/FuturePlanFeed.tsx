@@ -41,7 +41,7 @@ const TIME_SLOT_ORDER: Record<string, number> = { 昼: 0, 夕方: 1, 夜: 2 };
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
 function gymDisplayName(name: string): string {
-  return name === GYM_UNDECIDED_LABEL ? "📢 登る仲間を募集中！" : `🏢 ${name}`;
+  return name === GYM_UNDECIDED_LABEL ? "📢 登る仲間を募集中！" : `🧗 ${name}`;
 }
 
 // 参加ミニUIコンポーネント

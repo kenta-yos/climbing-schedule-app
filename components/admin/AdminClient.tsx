@@ -344,7 +344,7 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
               tab === "gym" ? "climbing-gradient text-white" : "text-gray-500"
             }`}
           >
-            🏢 ジム登録
+            🧗 ジム登録
           </button>
           {isAdmin && (
             <>
@@ -638,7 +638,7 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
                 onClick={() => setGymListOpen((v) => !v)}
                 className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700"
               >
-                <span>🏢 登録ジム一覧（{gyms.length}件）</span>
+                <span>🧗 登録ジム一覧（{gyms.length}件）</span>
                 {gymListOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
               </button>
 

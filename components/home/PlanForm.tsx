@@ -133,7 +133,7 @@ export function PlanForm({ userName, gyms, onSuccess, onClose, recentGymNames }:
         {/* ジム選択 */}
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-2">
-            🏢 ジム選択
+            🧗 ジム選択
           </label>
 
           {/* 選択済み表示 */}
