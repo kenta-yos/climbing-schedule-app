@@ -173,14 +173,16 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
   // 編集ページへ遷移中のlogId
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // New バッジ: 前回閲覧以降に追加された他人の予定を判定
-  const lastSeenRef = useRef<string | null>(null);
+  // New バッジ: 前回閲覧以降に追加された他人の予定を判定（初回のみ）
+  const initializedRef = useRef(false);
   const [newLogIds, setNewLogIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
     const key = LAST_SEEN_KEY_PREFIX + currentUser;
     const lastSeen = localStorage.getItem(key);
-    lastSeenRef.current = lastSeen;
 
     if (lastSeen) {
       const newIds = new Set(
