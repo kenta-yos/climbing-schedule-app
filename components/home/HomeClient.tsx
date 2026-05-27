@@ -170,8 +170,9 @@ export function HomeClient({ initialLogs, users, currentUser, announcements }: P
         {/* 人気ジム TOP3 */}
         {(() => {
           const gymCount: Record<string, number> = {};
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
           logs
-            .filter((l) => l.type === "実績" && l.gym_name !== GYM_UNDECIDED_LABEL)
+            .filter((l) => l.type === "実績" && l.gym_name !== GYM_UNDECIDED_LABEL && l.date >= thirtyDaysAgo)
             .forEach((l) => { gymCount[l.gym_name] = (gymCount[l.gym_name] || 0) + 1; });
           const top3 = Object.entries(gymCount)
             .sort((a, b) => b[1] - a[1])
