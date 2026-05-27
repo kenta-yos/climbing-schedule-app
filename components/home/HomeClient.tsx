@@ -9,6 +9,7 @@ import { AnnouncementBanner } from "@/components/home/AnnouncementBanner";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
 import { getTodayJST } from "@/lib/utils";
+import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
 import type { ClimbingLog, User, Announcement } from "@/lib/supabase/queries";
 import { trackAction } from "@/lib/analytics";
 
@@ -165,6 +166,33 @@ export function HomeClient({ initialLogs, users, currentUser, announcements }: P
             <><Plus size={22} />クライミングを記録する</>
           )}
         </Button>
+
+        {/* 人気ジム TOP3 */}
+        {(() => {
+          const gymCount: Record<string, number> = {};
+          logs
+            .filter((l) => l.type === "実績" && l.gym_name !== GYM_UNDECIDED_LABEL)
+            .forEach((l) => { gymCount[l.gym_name] = (gymCount[l.gym_name] || 0) + 1; });
+          const top3 = Object.entries(gymCount)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3);
+          if (top3.length === 0) return null;
+          const medals = ["🥇", "🥈", "🥉"];
+          return (
+            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <span className="text-xs font-bold text-gray-500 flex-shrink-0">🔥 人気</span>
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                {top3.map(([gym, count], i) => (
+                  <span key={gym} className="text-xs text-gray-700">
+                    <span>{medals[i]}</span>
+                    <span className="font-semibold">{gym}</span>
+                    <span className="text-gray-400 ml-0.5">({count})</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 予定フィード */}
         <section>
