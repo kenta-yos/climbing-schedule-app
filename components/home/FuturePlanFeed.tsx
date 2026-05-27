@@ -41,7 +41,7 @@ const TIME_SLOT_ORDER: Record<string, number> = { 昼: 0, 夕方: 1, 夜: 2 };
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
 function gymDisplayName(name: string): string {
-  return name === GYM_UNDECIDED_LABEL ? "🙋 登る仲間を募集中！" : `🏢 ${name}`;
+  return name === GYM_UNDECIDED_LABEL ? "📢 登る仲間を募集中！" : `🏢 ${name}`;
 }
 
 // 参加ミニUIコンポーネント
@@ -318,7 +318,7 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                                   : "border-orange-300 text-orange-500 hover:bg-orange-50"
                               }`}
                             >
-                              <span>🙋</span>
+                              <span>✋</span>
                               <span>{isUndecided ? "一緒に行く！" : "参加"}</span>
                             </button>
                           )}
@@ -370,7 +370,7 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                                   )}
                                   {log.with_friends && (
                                     <span className="text-[10px] leading-none flex-shrink-0">
-                                      🙋
+                                      👫
                                     </span>
                                   )}
                                   {isMe && (
