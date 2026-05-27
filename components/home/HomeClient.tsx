@@ -8,37 +8,26 @@ import { MonthlyRanking } from "@/components/home/MonthlyRanking";
 import { AnnouncementBanner } from "@/components/home/AnnouncementBanner";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
-import { SnsIcon } from "@/components/ui/SnsIcon";
 import { getTodayJST } from "@/lib/utils";
-import type { ClimbingLog, GymMaster, AreaMaster, User, Announcement } from "@/lib/supabase/queries";
+import type { ClimbingLog, User, Announcement } from "@/lib/supabase/queries";
 import { trackAction } from "@/lib/analytics";
 
 const POLL_INTERVAL = 30_000; // 30秒ごとにバックグラウンド更新
 const PTR_THRESHOLD = 72;     // pull-to-refreshのトリガー距離(px)
 
-type NewSetInfo = {
-  gym_name: string;
-  daysSinceNew: number;
-  profile_url: string | null;
-};
-
 type Props = {
   initialLogs: ClimbingLog[];
-  gyms: GymMaster[];
-  areas: AreaMaster[];
   users: User[];
   currentUser: string;
   announcements: Announcement[];
-  newSets: NewSetInfo[];
 };
 
-export function HomeClient({ initialLogs, users, currentUser, announcements, newSets }: Props) {
+export function HomeClient({ initialLogs, users, currentUser, announcements }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
   const today = getTodayJST();
   const [navigatingRecord, setNavigatingRecord] = useState(false);
-  const [navigatingMore, setNavigatingMore] = useState(false);
 
   // pull-to-refresh state
   const [pullY, setPullY] = useState(0);         // 引っ張り量(px)
@@ -49,7 +38,6 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
   // パスが変わったらnavigatingを解除
   useEffect(() => {
     setNavigatingRecord(false);
-    setNavigatingMore(false);
   }, [pathname]);
 
   // --- データ取得 ---
@@ -177,54 +165,6 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, new
             <><Plus size={22} />クライミングを記録する</>
           )}
         </Button>
-
-        {/* 新セット情報 */}
-        {newSets.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-4 pt-3 pb-2">
-              <h3 className="text-xs font-bold text-gray-500 tracking-wide">🔥 最近の新セット</h3>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {newSets.map((s) => {
-                const inner = (
-                  <>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-sm font-semibold text-gray-800 truncate">{s.gym_name}</span>
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      <span className={`text-xs font-bold ${s.daysSinceNew <= 7 ? "text-orange-500" : "text-yellow-600"}`}>
-                        {s.daysSinceNew}日目
-                      </span>
-                      {s.profile_url && <SnsIcon url={s.profile_url} size={14} className="text-gray-300" />}
-                    </div>
-                  </>
-                );
-                return s.profile_url ? (
-                  <a
-                    key={s.gym_name}
-                    href={s.profile_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 transition-colors"
-                  >
-                    {inner}
-                  </a>
-                ) : (
-                  <div key={s.gym_name} className="flex items-center justify-between px-4 py-2.5">
-                    {inner}
-                  </div>
-                );
-              })}
-            </div>
-            <button
-              onClick={() => { setNavigatingMore(true); router.push("/gyms?sort=freshset"); }}
-              disabled={navigatingMore}
-              className="block w-full text-center text-xs text-gray-400 font-medium py-2 hover:text-orange-500 transition-colors border-t border-gray-100"
-            >
-              {navigatingMore ? "移動中…" : "もっと見る →"}
-            </button>
-          </div>
-        )}
 
         {/* 予定フィード */}
         <section>
