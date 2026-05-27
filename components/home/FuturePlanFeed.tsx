@@ -182,13 +182,15 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
     didInitNew.current = true;
 
     const key = LAST_SEEN_KEY_PREFIX + currentUser;
-    const lastSeen = localStorage.getItem(key);
-    localStorage.setItem(key, new Date().toISOString());
+    const stored = localStorage.getItem(key);
+    const now = Date.now();
+    localStorage.setItem(key, String(now));
 
-    if (lastSeen) {
+    if (stored) {
+      const lastSeenTime = Number(stored) || new Date(stored).getTime();
       const ids = new Set(
         logs
-          .filter((l) => l.type === "予定" && l.user !== currentUser && l.created_at > lastSeen)
+          .filter((l) => l.type === "予定" && l.user !== currentUser && new Date(l.created_at).getTime() > lastSeenTime)
           .map((l) => l.id)
       );
       if (ids.size > 0) setNewLogIds(ids);
