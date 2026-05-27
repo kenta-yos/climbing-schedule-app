@@ -390,7 +390,7 @@ export function PlanPageClient({
                 className="w-full text-left px-4 py-3 mb-3 rounded-xl border-2 border-dashed border-gray-300 bg-white text-sm font-medium text-gray-500 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-600 transition-all duration-150 active:scale-[0.98] flex items-center gap-2"
               >
                 <span className="text-lg">📢</span>
-                <span>登る仲間を募集する</span>
+                <span>ジム未定で仲間を募集</span>
               </button>
 
               {/* 検索ボックス */}
