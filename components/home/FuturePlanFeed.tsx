@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { formatMMDD, getTodayJST, getTomorrowJST } from "@/lib/utils";
@@ -173,20 +173,27 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
   // 編集ページへ遷移中のlogId
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // New バッジ: 前回閲覧以降に追加された他人の予定を判定（初回のみ）
-  const [newLogIds] = useState<Set<string>>(() => {
-    if (typeof window === "undefined") return new Set<string>();
+  // New バッジ: 前回閲覧以降に追加された他人の予定を判定（クライアント初回のみ）
+  const [newLogIds, setNewLogIds] = useState<Set<string>>(new Set());
+  const didInitNew = useRef(false);
+
+  useEffect(() => {
+    if (didInitNew.current || logs.length === 0) return;
+    didInitNew.current = true;
+
     const key = LAST_SEEN_KEY_PREFIX + currentUser;
     const lastSeen = localStorage.getItem(key);
-    // 即座に更新（バッジは初期値として state に残る）
     localStorage.setItem(key, new Date().toISOString());
-    if (!lastSeen) return new Set<string>();
-    return new Set(
-      logs
-        .filter((l) => l.type === "予定" && l.user !== currentUser && l.created_at > lastSeen)
-        .map((l) => l.id)
-    );
-  });
+
+    if (lastSeen) {
+      const ids = new Set(
+        logs
+          .filter((l) => l.type === "予定" && l.user !== currentUser && l.created_at > lastSeen)
+          .map((l) => l.id)
+      );
+      if (ids.size > 0) setNewLogIds(ids);
+    }
+  }, [logs, currentUser]);
 
   const handleEditNavigate = useCallback((logId: string) => {
     trackAction(currentUser, "home", "edit_tapped");
