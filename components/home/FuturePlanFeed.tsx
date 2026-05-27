@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { formatMMDD, getTodayJST, getTomorrowJST } from "@/lib/utils";
@@ -164,12 +164,39 @@ function JoinPanel({
   );
 }
 
+const LAST_SEEN_KEY_PREFIX = "lastSeenPlans_";
+
 export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
   const router = useRouter();
   // 展開中のジムキー（"日付|ジム名"）
   const [openJoinKey, setOpenJoinKey] = useState<string | null>(null);
   // 編集ページへ遷移中のlogId
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // New バッジ: 前回閲覧以降に追加された他人の予定を判定
+  const lastSeenRef = useRef<string | null>(null);
+  const [newLogIds, setNewLogIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const key = LAST_SEEN_KEY_PREFIX + currentUser;
+    const lastSeen = localStorage.getItem(key);
+    lastSeenRef.current = lastSeen;
+
+    if (lastSeen) {
+      const newIds = new Set(
+        logs
+          .filter((l) => l.type === "予定" && l.user !== currentUser && l.created_at > lastSeen)
+          .map((l) => l.id)
+      );
+      setNewLogIds(newIds);
+    }
+
+    // 3秒後に lastSeen を更新（バッジを見る時間を確保）
+    const timer = setTimeout(() => {
+      localStorage.setItem(key, new Date().toISOString());
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [logs, currentUser]);
 
   const handleEditNavigate = useCallback((logId: string) => {
     trackAction(currentUser, "home", "edit_tapped");
@@ -283,16 +310,24 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                             .map((log) => {
                               const user = userMap[log.user];
                               const isMe = log.user === currentUser;
+                              const isNew = newLogIds.has(log.id);
                               const userSlot = TIME_SLOTS.find((s) => s.value === log.time_slot);
                               return (
                                 <div
                                   key={log.id}
-                                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                  className={`relative flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                                     isMe
                                       ? "bg-orange-100 text-orange-700 ring-1 ring-orange-300"
+                                      : isNew
+                                      ? "bg-red-50 text-red-700 ring-1 ring-red-300"
                                       : "bg-gray-100 text-gray-600"
                                   }`}
                                 >
+                                  {isNew && (
+                                    <span className="absolute -top-1.5 -right-1 px-1 py-0 rounded-full bg-red-500 text-white text-[8px] font-bold leading-tight">
+                                      New
+                                    </span>
+                                  )}
                                   <span
                                     className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] flex-shrink-0"
                                     style={{ backgroundColor: user?.color || "#999" }}
