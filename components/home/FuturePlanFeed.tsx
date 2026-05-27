@@ -41,7 +41,7 @@ const TIME_SLOT_ORDER: Record<string, number> = { 昼: 0, 夕方: 1, 夜: 2 };
 const WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"];
 
 function gymDisplayName(name: string): string {
-  return name === GYM_UNDECIDED_LABEL ? "🤷 どこか登ろう〜" : `🏢 ${name}`;
+  return name === GYM_UNDECIDED_LABEL ? "🙋 登る仲間を募集中！" : `🏢 ${name}`;
 }
 
 // 参加ミニUIコンポーネント
@@ -281,21 +281,43 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                     const joinKey = `${dateStr}|${gymName}`;
                     const isJoinOpen = openJoinKey === joinKey;
 
+                    const isUndecided = gymName === GYM_UNDECIDED_LABEL;
+
                     return (
-                      <div key={gymName} className={`px-4 py-3 ${hasMe ? "bg-orange-50/40" : ""}`}>
+                      <div
+                        key={gymName}
+                        className={`px-4 py-3 ${
+                          isUndecided
+                            ? "bg-purple-50/60 border-l-4 border-purple-300"
+                            : hasMe
+                            ? "bg-orange-50/40"
+                            : ""
+                        }`}
+                      >
                         {/* ジム名 + 参加ボタン */}
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-semibold text-gray-800">
-                            {gymDisplayName(gymName)}
-                          </span>
-                          {/* 自分が未参加のときのみ「+ 参加」ボタン表示 */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-gray-800">
+                              {gymDisplayName(gymName)}
+                            </span>
+                            {isUndecided && gymLogs.length > 0 && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-purple-500 text-white text-[10px] font-bold leading-tight">
+                                {gymLogs.length}人
+                              </span>
+                            )}
+                          </div>
+                          {/* 自分が未参加のときのみ参加ボタン表示 */}
                           {!hasMe && !isJoinOpen && (
                             <button
                               onClick={() => { trackAction(currentUser, "home", "join_tapped"); setOpenJoinKey(joinKey); }}
-                              className="flex items-center gap-0.5 px-2 py-0.5 rounded-full border border-orange-300 text-orange-500 text-xs font-semibold hover:bg-orange-50 active:scale-95 transition-all"
+                              className={`flex items-center gap-0.5 px-2 py-0.5 rounded-full border text-xs font-semibold active:scale-95 transition-all ${
+                                isUndecided
+                                  ? "border-purple-400 text-purple-600 hover:bg-purple-50"
+                                  : "border-orange-300 text-orange-500 hover:bg-orange-50"
+                              }`}
                             >
-                              <span>＋</span>
-                              <span>参加</span>
+                              <span>🙋</span>
+                              <span>{isUndecided ? "一緒に行く！" : "参加"}</span>
                             </button>
                           )}
                         </div>
