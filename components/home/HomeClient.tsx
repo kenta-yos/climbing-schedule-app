@@ -7,28 +7,59 @@ import { FuturePlanFeed } from "@/components/home/FuturePlanFeed";
 import { MonthlyRanking } from "@/components/home/MonthlyRanking";
 import { AnnouncementBanner } from "@/components/home/AnnouncementBanner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Plus, Loader2 } from "lucide-react";
 import { getTodayJST } from "@/lib/utils";
 import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
-import type { ClimbingLog, User, Announcement } from "@/lib/supabase/queries";
+import type { ClimbingLog, User, Announcement, WorkShift } from "@/lib/supabase/queries";
 import { trackAction } from "@/lib/analytics";
 
-const POLL_INTERVAL = 30_000; // 30秒ごとにバックグラウンド更新
-const PTR_THRESHOLD = 72;     // pull-to-refreshのトリガー距離(px)
+const POLL_INTERVAL = 30_000;
+const PTR_THRESHOLD = 72;
+const SHIFT_GYM = "THE STONE SESSION TOKYO";
+const SHIFT_USER = "Dai";
 
 type Props = {
   initialLogs: ClimbingLog[];
   users: User[];
   currentUser: string;
   announcements: Announcement[];
+  initialShifts?: WorkShift[];
 };
 
-export function HomeClient({ initialLogs, users, currentUser, announcements }: Props) {
+export function HomeClient({ initialLogs, users, currentUser, announcements, initialShifts = [] }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
+  const [shifts, setShifts] = useState<WorkShift[]>(initialShifts);
   const today = getTodayJST();
   const [navigatingRecord, setNavigatingRecord] = useState(false);
+
+  // シフト登録（Daiのみ）
+  const [shiftDate, setShiftDate] = useState(getTodayJST());
+  const [shiftStart, setShiftStart] = useState("10:00");
+  const [shiftEnd, setShiftEnd] = useState("18:00");
+  const [submittingShift, setSubmittingShift] = useState(false);
+  const [shiftFormOpen, setShiftFormOpen] = useState(false);
+
+  const handleAddShift = useCallback(async () => {
+    if (!shiftDate || !shiftStart || !shiftEnd) return;
+    setSubmittingShift(true);
+    try {
+      const res = await fetch("/api/shifts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_name: SHIFT_USER, gym_name: SHIFT_GYM, date: shiftDate, start_time: shiftStart, end_time: shiftEnd }),
+      });
+      if (res.ok) {
+        const updated = await fetch("/api/shifts").then((r) => r.json());
+        setShifts(updated);
+        setShiftFormOpen(false);
+      }
+    } catch { /* ignore */ } finally {
+      setSubmittingShift(false);
+    }
+  }, [shiftDate, shiftStart, shiftEnd]);
 
   // pull-to-refresh state
   const [pullY, setPullY] = useState(0);         // 引っ張り量(px)
@@ -44,8 +75,12 @@ export function HomeClient({ initialLogs, users, currentUser, announcements }: P
   // --- データ取得 ---
   const fetchLogs = useCallback(async () => {
     try {
-      const res = await fetch("/api/logs?mode=home");
-      if (res.ok) setLogs(await res.json());
+      const [logsRes, shiftsRes] = await Promise.all([
+        fetch("/api/logs?mode=home"),
+        fetch("/api/shifts"),
+      ]);
+      if (logsRes.ok) setLogs(await logsRes.json());
+      if (shiftsRes.ok) setShifts(await shiftsRes.json());
     } catch (e) {
       console.error(e);
     }
@@ -167,6 +202,40 @@ export function HomeClient({ initialLogs, users, currentUser, announcements }: P
           )}
         </Button>
 
+        {/* Daiのシフト登録（Daiのみ） */}
+        {currentUser === SHIFT_USER && (
+          <div className="bg-emerald-50 rounded-2xl border border-emerald-200 overflow-hidden">
+            <button
+              onClick={() => setShiftFormOpen((v) => !v)}
+              className="w-full px-4 py-2.5 flex items-center justify-between"
+            >
+              <span className="text-sm font-semibold text-emerald-700">🍺 バイトシフトを登録</span>
+              <span className="text-emerald-400 text-xs">{shiftFormOpen ? "▲" : "▼"}</span>
+            </button>
+            {shiftFormOpen && (
+              <div className="px-4 pb-3 space-y-2 border-t border-emerald-100">
+                <div className="flex items-end gap-2 pt-2">
+                  <div className="flex-1">
+                    <label className="text-[11px] text-emerald-600 block mb-0.5">日付</label>
+                    <Input type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="text-sm h-9" />
+                  </div>
+                  <div className="w-20">
+                    <label className="text-[11px] text-emerald-600 block mb-0.5">開始</label>
+                    <Input type="time" value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="text-sm h-9" />
+                  </div>
+                  <div className="w-20">
+                    <label className="text-[11px] text-emerald-600 block mb-0.5">終了</label>
+                    <Input type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="text-sm h-9" />
+                  </div>
+                </div>
+                <Button onClick={handleAddShift} disabled={submittingShift} variant="climbing" className="w-full h-9 text-sm">
+                  {submittingShift ? "登録中…" : "シフトを登録"}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 人気ジム TOP3 */}
         {(() => {
           const gymCount: Record<string, number> = {};
@@ -206,6 +275,7 @@ export function HomeClient({ initialLogs, users, currentUser, announcements }: P
             users={users}
             currentUser={currentUser}
             onJoined={handleRefresh}
+            shifts={shifts}
           />
         </section>
 

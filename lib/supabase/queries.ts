@@ -43,6 +43,16 @@ export type SetSchedule = {
   created_at: string;
 };
 
+export type WorkShift = {
+  id: string;
+  user_name: string;
+  gym_name: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  created_at: string;
+};
+
 export type AccessLog = {
   id: string;
   user_name: string;

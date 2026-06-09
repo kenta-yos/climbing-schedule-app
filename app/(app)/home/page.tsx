@@ -2,7 +2,7 @@ import { HomeClient } from "@/components/home/HomeClient";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { ClimbingLog, User, Announcement } from "@/lib/supabase/queries";
+import type { ClimbingLog, User, Announcement, WorkShift } from "@/lib/supabase/queries";
 import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -21,11 +21,12 @@ export default async function HomePage() {
   const lastMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() - 1, 1);
   const monthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`;
 
-  const [futurePlansRes, monthlyLogsRes, usersRes, announcementsRes] = await Promise.all([
+  const [futurePlansRes, monthlyLogsRes, usersRes, announcementsRes, shiftsRes] = await Promise.all([
     supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", todayStr).order("date", { ascending: true }),
     supabase.from("climbing_logs").select("*").eq("type", "実績").gte("date", monthStart).order("date", { ascending: false }),
     supabase.from("users").select("*").order("user_name"),
     supabase.from("release_announcements").select("*").gte("display_until", todayStr).order("created_at", { ascending: false }),
+    supabase.from("work_shifts").select("*").gte("date", todayStr).order("date", { ascending: true }),
   ]);
 
   const initialLogs = [...(futurePlansRes.data || []), ...(monthlyLogsRes.data || [])];
@@ -38,6 +39,7 @@ export default async function HomePage() {
       users={(usersRes.data || []) as User[]}
       currentUser={decodedUser}
       announcements={(announcementsRes.data || []) as Announcement[]}
+      initialShifts={(shiftsRes.data || []) as WorkShift[]}
     />
   );
 }

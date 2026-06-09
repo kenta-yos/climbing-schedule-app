@@ -9,13 +9,16 @@ import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
 import { addClimbingLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { trackAction } from "@/lib/analytics";
-import type { ClimbingLog, User } from "@/lib/supabase/queries";
+import { Input } from "@/components/ui/input";
+import { Pencil, Trash2 } from "lucide-react";
+import type { ClimbingLog, User, WorkShift } from "@/lib/supabase/queries";
 
 type Props = {
   logs: ClimbingLog[];
   users: User[];
   currentUser: string;
-  onJoined: () => void; // 参加登録後のリフレッシュ
+  onJoined: () => void;
+  shifts?: WorkShift[];
 };
 
 // 日付でグループ化
@@ -166,7 +169,7 @@ function JoinPanel({
 
 const LAST_SEEN_KEY_PREFIX = "lastSeenPlans_";
 
-export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
+export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = [] }: Props) {
   const router = useRouter();
   // 展開中のジムキー（"日付|ジム名"）
   const [openJoinKey, setOpenJoinKey] = useState<string | null>(null);
@@ -218,7 +221,50 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
 
   const userMap = Object.fromEntries(users.map((u) => [u.user_name, u]));
   const grouped = groupByDate(futureLogs);
-  const sortedDates = Object.keys(grouped).sort();
+
+  // シフトの日付もマージ
+  const shiftsByDate: Record<string, WorkShift[]> = {};
+  for (const s of shifts) {
+    const d = s.date.split("T")[0];
+    if (!shiftsByDate[d]) shiftsByDate[d] = [];
+    shiftsByDate[d].push(s);
+  }
+  const allDatesArr = [...Object.keys(grouped), ...Object.keys(shiftsByDate)];
+  const sortedDates = Array.from(new Set(allDatesArr)).sort();
+
+  // シフト編集state
+  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
+  const [editShiftStart, setEditShiftStart] = useState("");
+  const [editShiftEnd, setEditShiftEnd] = useState("");
+  const [savingShift, setSavingShift] = useState(false);
+
+  const handleEditShift = (shift: WorkShift) => {
+    setEditingShiftId(shift.id);
+    setEditShiftStart(shift.start_time);
+    setEditShiftEnd(shift.end_time);
+  };
+
+  const handleSaveShift = async (id: string) => {
+    setSavingShift(true);
+    try {
+      await fetch("/api/shifts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, start_time: editShiftStart, end_time: editShiftEnd }),
+      });
+      setEditingShiftId(null);
+      handleJoined();
+    } catch { /* ignore */ } finally {
+      setSavingShift(false);
+    }
+  };
+
+  const handleDeleteShift = async (id: string) => {
+    try {
+      await fetch(`/api/shifts?id=${id}`, { method: "DELETE" });
+      handleJoined();
+    } catch { /* ignore */ }
+  };
 
   if (sortedDates.length === 0) {
     return (
@@ -236,7 +282,7 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
         const weekday = WEEKDAYS[date.getDay()];
         const isToday = dateStr === today;
         const isTomorrow = dateStr === tomorrow;
-        const dayLogs = grouped[dateStr];
+        const dayLogs = grouped[dateStr] || [];
 
         // カード・ヘッダーのスタイルを日付で切り替え
         const cardClass = isToday
@@ -430,6 +476,94 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined }: Props) {
                               setOpenJoinKey(null);
                               handleJoined();
                             }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* シフトカード（この日付にシフトがあれば表示） */}
+                  {(shiftsByDate[dateStr] || []).map((shift) => {
+                    const isShiftOwner = currentUser === shift.user_name;
+                    const isEditingThis = editingShiftId === shift.id;
+                    const shiftJoinKey = `${dateStr}|${shift.gym_name}`;
+                    const isShiftJoinOpen = openJoinKey === shiftJoinKey;
+                    const hasMyPlanAtGym = dayLogs?.some((l) => l.user === currentUser && l.gym_name === shift.gym_name);
+
+                    // このジム+日の参加者タグ
+                    const gymPlans = (grouped[dateStr] || []).filter((l) => l.gym_name === shift.gym_name);
+
+                    return (
+                      <div key={shift.id} className="px-4 py-3 bg-emerald-50/60 border-l-4 border-emerald-400">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">🍺</span>
+                            <span className="text-xs font-bold text-emerald-700">
+                              {shift.user_name}バイト中
+                            </span>
+                          </div>
+                          {isShiftOwner ? (
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => handleEditShift(shift)} className="p-1 text-emerald-400 hover:text-emerald-600"><Pencil size={13} /></button>
+                              <button onClick={() => handleDeleteShift(shift.id)} className="p-1 text-emerald-400 hover:text-red-400"><Trash2 size={13} /></button>
+                            </div>
+                          ) : !hasMyPlanAtGym && !isShiftJoinOpen ? (
+                            <button
+                              onClick={() => { trackAction(currentUser, "home", "shift_join_tapped"); setOpenJoinKey(shiftJoinKey); }}
+                              className="flex items-center gap-0.5 px-2 py-0.5 rounded-full border border-emerald-400 text-emerald-600 text-xs font-semibold hover:bg-emerald-50 active:scale-95 transition-all"
+                            >
+                              <span>✋</span>
+                              <span>行くよ</span>
+                            </button>
+                          ) : null}
+                        </div>
+
+                        {isEditingThis ? (
+                          <div className="flex items-end gap-2 mt-1">
+                            <div className="w-20">
+                              <Input type="time" value={editShiftStart} onChange={(e) => setEditShiftStart(e.target.value)} className="text-xs h-8" />
+                            </div>
+                            <span className="text-gray-400 text-xs pb-1.5">〜</span>
+                            <div className="w-20">
+                              <Input type="time" value={editShiftEnd} onChange={(e) => setEditShiftEnd(e.target.value)} className="text-xs h-8" />
+                            </div>
+                            <button onClick={() => setEditingShiftId(null)} className="px-2 py-1 text-[11px] text-gray-500 border border-gray-200 rounded-lg">戻す</button>
+                            <button onClick={() => handleSaveShift(shift.id)} disabled={savingShift} className="px-2 py-1 text-[11px] text-white bg-emerald-500 rounded-lg disabled:opacity-60">保存</button>
+                          </div>
+                        ) : (
+                          <div className="text-xs text-emerald-600 font-medium">
+                            🧗 {shift.gym_name} {shift.start_time}〜{shift.end_time}
+                          </div>
+                        )}
+
+                        {/* このジムの参加者タグ */}
+                        {gymPlans.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {gymPlans
+                              .sort((a, b) => (TIME_SLOT_ORDER[a.time_slot ?? ""] ?? 99) - (TIME_SLOT_ORDER[b.time_slot ?? ""] ?? 99))
+                              .map((log) => {
+                                const user = userMap[log.user];
+                                const userSlot = TIME_SLOTS.find((s) => s.value === log.time_slot);
+                                return (
+                                  <span key={log.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-200">
+                                    <span className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-white text-[9px] flex-shrink-0" style={{ backgroundColor: user?.color || "#999" }}>{user?.icon || "?"}</span>
+                                    {log.user}
+                                    {userSlot && <Image src={userSlot.icon} alt={userSlot.label} width={12} height={12} className="object-contain flex-shrink-0" />}
+                                  </span>
+                                );
+                              })}
+                          </div>
+                        )}
+
+                        {/* JoinPanel */}
+                        {isShiftJoinOpen && (
+                          <JoinPanel
+                            date={dateStr}
+                            gymName={shift.gym_name}
+                            currentUser={currentUser}
+                            existingLogs={logs}
+                            onCancel={() => setOpenJoinKey(null)}
+                            onJoined={() => { setOpenJoinKey(null); handleJoined(); }}
                           />
                         )}
                       </div>
