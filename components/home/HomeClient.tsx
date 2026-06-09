@@ -12,6 +12,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { getTodayJST } from "@/lib/utils";
 import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
 import type { ClimbingLog, User, Announcement, WorkShift } from "@/lib/supabase/queries";
+import { toast } from "@/lib/hooks/use-toast";
 import { trackAction } from "@/lib/analytics";
 
 const POLL_INTERVAL = 30_000;
@@ -55,8 +56,13 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, ini
         const updated = await fetch("/api/shifts").then((r) => r.json());
         setShifts(updated);
         setShiftFormOpen(false);
+        toast({ title: "🍺 シフトを登録しました！", variant: "success" as any });
+      } else {
+        toast({ title: "登録に失敗しました", variant: "destructive" });
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      toast({ title: "登録に失敗しました", variant: "destructive" });
+    } finally {
       setSubmittingShift(false);
     }
   }, [shiftDate, shiftStart, shiftEnd]);
