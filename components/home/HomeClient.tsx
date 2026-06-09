@@ -220,18 +220,21 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, ini
             </button>
             {shiftFormOpen && (
               <div className="px-4 pb-3 space-y-2 border-t border-emerald-100">
-                <div className="flex items-end gap-2 pt-2">
-                  <div className="flex-1">
+                <div className="space-y-2 pt-2">
+                  <div>
                     <label className="text-[11px] text-emerald-600 block mb-0.5">日付</label>
-                    <Input type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="text-sm h-9" />
+                    <Input type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="text-sm h-10" />
                   </div>
-                  <div className="w-20">
-                    <label className="text-[11px] text-emerald-600 block mb-0.5">開始</label>
-                    <Input type="time" value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="text-sm h-9" />
-                  </div>
-                  <div className="w-20">
-                    <label className="text-[11px] text-emerald-600 block mb-0.5">終了</label>
-                    <Input type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="text-sm h-9" />
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="text-[11px] text-emerald-600 block mb-0.5">開始</label>
+                      <Input type="time" value={shiftStart} onChange={(e) => setShiftStart(e.target.value)} className="text-sm h-10" />
+                    </div>
+                    <span className="text-gray-400 text-sm pb-2">〜</span>
+                    <div className="flex-1">
+                      <label className="text-[11px] text-emerald-600 block mb-0.5">終了</label>
+                      <Input type="time" value={shiftEnd} onChange={(e) => setShiftEnd(e.target.value)} className="text-sm h-10" />
+                    </div>
                   </div>
                 </div>
                 <Button onClick={handleAddShift} disabled={submittingShift} variant="climbing" className="w-full h-9 text-sm">
