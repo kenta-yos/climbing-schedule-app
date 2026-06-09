@@ -71,6 +71,10 @@ export function PlanPageClient({
   const [joinDinner, setJoinDinner] = useState<boolean>(
     editLog?.join_dinner ?? false
   );
+  // コンペフラグ
+  const [isComp, setIsComp] = useState<boolean>(
+    editLog?.is_comp ?? false
+  );
 
   // 編集モードで元々グループにいたメンバーはロック（外せない）
   const lockedCompanions = isEdit ? new Set(groupMembers.map((m) => m.user)) : new Set<string>();
@@ -129,6 +133,7 @@ export function PlanPageClient({
           time_slot: timeSlot as "昼" | "夕方" | "夜",
           with_friends: withFriends,
           join_dinner: joinDinner,
+          is_comp: isComp,
         });
 
         // 元々のグループメンバーのうち、まだ選択されているメンバーのログも更新
@@ -223,6 +228,7 @@ export function PlanPageClient({
             time_slot: timeSlot as "昼" | "夕方" | "夜",
             with_friends: withFriends,
             join_dinner: joinDinner,
+            is_comp: isComp,
           }),
           ...selectedCompanions.map((companion) =>
             addClimbingLog({
@@ -560,6 +566,31 @@ export function PlanPageClient({
               }`}
             >
               {joinDinner && <span className="text-white text-xs leading-none">✓</span>}
+            </span>
+          </button>
+        </section>
+
+        {/* コンペ */}
+        <section>
+          <button
+            type="button"
+            onClick={() => setIsComp((prev) => !prev)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 transition-all duration-150 active:scale-[0.98] ${
+              isComp
+                ? "border-red-400 bg-red-50"
+                : "border-gray-200 bg-white"
+            }`}
+          >
+            <span className="text-2xl">⚔️</span>
+            <span className={`flex-1 text-left text-sm font-semibold ${isComp ? "text-red-600" : "text-gray-600"}`}>
+              コンペ
+            </span>
+            <span
+              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                isComp ? "border-red-400 bg-red-400" : "border-gray-300 bg-white"
+              }`}
+            >
+              {isComp && <span className="text-white text-xs leading-none">✓</span>}
             </span>
           </button>
         </section>

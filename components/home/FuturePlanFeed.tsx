@@ -416,6 +416,11 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = []
                                       👫
                                     </span>
                                   )}
+                                  {log.is_comp && (
+                                    <span className="text-[10px] leading-none flex-shrink-0">
+                                      ⚔️
+                                    </span>
+                                  )}
                                   {isMe && (
                                     <button
                                       onClick={() => handleEditNavigate(log.id)}
