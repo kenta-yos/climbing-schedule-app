@@ -327,6 +327,7 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = []
                     const isJoinOpen = openJoinKey === joinKey;
 
                     const isUndecided = gymName === GYM_UNDECIDED_LABEL;
+                    const hasComp = gymLogs.some((l) => l.is_comp);
 
                     return (
                       <div
@@ -345,6 +346,11 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = []
                             <span className="text-sm font-semibold text-gray-800">
                               {gymDisplayName(gymName)}
                             </span>
+                            {hasComp && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-bold leading-tight">
+                                ⚔️ コンペ
+                              </span>
+                            )}
                             {isUndecided && gymLogs.length > 0 && (
                               <span className="px-1.5 py-0.5 rounded-full bg-purple-500 text-white text-[10px] font-bold leading-tight">
                                 {gymLogs.length}人
@@ -414,11 +420,6 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = []
                                   {log.with_friends && (
                                     <span className="text-[10px] leading-none flex-shrink-0">
                                       👫
-                                    </span>
-                                  )}
-                                  {log.is_comp && (
-                                    <span className="text-[10px] leading-none flex-shrink-0">
-                                      ⚔️
                                     </span>
                                   )}
                                   {isMe && (
