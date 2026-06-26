@@ -83,6 +83,41 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
   // スケジュール一覧アコーディオン
   const [scheduleListOpen, setScheduleListOpen] = useState(false);
 
+  // ---- ジム編集 ----
+  const [editingGym, setEditingGym] = useState<string | null>(null);
+  const [editGymUrl, setEditGymUrl] = useState("");
+  const [editGymAreaTag, setEditGymAreaTag] = useState("");
+  const [savingGym, setSavingGym] = useState(false);
+  const [gymList, setGymList] = useState<GymMaster[]>(gyms);
+
+  const handleStartEditGym = (gym: GymMaster) => {
+    setEditingGym(gym.gym_name);
+    setEditGymUrl(gym.profile_url || "");
+    setEditGymAreaTag(gym.area_tag);
+  };
+
+  const handleSaveGym = async (gymName: string) => {
+    setSavingGym(true);
+    try {
+      const res = await fetch("/api/gyms", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gym_name: gymName, profile_url: editGymUrl, area_tag: editGymAreaTag }),
+      });
+      if (res.ok) {
+        setGymList((prev) =>
+          prev.map((g) => g.gym_name === gymName ? { ...g, profile_url: editGymUrl || null, area_tag: editGymAreaTag } : g)
+        );
+        setEditingGym(null);
+        toast({ title: "ジムを更新しました", variant: "success" as any });
+      }
+    } catch {
+      toast({ title: "更新に失敗しました", variant: "destructive" });
+    } finally {
+      setSavingGym(false);
+    }
+  };
+
   // ---- ジム登録 ----
   const [gymName, setGymName] = useState("");
   const [gymUrl, setGymUrl] = useState("");
@@ -638,24 +673,69 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
                 onClick={() => setGymListOpen((v) => !v)}
                 className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700"
               >
-                <span>🧗 登録ジム一覧（{gyms.length}件）</span>
+                <span>🧗 登録ジム一覧（{gymList.length}件）</span>
                 {gymListOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
               </button>
 
               {gymListOpen && (
                 <div className="border-t border-gray-100 px-4 pb-4 pt-3">
                   <div className="space-y-1">
-                    {gyms.map((gym) => (
-                      <div key={gym.gym_name} className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0">
-                        <span className="text-xs font-medium text-gray-800 flex-1 truncate">{gym.gym_name}</span>
-                        <span className="text-[11px] text-gray-400 flex-shrink-0">{gym.area_tag}</span>
-                        {gym.lat != null && gym.lng != null ? (
-                          <span className="text-[11px] text-green-500 flex-shrink-0">📍</span>
-                        ) : (
-                          <span className="text-[11px] text-gray-300 flex-shrink-0">📍</span>
-                        )}
-                      </div>
-                    ))}
+                    {gymList.map((gym) => {
+                      const isEditing = editingGym === gym.gym_name;
+                      return (
+                        <div key={gym.gym_name} className="py-1.5 border-b border-gray-50 last:border-0">
+                          {isEditing ? (
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-gray-800">{gym.gym_name}</p>
+                              <div>
+                                <label className="text-[10px] text-gray-500">URL</label>
+                                <Input
+                                  value={editGymUrl}
+                                  onChange={(e) => setEditGymUrl(e.target.value)}
+                                  placeholder="https://..."
+                                  className="text-xs h-8"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-gray-500">エリア</label>
+                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                  {areas.map((area) => (
+                                    <button
+                                      key={area.area_tag}
+                                      onClick={() => setEditGymAreaTag(area.area_tag)}
+                                      className={`px-2 py-1 rounded-lg border text-[11px] font-medium transition-all ${
+                                        editGymAreaTag === area.area_tag
+                                          ? "border-orange-400 bg-orange-50 text-orange-700"
+                                          : "border-gray-200 text-gray-600"
+                                      }`}
+                                    >
+                                      {area.area_tag}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <button onClick={() => setEditingGym(null)} className="flex-1 py-1.5 text-xs text-gray-500 border border-gray-200 rounded-lg">キャンセル</button>
+                                <button onClick={() => handleSaveGym(gym.gym_name)} disabled={savingGym} className="flex-1 py-1.5 text-xs text-white bg-orange-500 rounded-lg disabled:opacity-60">{savingGym ? "保存中…" : "保存"}</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-gray-800 flex-1 truncate">{gym.gym_name}</span>
+                              <span className="text-[11px] text-gray-400 flex-shrink-0">{gym.area_tag}</span>
+                              {gym.lat != null && gym.lng != null ? (
+                                <span className="text-[11px] text-green-500 flex-shrink-0">📍</span>
+                              ) : (
+                                <span className="text-[11px] text-gray-300 flex-shrink-0">📍</span>
+                              )}
+                              <button onClick={() => handleStartEditGym(gym)} className="p-1 text-gray-300 hover:text-blue-500 transition-colors flex-shrink-0">
+                                <Pencil size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
