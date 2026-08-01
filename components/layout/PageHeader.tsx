@@ -22,11 +22,11 @@ export function PageHeader({ title, subtitle, icon, heroImage }: PageHeaderProps
     >
       {hasHero && (
         <>
-          <Image src={heroImage} alt="" fill className="object-cover object-center" priority />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-gray-50" />
+          <Image src={heroImage} alt="" fill className="object-cover" style={{ objectPosition: "center 35%" }} priority />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent via-60% to-gray-50" />
         </>
       )}
-      <div className={`flex items-center justify-between px-4 max-w-lg mx-auto ${hasHero ? "relative z-10 pt-8 pb-12" : "py-3"}`}>
+      <div className={`flex items-center justify-between px-4 max-w-lg mx-auto ${hasHero ? "relative z-10 pt-2 pb-16" : "py-3"}`}>
         <div className="flex items-center gap-2">
           {icon && (
             <Image src={icon} alt="icon" width={28} height={28} className="rounded-lg flex-shrink-0" />
