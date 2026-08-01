@@ -23,6 +23,7 @@ export function PageHeader({ title, subtitle, icon, heroImage }: PageHeaderProps
       {hasHero && (
         <>
           <Image src={heroImage} alt="" fill className="object-cover" style={{ objectPosition: "center 40%" }} priority />
+          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-b from-transparent to-gray-50" />
         </>
       )}
       <div className={`flex items-center justify-between px-4 max-w-lg mx-auto ${hasHero ? "relative z-10 pt-24 pb-3" : "py-3"}`}>
