@@ -26,7 +26,7 @@ export function PageHeader({ title, subtitle, icon, heroImage }: PageHeaderProps
           <div className="absolute inset-0 bg-black/40" />
         </>
       )}
-      <div className={`flex items-center justify-between px-4 py-3 max-w-lg mx-auto ${hasHero ? "relative z-10" : ""}`}>
+      <div className={`flex items-center justify-between px-4 max-w-lg mx-auto ${hasHero ? "relative z-10 py-6" : "py-3"}`}>
         <div className="flex items-center gap-2">
           {icon && (
             <Image src={icon} alt="icon" width={28} height={28} className="rounded-lg flex-shrink-0" />
