@@ -187,7 +187,7 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, ini
         </div>
       </div>
 
-      <PageHeader title="Go Bouldering" subtitle={`今日 ${today}`} icon="/icon-192.png" heroImage="/hero.jpg" />
+      <PageHeader title="Go Bouldering" icon="/icon-192.png" heroImage="/hero.jpg" />
 
       <AnnouncementBanner announcements={announcements} />
 
