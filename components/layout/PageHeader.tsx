@@ -17,16 +17,16 @@ export function PageHeader({ title, subtitle, icon, heroImage }: PageHeaderProps
 
   return (
     <header
-      className={`sticky top-0 z-40 ${hasHero ? "relative overflow-hidden" : "bg-white/90 backdrop-blur-md border-b border-gray-100"}`}
+      className={`${hasHero ? "relative overflow-hidden" : "sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100"}`}
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       {hasHero && (
         <>
-          <Image src={heroImage} alt="" fill className="object-cover" priority />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-white" />
+          <Image src={heroImage} alt="" fill className="object-cover object-top" priority />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-gray-50" />
         </>
       )}
-      <div className={`flex items-center justify-between px-4 max-w-lg mx-auto ${hasHero ? "relative z-10 py-6" : "py-3"}`}>
+      <div className={`flex items-center justify-between px-4 max-w-lg mx-auto ${hasHero ? "relative z-10 pt-8 pb-12" : "py-3"}`}>
         <div className="flex items-center gap-2">
           {icon && (
             <Image src={icon} alt="icon" width={28} height={28} className="rounded-lg flex-shrink-0" />
