@@ -1,18 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { SnsIcon } from "@/components/ui/SnsIcon";
-import { TIME_SLOTS } from "@/lib/constants";
-import type { GymMaster, ClimbingLog, User } from "@/lib/supabase/queries";
+import type { GymMaster } from "@/lib/supabase/queries";
 
 type Props = {
   gym: GymMaster;
-  targetDate: string;
   distanceKm?: number | null;
   lastVisit?: string;
   lastVisitDays?: number;
-  friendLogsOnDate: ClimbingLog[];
-  users: User[];
   isSub?: boolean;
 };
 
@@ -23,8 +18,6 @@ export function GymCard({
   distanceKm,
   lastVisit,
   lastVisitDays,
-  friendLogsOnDate,
-  users,
   isSub = false,
 }: Props) {
 
@@ -40,16 +33,6 @@ export function GymCard({
   // 最終登攀日（先頭10文字＝YYYY-MM-DD のみ使う）
   const lastVisitDate = lastVisit ? lastVisit.slice(0, 10) : null;
   const lastVisitFull = lastVisitDate ? lastVisitDate.replace(/-/g, "/") : null;
-
-  // 時間帯アイコンパス（/images/hiru.png 等）
-  const getTimeIcon = (timeSlot: string | null): string | null => {
-    if (!timeSlot) return null;
-    return TIME_SLOTS.find((s) => s.value === timeSlot)?.icon ?? null;
-  };
-
-  // ユーザー情報（icon は絵文字テキスト、color は hex カラー）
-  const getUserInfo = (userName: string): User | undefined =>
-    users.find((u) => u.user_name === userName);
 
   return (
     <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden ${isSub ? "opacity-75" : ""}`}>
@@ -84,42 +67,13 @@ export function GymCard({
         </div>
 
         {/* バッジ行 */}
-        {(badges.length > 0 || friendLogsOnDate.length > 0) && (
+        {badges.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-2">
             {badges.map((b) => (
               <span key={b.label} className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${b.cls}`}>
                 {b.label}
               </span>
             ))}
-            {/* 仲間バッジ：絵文字アイコン（背景色付き丸）＋ 時間帯画像アイコン */}
-            {friendLogsOnDate.map((l) => {
-              const user = getUserInfo(l.user);
-              const timeIcon = getTimeIcon(l.time_slot);
-              return (
-                <span
-                  key={l.id}
-                  className="inline-flex items-center gap-1 pl-0.5 pr-1.5 py-0.5 rounded-full bg-purple-50 border border-purple-100"
-                >
-                  {/* ユーザーアイコン（絵文字 + カラー背景丸） */}
-                  <span
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] flex-shrink-0"
-                    style={{ backgroundColor: user?.color ?? "#9ca3af" }}
-                  >
-                    {user?.icon ?? l.user.slice(0, 1)}
-                  </span>
-                  {/* 時間帯アイコン（画像） */}
-                  {timeIcon && (
-                    <Image
-                      src={timeIcon}
-                      alt={l.time_slot ?? ""}
-                      width={14}
-                      height={14}
-                      className="object-contain flex-shrink-0"
-                    />
-                  )}
-                </span>
-              );
-            })}
           </div>
         )}
       </div>

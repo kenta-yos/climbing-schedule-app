@@ -2,20 +2,18 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Input } from "@/components/ui/input";
 import { AddressInput } from "@/components/ui/AddressInput";
 import { getTodayJST, haversineKm } from "@/lib/utils";
 import { GymCard } from "@/components/gyms/GymCard";
-import type { GymMaster, AreaMaster, ClimbingLog, User } from "@/lib/supabase/queries";
+import type { GymMaster, AreaMaster, ClimbingLog } from "@/lib/supabase/queries";
 import { trackAction } from "@/lib/analytics";
 
 type Props = {
   gyms: GymMaster[];
   areas: AreaMaster[];
-  allLogs: ClimbingLog[];
+  /** 自分の実績ログ。最終登攀日の算出に使う */
   myLogs: ClimbingLog[];
-  friendLogs: ClimbingLog[];
-  users: User[];
+  /** 操作ログの記録に使う */
   currentUser: string;
   initialSort?: SortTab;
 };
@@ -28,10 +26,7 @@ const PAGE_SIZE = 8;
 // 東京・神奈川エリアのmajor_area値
 const DEFAULT_AREA = "都内・神奈川";
 
-export function GymsClient({
-  gyms, areas, myLogs, friendLogs, users, currentUser, initialSort,
-}: Props) {
-  const [targetDate, setTargetDate] = useState(getTodayJST());
+export function GymsClient({ gyms, areas, myLogs, currentUser, initialSort }: Props) {
   const [origin, setOrigin] = useState<Origin>(null);
   const [originInput, setOriginInput] = useState("現在地");
   const [geocodeError, setGeocodeError] = useState("");
@@ -130,9 +125,6 @@ export function GymsClient({
         return area?.major_area === DEFAULT_AREA;
       });
 
-  // 選択日の仲間ログ
-  const friendLogsOnDate = friendLogs.filter((l) => l.date.startsWith(targetDate));
-
   // 距離計算
   const getDistance = (gym: GymMaster): number | null => {
     if (!origin || gym.lat == null || gym.lng == null) return null;
@@ -143,16 +135,17 @@ export function GymsClient({
   // 最終訪問日取得（自分）
   const getLastVisit = (gymName: string): string | null => {
     const visits = myLogs
-      .filter((l) => l.gym_name === gymName && l.type === "実績")
+      .filter((l) => l.gym_name === gymName)
       .sort((a, b) => b.date.localeCompare(a.date));
     return visits[0]?.date ?? null;
   };
 
-  // 日数差（targetDate基準）
-  const daysDiffFromTarget = (dateStr: string): number => {
-    const target = new Date(targetDate + "T00:00:00+09:00");
+  // 今日からの経過日数
+  const today = getTodayJST();
+  const daysSince = (dateStr: string): number => {
+    const t = new Date(today + "T00:00:00+09:00");
     const d = new Date(dateStr + "T00:00:00+09:00");
-    return Math.floor((target.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.floor((t.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   // ---- ソート ----
@@ -160,7 +153,7 @@ export function GymsClient({
     gym: GymMaster;
     distanceKm: number | null;
     lastVisit: string | null;
-    lastVisitDays: number | null; // targetDateから最終訪問まで何日経過
+    lastVisitDays: number | null; // 最終訪問から今日まで何日経過
   };
 
   const gymsWithMeta: GymWithMeta[] = filteredGyms.map((gym) => {
@@ -169,7 +162,7 @@ export function GymsClient({
       gym,
       distanceKm: getDistance(gym),
       lastVisit,
-      lastVisitDays: lastVisit ? daysDiffFromTarget(lastVisit.slice(0, 10)) : null,
+      lastVisitDays: lastVisit ? daysSince(lastVisit.slice(0, 10)) : null,
     };
   });
 
@@ -220,20 +213,8 @@ export function GymsClient({
       <PageHeader title="ジム" />
       <div className="px-4 py-4 space-y-3 page-enter">
 
-        {/* 登る日・出発地 */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3 space-y-3">
-          {/* 登る日 */}
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-gray-500 w-14 flex-shrink-0">📅 登る日</span>
-            <Input
-              type="date"
-              value={targetDate}
-              onChange={(e) => { setTargetDate(e.target.value); setVisibleCount(PAGE_SIZE); }}
-              className="flex-1 text-sm h-9"
-            />
-          </div>
-
-          {/* 出発地 */}
+        {/* 出発地 */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-3">
           <div className="flex items-start gap-3">
             <span className="text-xs font-semibold text-gray-500 w-14 flex-shrink-0 pt-2">📍 出発地</span>
             <div className="flex-1">
@@ -307,12 +288,9 @@ export function GymsClient({
             <GymCard
               key={gym.gym_name}
               gym={gym}
-              targetDate={targetDate}
               distanceKm={distanceKm}
               lastVisit={lastVisit ?? undefined}
               lastVisitDays={lastVisitDays ?? undefined}
-              friendLogsOnDate={friendLogsOnDate.filter((l) => l.gym_name === gym.gym_name)}
-              users={users}
             />
           ))}
 
@@ -332,12 +310,9 @@ export function GymsClient({
               <GymCard
                 key={gym.gym_name}
                 gym={gym}
-                targetDate={targetDate}
-                distanceKm={distanceKm}
+                  distanceKm={distanceKm}
                 lastVisit={lastVisit ?? undefined}
                 lastVisitDays={lastVisitDays ?? undefined}
-                friendLogsOnDate={friendLogsOnDate.filter((l) => l.gym_name === gym.gym_name)}
-                users={users}
                 isSub
               />
             ))}
