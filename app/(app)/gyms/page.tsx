@@ -1,9 +1,8 @@
 import { GymsClient } from "@/components/gyms/GymsClient";
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth";
+import { trackAction } from "@/lib/analytics";
 import type { ClimbingLog, GymMaster, AreaMaster, User } from "@/lib/supabase/queries";
-import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +11,7 @@ export default async function GymsPage({
 }: {
   searchParams: { sort?: string };
 }) {
-  const cookieStore = cookies();
-  const userName = cookieStore.get("user_name")?.value;
-  if (!userName) redirect("/");
-
-  const decodedUser = decodeURIComponent(userName);
+  const decodedUser = requireUser();
   const supabase = createClient();
 
   const [gymsRes, areasRes, allLogsRes, myLogsRes, usersRes] = await Promise.all([
@@ -31,7 +26,7 @@ export default async function GymsPage({
   const friendLogs = allLogs.filter((l) => l.user !== decodedUser);
 
   // ページビュー記録（非同期・fire-and-forget）
-  addPageView(decodedUser, "gyms").catch(() => {});
+  trackAction(decodedUser, "gyms");
 
   return (
     <GymsClient

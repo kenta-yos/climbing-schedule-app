@@ -1,28 +1,23 @@
 import { GraphClient } from "@/components/graph/GraphClient";
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth";
+import { getTodayJST, toJSTDateString } from "@/lib/utils";
+import { trackAction } from "@/lib/analytics";
 import type { ClimbingLog, User } from "@/lib/supabase/queries";
-import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function GraphPage() {
-  const cookieStore = cookies();
-  const userName = cookieStore.get("user_name")?.value;
-  if (!userName) redirect("/");
-
-  const decodedUser = decodeURIComponent(userName);
+  const decodedUser = requireUser();
 
   const supabase = createClient();
 
   // 過去12ヶ月分を取得（クライアント側で期間フィルタ）
-  const jstDate = (d: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(d);
   const twelveMonthsAgo = new Date();
   twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
-  const cutoffStr = jstDate(twelveMonthsAgo);
+  const cutoffStr = toJSTDateString(twelveMonthsAgo);
 
-  const todayStr = jstDate(new Date());
+  const todayStr = getTodayJST();
 
   const [logsRes, plansRes, usersRes] = await Promise.all([
     supabase
@@ -41,7 +36,7 @@ export default async function GraphPage() {
     supabase.from("users").select("*").order("user_name"),
   ]);
 
-  addPageView(decodedUser, "graph").catch(() => {});
+  trackAction(decodedUser, "graph");
 
   return (
     <GraphClient

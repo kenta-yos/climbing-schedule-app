@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import type { ClimbingLog, User } from "@/lib/supabase/queries";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { getTodayJST, toJSTDateString } from "@/lib/utils";
 import { X } from "lucide-react";
 
 // ─── 型定義 ───────────────────────────────────────────────────────────────────
@@ -39,8 +40,8 @@ const PERIOD_LABELS: { value: Period; label: string }[] = [
 
 function getPeriodRange(period: Period): { start: string; end: string } {
   const now = new Date();
-  const toStr = (d: Date) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(d);
-  const today = toStr(now);
+  const toStr = toJSTDateString;
+  const today = getTodayJST();
   switch (period) {
     case "thisMonth":  return { start: toStr(new Date(now.getFullYear(), now.getMonth(), 1)), end: today };
     case "lastMonth":  return { start: toStr(new Date(now.getFullYear(), now.getMonth() - 1, 1)), end: toStr(new Date(now.getFullYear(), now.getMonth(), 0)) };
@@ -62,7 +63,7 @@ function fmtDate(s: string): string {
 }
 
 function daysAgo(dateStr: string): string {
-  const jstToday = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(new Date());
+  const jstToday = getTodayJST();
   const diff = Math.floor((new Date(jstToday).getTime() - new Date(dateStr).getTime()) / 86400000);
   if (diff === 0) return "今日";
   if (diff === 1) return "昨日";

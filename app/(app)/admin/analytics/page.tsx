@@ -1,50 +1,27 @@
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, isAdminUser } from "@/lib/auth";
+import { toJSTDateString, getDateOffsetJST } from "@/lib/utils";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import type { AnalyticsProps } from "@/components/admin/AnalyticsDashboard";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_USER_ID = "8779bd4c-be62-49af-9a74-2fa035079ca9";
+const toJSTDate = (iso: string) => toJSTDateString(new Date(iso));
 
-function toJSTDate(iso: string): string {
-  const parts = new Date(iso)
-    .toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })
-    .split("/");
-  return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
-}
-
+// 直近 n 日分の日付文字列（古い順）
 function lastNDays(n: number): string[] {
-  return Array.from({ length: n }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (n - 1 - i));
-    const parts = d
-      .toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })
-      .split("/");
-    return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
-  });
+  return Array.from({ length: n }, (_, i) => getDateOffsetJST(-(n - 1 - i)));
 }
 
 export default async function AnalyticsPage() {
-  const cookieStore = cookies();
-  const userName = cookieStore.get("user_name")?.value;
-  if (!userName) notFound();
+  const decodedUser = getCurrentUser();
+  if (!decodedUser) notFound();
+
+  if (!(await isAdminUser(decodedUser))) notFound();
 
   const supabase = createClient();
-  const decodedUser = decodeURIComponent(userName);
-
-  const { data: adminUser } = await supabase
-    .from("users")
-    .select("user_name")
-    .eq("id", ADMIN_USER_ID)
-    .single();
-
-  if (!adminUser || adminUser.user_name !== decodedUser) {
-    notFound();
-  }
-
-  const adminName = adminUser.user_name;
+  const adminName = decodedUser;
 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - 30);

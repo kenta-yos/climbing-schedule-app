@@ -40,11 +40,12 @@ export function GymsClient({
   const [sortTab, setSortTab] = useState<SortTab>(initialSort ?? "distance");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  // 無限スクロール用
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
+  // 無限スクロール用。sentinel のマウント・アンマウント時だけ監視を張り替える
+  // （依存配列なしの useEffect だと毎レンダリングで作り直しになるため callback ref を使う）
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const sentinelRef = useCallback((node: HTMLDivElement | null) => {
+    observerRef.current?.disconnect();
+    if (!node) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -53,9 +54,12 @@ export function GymsClient({
       },
       { rootMargin: "200px" }
     );
-    observer.observe(el);
-    return () => observer.disconnect();
-  });
+    observer.observe(node);
+    observerRef.current = observer;
+  }, []);
+
+  // アンマウント時に監視を解除する
+  useEffect(() => () => observerRef.current?.disconnect(), []);
 
   // 起動時に現在地を自動取得
   useEffect(() => {

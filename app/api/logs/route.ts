@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getTodayJST, getNowJST, toJSTDateString } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,15 +11,10 @@ export async function GET(request: NextRequest) {
 
     if (mode === "home") {
       // トップページ用：今日以降の全予定 + 今月の実績
-      const now = new Date();
-      const toJST = (d: Date) =>
-        d.toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })
-          .replace(/\//g, "-")
-          .replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, day) => `${y}-${m.padStart(2,"0")}-${day.padStart(2,"0")}`);
-      const today = toJST(now);
+      const today = getTodayJST();
       // 先月1日から取得（ランキングの先月タブ用）
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const monthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`;
+      const now = getNowJST();
+      const monthStart = toJSTDateString(new Date(now.getFullYear(), now.getMonth() - 1, 1));
 
       const [plansRes, logsRes] = await Promise.all([
         supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", today).order("date", { ascending: true }),

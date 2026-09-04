@@ -28,15 +28,9 @@ export type AnalyticsProps = {
 
 type Tab = "events" | "logs" | "actions" | "users";
 
-function formatJST(iso: string): string {
-  return new Date(iso).toLocaleString("ja-JP", {
-    timeZone: "Asia/Tokyo",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { formatJST as formatInJST } from "@/lib/utils";
+
+const formatJST = (iso: string) => formatInJST(iso, "MM/dd HH:mm");
 
 // ─── 共通UIパーツ ──────────────────────────────────────────────────────────────
 

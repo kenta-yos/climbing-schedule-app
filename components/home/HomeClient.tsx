@@ -55,7 +55,7 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, ini
         const updated = await fetch("/api/shifts").then((r) => r.json());
         setShifts(updated);
         setShiftFormOpen(false);
-        toast({ title: "🍺 シフトを登録しました！", variant: "success" as any });
+        toast({ title: "🍺 シフトを登録しました！", variant: "success" });
       } else {
         toast({ title: "登録に失敗しました", variant: "destructive" });
       }

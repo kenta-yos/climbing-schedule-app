@@ -1,9 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { PlanPageClient } from "@/components/home/PlanPageClient";
+import { requireUser } from "@/lib/auth";
 import { getTodayJST, getDateOffsetJST } from "@/lib/utils";
-import { addPageView } from "@/lib/supabase/queries";
+import { trackAction } from "@/lib/analytics";
 import type { ClimbingLog, GymMaster, User } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +12,7 @@ type Props = {
 };
 
 export default async function PlanPage({ searchParams }: Props) {
-  const cookieStore = cookies();
-  const userName = cookieStore.get("user_name")?.value;
-  if (!userName) redirect("/");
-  const decodedUser = decodeURIComponent(userName);
+  const decodedUser = requireUser();
 
   const supabase = createClient();
 
@@ -71,7 +67,7 @@ export default async function PlanPage({ searchParams }: Props) {
     groupMembers = (groupRes.data || []) as ClimbingLog[];
   }
 
-  addPageView(decodedUser, "plan").catch(() => {});
+  trackAction(decodedUser, "plan");
 
   return (
     // key を editId（または "new"）にすることで、編集対象が変わるたびに

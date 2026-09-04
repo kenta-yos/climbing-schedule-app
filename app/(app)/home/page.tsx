@@ -1,25 +1,20 @@
 import { HomeClient } from "@/components/home/HomeClient";
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth";
+import { getTodayJST, getNowJST, toJSTDateString } from "@/lib/utils";
+import { trackAction } from "@/lib/analytics";
 import type { ClimbingLog, User, Announcement, WorkShift } from "@/lib/supabase/queries";
-import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const cookieStore = cookies();
-  const userName = cookieStore.get("user_name")?.value;
-  if (!userName) redirect("/");
-
-  const decodedUser = decodeURIComponent(userName);
+  const decodedUser = requireUser();
 
   const supabase = createClient();
 
-  const todayStr = new Date().toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" }).replace(/\//g, "-").replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, d) => `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`);
-  const nowDate = new Date();
-  const lastMonth = new Date(nowDate.getFullYear(), nowDate.getMonth() - 1, 1);
-  const monthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`;
+  const todayStr = getTodayJST();
+  const now = getNowJST();
+  const monthStart = toJSTDateString(new Date(now.getFullYear(), now.getMonth() - 1, 1));
 
   const [futurePlansRes, monthlyLogsRes, usersRes, announcementsRes, shiftsRes] = await Promise.all([
     supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", todayStr).order("date", { ascending: true }),
@@ -31,7 +26,7 @@ export default async function HomePage() {
 
   const initialLogs = [...(futurePlansRes.data || []), ...(monthlyLogsRes.data || [])];
 
-  addPageView(decodedUser, "home").catch(() => {});
+  trackAction(decodedUser, "home");
 
   return (
     <HomeClient

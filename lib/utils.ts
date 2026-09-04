@@ -19,15 +19,22 @@ export function formatJST(date: Date | string, fmt: string): string {
   return tzFormat(toZonedTime(d, TZ), fmt, { timeZone: TZ });
 }
 
+// Date を日本時間の YYYY-MM-DD 文字列に変換
+export function toJSTDateString(date: Date): string {
+  return formatJST(date, "yyyy-MM-dd");
+}
+
 // 今日の日本日付文字列 (YYYY-MM-DD)
 export function getTodayJST(): string {
-  return formatJST(new Date(), "yyyy-MM-dd");
+  return toJSTDateString(new Date());
 }
 
 // N日後の日本日付文字列 (YYYY-MM-DD)  ※負数で過去
+// 現在時刻（絶対時刻）に日数を加算してから日本時間の日付を読む。
+// getNowJST() の戻り値に加算すると、タイムゾーン変換が二重にかかり
+// JST 15時以降で1日ずれるため、ここでは使わない。
 export function getDateOffsetJST(offsetDays: number): string {
-  const d = new Date(getNowJST().getTime() + offsetDays * 24 * 60 * 60 * 1000);
-  return tzFormat(toZonedTime(d, TZ), "yyyy-MM-dd", { timeZone: TZ });
+  return toJSTDateString(new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000));
 }
 
 // 明日の日本日付文字列 (YYYY-MM-DD)
@@ -40,19 +47,6 @@ export function formatMMDD(dateStr: string): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   return tzFormat(toZonedTime(d, TZ), "M/d", { timeZone: TZ });
-}
-
-// 月選択用のリスト生成 (過去6ヶ月〜翌月)
-export function getMonthOptions(): { value: string; label: string }[] {
-  const now = getNowJST();
-  const options = [];
-  for (let i = -6; i <= 2; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    const value = tzFormat(toZonedTime(d, TZ), "yyyy-MM", { timeZone: TZ });
-    const label = tzFormat(toZonedTime(d, TZ), "yyyy年M月", { timeZone: TZ });
-    options.push({ value, label });
-  }
-  return options.reverse();
 }
 
 // 日数差計算

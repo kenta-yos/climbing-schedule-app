@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getTodayJST } from "@/lib/utils";
 
 export async function GET() {
   try {
     const supabase = createClient();
-    const today = new Date().toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })
-      .replace(/\//g, "-")
-      .replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, d) => `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`);
+    const today = getTodayJST();
     const { data, error } = await supabase
       .from("work_shifts")
       .select("*")

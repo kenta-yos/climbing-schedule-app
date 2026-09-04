@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-function getTodayJST(): string {
-  return new Date().toLocaleDateString("ja-JP", { timeZone: "Asia/Tokyo" })
-    .replace(/\//g, "-")
-    .replace(/(\d+)-(\d+)-(\d+)/, (_, y, m, d) => `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`);
-}
+import { getTodayJST } from "@/lib/utils";
 
 export async function GET(request: NextRequest) {
   try {

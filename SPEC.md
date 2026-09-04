@@ -54,9 +54,9 @@
 
 ### アクセス制御の2段構え
 
-ミドルウェアが `/home` `/dashboard` `/gyms` `/admin` 以下を保護し、Cookie が無ければログイン画面へリダイレクトします。各ページのサーバーコンポーネントでも同じ判定を再度行い、Cookie が無ければ `redirect` します。
+ミドルウェアが `/home` `/dashboard` `/gyms` `/admin` 以下を保護し、Cookie が無ければログイン画面へリダイレクトします。各ページのサーバーコンポーネントでも `lib/auth.ts` の `requireUser()` で同じ判定を再度行います。
 
-管理者判定はこれとは別で、`users` テーブルの特定の `id`（UUID をソース内に直書き）を引き、その行の `user_name` が Cookie の値と一致するかで判定します。管理者だけがお知らせタブ、ユーザー管理タブ、分析ダッシュボードにアクセスできます。分析ダッシュボードは非管理者に対して `notFound()` を返し、存在自体を隠します。
+管理者判定はこれとは別で、`users` テーブルの特定の `id`（`lib/constants.ts` の `ADMIN_USER_ID`）を引き、その行の `user_name` が Cookie の値と一致するかで判定します（`isAdminUser()`）。管理者だけがお知らせタブ、ユーザー管理タブ、分析ダッシュボードにアクセスできます。分析ダッシュボードは非管理者に対して `notFound()` を返し、存在自体を隠します。
 
 ---
 
@@ -275,7 +275,7 @@ Supabase の PostgreSQL に 8 テーブル。外部キー制約は使わず、�
 |---|---|
 | PWA | standalone 表示、縦向き固定、開始 URL は `/home`。Service Worker は開発時は無効。静的 JS と RSC ペイロードは Network First でキャッシュする |
 | iOS 対応 | ノッチと Dynamic Island、ホームバーに合わせて safe-area を全画面で確保。ズーム禁止 |
-| 日時 | date-fns-tz で Asia/Tokyo に固定。ただしサーバー側は `toLocaleDateString("ja-JP")` で各ファイルに個別実装されている |
+| 日時 | date-fns-tz で Asia/Tokyo に固定。変換は `lib/utils.ts` に集約し、サーバー・クライアント双方から利用する |
 | 表示幅 | 本文は最大 512px の 1 カラム。モバイル専用でデスクトップ最適化は無い |
 | 配色 | オレンジからマゼンタへのグラデーションがブランド色。ダークモード非対応 |
 | フォント | Noto Sans JP を next/font でセルフホスト |
@@ -312,11 +312,11 @@ Supabase の PostgreSQL に 8 テーブル。外部キー制約は使わず、�
 
 全テーブルが名前の文字列で参照し合っています。管理画面にユーザー名の変更機能は無いため今は顕在化しませんが、ジム名の変更は同じ問題を起こします。
 
-### 軽微 — 使われていないコード
+### 軽微 — 計測テーブルへの書き込みが読まれていない
 
 ログイン時に書き込む `access_logs` テーブルは、読み出す側がありません。
 
-以下は削除済みです。未参照コンポーネント 4 つ（予定入力フォームの旧モーダル版と、shadcn/ui 由来の radio-group・separator・skeleton）、`lib` の未参照 export 18 件、未使用 npm パッケージ 6 つ（`swr` と Radix の dropdown-menu・label・radio-group・separator・toggle）、そしてセット替え機能一式（`/schedule` 画面、管理画面のセット登録タブ、ジム一覧の新セット順ソートとセット関連表示）。
+デッドコードは削除済みです。未参照コンポーネント 4 つ（予定入力フォームの旧モーダル版と、shadcn/ui 由来の radio-group・separator・skeleton）、`lib` の未参照 export 18 件、未使用 npm パッケージ 6 つ（`swr` と Radix の dropdown-menu・label・radio-group・separator・toggle）、そしてセット替え機能一式（`/schedule` 画面、管理画面のセット登録タブ、ジム一覧の新セット順ソートとセット関連表示）。
 
 ### 軽微 — ジム一覧が毎回すべてのログを読む
 

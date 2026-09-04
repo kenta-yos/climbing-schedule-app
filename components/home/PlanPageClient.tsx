@@ -214,7 +214,7 @@ export function PlanPageClient({
         }
 
         trackAction(userName, "plan", `plan_updated|${date}|${gymNameForDB}|${selectedCompanions.join(",")}`);
-        toast({ title: "📅 予定を更新しました！", variant: "success" as any });
+        toast({ title: "📅 予定を更新しました！", variant: "success" });
         await revalidateSchedulePages();
         router.push("/home");
       } catch (err) {
@@ -281,7 +281,7 @@ export function PlanPageClient({
           title: type === "予定"
             ? `📅 予定を登録しました！${companionMsg}`
             : `🧗 実績を登録しました！${companionMsg}`,
-          variant: "success" as any,
+          variant: "success",
         });
         await revalidateSchedulePages();
         router.push("/home");
@@ -299,7 +299,7 @@ export function PlanPageClient({
     try {
       await deleteClimbingLog(editLog.id);
       trackAction(userName, "plan", `plan_deleted|${editLog.date.split("T")[0]}|${editLog.gym_name}`);
-      toast({ title: "🗑️ 予定を削除しました", variant: "success" as any });
+      toast({ title: "🗑️ 予定を削除しました", variant: "success" });
       await revalidateSchedulePages();
       router.push("/home");
     } catch (err) {

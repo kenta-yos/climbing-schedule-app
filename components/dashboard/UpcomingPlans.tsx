@@ -36,7 +36,7 @@ export function UpcomingPlans({ logs, onDeleted }: Props) {
     setDeletingId(id);
     try {
       await deleteClimbingLog(id);
-      toast({ title: "予定を削除しました", variant: "success" as any });
+      toast({ title: "予定を削除しました", variant: "success" });
       onDeleted();
     } catch {
       toast({ title: "削除に失敗しました", variant: "destructive" });

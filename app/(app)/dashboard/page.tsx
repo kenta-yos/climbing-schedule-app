@@ -1,26 +1,20 @@
 import { MyPageClient } from "@/components/dashboard/MyPageClient";
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { getNowJST } from "@/lib/utils";
+import { requireUser } from "@/lib/auth";
+import { getNowJST, toJSTDateString } from "@/lib/utils";
+import { trackAction } from "@/lib/analytics";
 import type { ClimbingLog, User, GymMaster } from "@/lib/supabase/queries";
-import { addPageView } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const cookieStore = cookies();
-  const userName = cookieStore.get("user_name")?.value;
-  if (!userName) redirect("/");
-
-  const decodedUser = decodeURIComponent(userName);
+  const decodedUser = requireUser();
 
   const supabase = createClient();
 
   // 先月1日を算出（ランキング用の範囲起点）
   const now = getNowJST();
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01`;
+  const lastMonthStr = toJSTDateString(new Date(now.getFullYear(), now.getMonth() - 1, 1));
 
   // 並列でデータ取得
   const [myLogsRes, rankingLogsRes, usersRes, gymsRes] = await Promise.all([
@@ -44,7 +38,7 @@ export default async function DashboardPage() {
   ]);
 
   // ページビュー記録（非同期・fire-and-forget）
-  addPageView(decodedUser, "dashboard").catch(() => {});
+  trackAction(decodedUser, "dashboard");
 
   return (
     <MyPageClient

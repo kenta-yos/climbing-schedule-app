@@ -88,7 +88,7 @@ function JoinPanel({
         time_slot: selectedSlot as "昼" | "夕方" | "夜",
         join_dinner: joinDinner,
       });
-      toast({ title: "📅 参加登録しました！", variant: "success" as any });
+      toast({ title: "📅 参加登録しました！", variant: "success" });
       trackAction(currentUser, "home", `plan_joined|${date}|${gymName}`);
       onJoined();
     } catch {
