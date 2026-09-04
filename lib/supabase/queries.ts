@@ -54,12 +54,6 @@ export type WorkShift = {
   created_at: string;
 };
 
-export type AccessLog = {
-  id: string;
-  user_name: string;
-  created_at: string;
-};
-
 export type Announcement = {
   id: string;
   content: string;
@@ -67,62 +61,6 @@ export type Announcement = {
   created_by: string;
   created_at: string;
 };
-
-
-// ユーザー一覧取得
-export async function getUsers(): Promise<User[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .order("user_name");
-  if (error) throw error;
-  return data || [];
-}
-
-// クライミングログ取得
-export async function getClimbingLogs(): Promise<ClimbingLog[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("climbing_logs")
-    .select("*")
-    .order("date", { ascending: true });
-  if (error) throw error;
-  return data || [];
-}
-
-// ジムマスター取得
-export async function getGyms(): Promise<GymMaster[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("gym_master")
-    .select("*")
-    .order("gym_name");
-  if (error) throw error;
-  return data || [];
-}
-
-// エリアマスター取得
-export async function getAreas(): Promise<AreaMaster[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("area_master")
-    .select("*")
-    .order("area_tag");
-  if (error) throw error;
-  return data || [];
-}
-
-// セットスケジュール取得
-export async function getSetSchedules(): Promise<SetSchedule[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("set_schedules")
-    .select("*")
-    .order("start_date", { ascending: true });
-  if (error) throw error;
-  return data || [];
-}
 
 // クライミングログ追加
 export async function addClimbingLog(log: Omit<ClimbingLog, "id" | "created_at">): Promise<void> {
@@ -148,20 +86,6 @@ export async function updateClimbingLog(
   if (error) throw error;
 }
 
-// ジムのlat/lng更新
-export async function updateGymLocation(
-  gymName: string,
-  lat: number | null,
-  lng: number | null
-): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("gym_master")
-    .update({ lat, lng })
-    .eq("gym_name", gymName);
-  if (error) throw error;
-}
-
 // ジム追加
 export async function addGym(gym: Omit<GymMaster, "created_at">): Promise<void> {
   const supabase = createClient();
@@ -176,19 +100,6 @@ export async function addSetSchedules(schedules: Omit<SetSchedule, "id" | "creat
   if (error) throw error;
 }
 
-// 1年以上前のセットスケジュールを削除
-export async function deleteOldSetSchedules(): Promise<void> {
-  const supabase = createClient();
-  const oneYearAgo = new Date();
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  const cutoff = oneYearAgo.toISOString().slice(0, 10);
-  const { error } = await supabase
-    .from("set_schedules")
-    .delete()
-    .lt("start_date", cutoff);
-  if (error) throw error;
-}
-
 // アクセスログ追加
 export async function addAccessLog(userName: string): Promise<void> {
   const supabase = createClient();
@@ -200,49 +111,6 @@ export async function addAccessLog(userName: string): Promise<void> {
 export async function addPageView(userName: string, page: string, action?: string): Promise<void> {
   const supabase = createClient();
   await supabase.from("page_views").insert({ user_name: userName, page, action: action ?? null });
-}
-
-// 同グループ（同日・同ジム・同時間帯）の他ユーザーのログを取得
-export async function getGroupLogs(
-  date: string,
-  gymName: string,
-  timeSlot: string,
-  excludeUser: string
-): Promise<ClimbingLog[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("climbing_logs")
-    .select("*")
-    .eq("date", date)
-    .eq("gym_name", gymName)
-    .eq("time_slot", timeSlot)
-    .eq("type", "予定")
-    .neq("user", excludeUser);
-  if (error) throw error;
-  return data || [];
-}
-
-// 特定ユーザーの変更後日付・ジム・時間帯に既存の予定があるか確認（重複チェック）
-export async function getConflictingLog(
-  user: string,
-  date: string,
-  gymName: string,
-  timeSlot: string,
-  excludeId: string
-): Promise<ClimbingLog | null> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("climbing_logs")
-    .select("*")
-    .eq("user", user)
-    .eq("date", date)
-    .eq("gym_name", gymName)
-    .eq("time_slot", timeSlot)
-    .eq("type", "予定")
-    .neq("id", excludeId)
-    .limit(1);
-  if (error || !data || data.length === 0) return null;
-  return data[0];
 }
 
 // 自分自身の重複チェック（同日・同時間帯・同種別）

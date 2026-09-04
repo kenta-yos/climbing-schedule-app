@@ -35,31 +35,11 @@ export function getTomorrowJST(): string {
   return getDateOffsetJST(1);
 }
 
-// 今月の開始/終了 (日本時間)
-export function getCurrentMonthRange(): { start: string; end: string } {
-  const now = getNowJST();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const start = new Date(year, month, 1);
-  const end = new Date(year, month + 1, 0);
-  return {
-    start: tzFormat(toZonedTime(start, TZ), "yyyy-MM-dd", { timeZone: TZ }),
-    end: tzFormat(toZonedTime(end, TZ), "yyyy-MM-dd", { timeZone: TZ }),
-  };
-}
-
 // 日付をMM/DD形式に変換
 export function formatMMDD(dateStr: string): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   return tzFormat(toZonedTime(d, TZ), "M/d", { timeZone: TZ });
-}
-
-// 日付をYYYY年M月D日形式に変換
-export function formatJapaneseDate(dateStr: string): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  return tzFormat(toZonedTime(d, TZ), "yyyy年M月d日", { timeZone: TZ });
 }
 
 // 月選択用のリスト生成 (過去6ヶ月〜翌月)
