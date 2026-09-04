@@ -106,7 +106,7 @@ export function AdminClient({
         )}
 
         {tab === "users" && isAdmin && (
-          <UsersTab initialUsers={initialUsers} />
+          <UsersTab initialUsers={initialUsers} currentUser={currentUser} />
         )}
 
         {/* ログアウト */}

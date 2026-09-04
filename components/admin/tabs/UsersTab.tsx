@@ -1,20 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/hooks/use-toast";
+import { useUserStore } from "@/lib/store/useUserStore";
 import { Trash2, Pencil } from "lucide-react";
 import type { User } from "@/lib/supabase/queries";
 
 type Props = {
   initialUsers: User[];
+  /** ログイン中のユーザー名。自分を改名したときにログイン情報を更新するため */
+  currentUser: string;
 };
 
-export function UsersTab({ initialUsers }: Props) {
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
+function setCookie(name: string, value: string) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${COOKIE_MAX_AGE}; SameSite=Lax`;
+}
+
+export function UsersTab({ initialUsers, currentUser }: Props) {
+  const router = useRouter();
+  const setUser = useUserStore((s) => s.setUser);
   // ---- ユーザー管理 ----
   const [userList, setUserList] = useState<User[]>(initialUsers);
   const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("");
   const [editIcon, setEditIcon] = useState("");
   const [newUserName, setNewUserName] = useState("");
@@ -24,23 +37,60 @@ export function UsersTab({ initialUsers }: Props) {
   // ---- ユーザー編集処理 ----
   const handleStartEdit = (user: User) => {
     setEditingUser(user.user_name);
+    setEditName(user.user_name);
     setEditColor(user.color);
     setEditIcon(user.icon);
   };
 
   const handleSaveUser = async (userName: string) => {
+    const trimmedName = editName.trim();
+    const trimmedIcon = editIcon.trim();
+    if (!trimmedName) {
+      toast({ title: "名前を入力してください", variant: "destructive" });
+      return;
+    }
+    if (!trimmedIcon) {
+      toast({ title: "アイコンを入力してください", variant: "destructive" });
+      return;
+    }
+
     setSubmittingUser(true);
     try {
       const res = await fetch("/api/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_name: userName, color: editColor, icon: editIcon }),
+        body: JSON.stringify({
+          user_name: userName,
+          new_user_name: trimmedName,
+          color: editColor,
+          icon: trimmedIcon,
+        }),
       });
-      if (!res.ok) throw new Error();
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast({ title: body?.error ?? "更新に失敗しました", variant: "destructive" });
+        return;
+      }
+
+      const savedName: string = body?.user_name ?? trimmedName;
       setUserList((prev) =>
-        prev.map((u) => u.user_name === userName ? { ...u, color: editColor, icon: editIcon } : u)
+        prev.map((u) =>
+          u.user_name === userName
+            ? { ...u, user_name: savedName, color: editColor, icon: trimmedIcon }
+            : u
+        )
       );
       setEditingUser(null);
+
+      // 自分自身を編集した場合はログイン情報も更新する
+      if (userName === currentUser) {
+        setUser(savedName, editColor, trimmedIcon);
+        setCookie("user_name", savedName);
+        setCookie("user_color", editColor);
+        setCookie("user_icon", trimmedIcon);
+        router.refresh();
+      }
+
       toast({ title: "ユーザーを更新しました", variant: "success" });
     } catch {
       toast({ title: "更新に失敗しました", variant: "destructive" });
@@ -162,6 +212,20 @@ export function UsersTab({ initialUsers }: Props) {
                           {editIcon || "?"}
                         </div>
                         <span className="text-sm font-semibold text-gray-800">{user.user_name}</span>
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-gray-500 block mb-1">名前</label>
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="text-sm"
+                          maxLength={20}
+                        />
+                        {editName.trim() !== user.user_name && (
+                          <p className="text-[11px] text-amber-600 mt-1 leading-relaxed">
+                            過去の予定・実績もすべて新しい名前に付け替えます。
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-end gap-3">
                         <div>
