@@ -121,6 +121,15 @@ export function AdminClient({ gyms, areas, currentUser, isAdmin, announcements: 
       toast({ title: "ジム名を入力してください", variant: "destructive" });
       return;
     }
+    const url = gymUrl.trim();
+    if (!url) {
+      toast({ title: "Instagram か公式サイトの URL を入力してください", variant: "destructive" });
+      return;
+    }
+    if (!/^https?:\/\/.+/i.test(url)) {
+      toast({ title: "URL は https:// から始まる形式で入力してください", variant: "destructive" });
+      return;
+    }
     if (!gymAreaTag) {
       toast({ title: "エリアを選択してください", variant: "destructive" });
       return;
@@ -133,7 +142,7 @@ export function AdminClient({ gyms, areas, currentUser, isAdmin, announcements: 
     try {
       await addGym({
         gym_name: gymName.trim(),
-        profile_url: gymUrl.trim() || null,
+        profile_url: url,
         area_tag: gymAreaTag,
         created_by: currentUser,
         lat: geoResult.lat,
@@ -331,7 +340,10 @@ export function AdminClient({ gyms, areas, currentUser, isAdmin, announcements: 
 
               {/* ジム名 */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1.5 block">ジム名</label>
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">
+                  ジム名
+                  <span className="ml-1 text-red-400 font-semibold">*</span>
+                </label>
                 <Input
                   value={gymName}
                   onChange={(e) => setGymName(e.target.value)}
@@ -339,20 +351,31 @@ export function AdminClient({ gyms, areas, currentUser, isAdmin, announcements: 
                 />
               </div>
 
-              {/* Instagram/URL */}
+              {/* Instagram / 公式サイト（必須） */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Instagram/URL（任意）</label>
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">
+                  Instagram
+                  <span className="ml-1 text-red-400 font-semibold">*</span>
+                </label>
                 <Input
                   value={gymUrl}
                   onChange={(e) => setGymUrl(e.target.value)}
                   placeholder="https://www.instagram.com/..."
                   type="url"
+                  inputMode="url"
+                  autoComplete="off"
                 />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Instagram が無いジムは X や Facebook、公式サイトの URL でも構いません
+                </p>
               </div>
 
               {/* エリア */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1.5 block">エリア</label>
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">
+                  エリア
+                  <span className="ml-1 text-red-400 font-semibold">*</span>
+                </label>
                 <div className="grid grid-cols-2 gap-1.5">
                   {areas.map((area) => (
                     <button

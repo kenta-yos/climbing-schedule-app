@@ -159,11 +159,11 @@ export function PlanPageClient({
         );
         if (newCompanions.length > 0) {
           const conflicting = await getCompanionConflicts(
-            newCompanions, date, gymNameForDB, "予定", timeSlot
+            newCompanions, date, "予定", timeSlot
           );
           if (conflicting.length > 0) {
             toast({
-              title: `${conflicting.join("・")}さんはすでにこの日・ジム・時間帯のログがあります`,
+              title: `${conflicting.join("・")}さんはこの日の「${timeSlot}」にすでに予定があります`,
               variant: "destructive",
             });
             setSubmitting(false);
@@ -197,9 +197,7 @@ export function PlanPageClient({
       const isDuplicate = await checkDuplicateLog(userName, date, timeSlot, type);
       if (isDuplicate) {
         toast({
-          title: type === "予定"
-            ? "🙈 同じ予定がもうすでにあるよ！"
-            : "🙈 同じ日・ジム・時間帯の実績がもうすでにあるよ！",
+          title: `🙈 その日の「${timeSlot}」の${type}はもう登録してるよ！`,
           variant: "destructive",
         });
         return;
@@ -207,11 +205,11 @@ export function PlanPageClient({
       // 仲間の重複チェック
       if (selectedCompanions.length > 0) {
         const conflicting = await getCompanionConflicts(
-          selectedCompanions, date, gymNameForDB, type, timeSlot
+          selectedCompanions, date, type, timeSlot
         );
         if (conflicting.length > 0) {
           toast({
-            title: `${conflicting.join("・")}さんはすでにこの日・ジム・時間帯のログがあります`,
+            title: `${conflicting.join("・")}さんはこの日の「${timeSlot}」にすでに${type}があります`,
             variant: "destructive",
           });
           return;

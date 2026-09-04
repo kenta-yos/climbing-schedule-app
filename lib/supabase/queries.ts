@@ -97,7 +97,10 @@ export async function addPageView(userName: string, page: string, action?: strin
   await supabase.from("page_views").insert({ user_name: userName, page, action: action ?? null });
 }
 
-// 自分自身の重複チェック（同日・同時間帯・同種別）
+// 重複チェックの共通ルール：同一ユーザー・同日・同時間帯・同種別で 1 件まで。
+// 同じ時間帯に複数のジムへは行けないため、ジム名は条件に含めない。
+
+// 自分自身の重複チェック
 export async function checkDuplicateLog(
   user: string,
   date: string,
@@ -116,11 +119,10 @@ export async function checkDuplicateLog(
   return (data?.length ?? 0) > 0;
 }
 
-// 仲間の重複チェック（同日・同ジム・同種別・同時間帯）→ 既に持っているユーザー名の配列を返す
+// 仲間の重複チェック → 既にログを持っているユーザー名の配列を返す
 export async function getCompanionConflicts(
   companions: string[],
   date: string,
-  gymName: string,
   type: "予定" | "実績",
   timeSlot: string
 ): Promise<string[]> {
@@ -131,7 +133,6 @@ export async function getCompanionConflicts(
     .select("user")
     .in("user", companions)
     .eq("date", date)
-    .eq("gym_name", gymName)
     .eq("type", type)
     .eq("time_slot", timeSlot);
   return (data || []).map((l: { user: string }) => l.user);

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatMMDD, getTodayJST, getTomorrowJST } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
 import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
-import { addClimbingLog } from "@/lib/supabase/queries";
+import { addClimbingLog, checkDuplicateLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { trackAction } from "@/lib/analytics";
 import { Input } from "@/components/ui/input";
@@ -52,14 +52,12 @@ function JoinPanel({
   date,
   gymName,
   currentUser,
-  existingLogs, // このジム+日のログ一覧（重複チェック用）
   onCancel,
   onJoined,
 }: {
   date: string;
   gymName: string;
   currentUser: string;
-  existingLogs: ClimbingLog[];
   onCancel: () => void;
   onJoined: () => void;
 }) {
@@ -68,25 +66,19 @@ function JoinPanel({
   const [submitting, setSubmitting] = useState(false);
 
   const handleJoin = async () => {
-    // 二重登録チェック：同日・同ジム・同時間帯で自分の予定がすでにある
-    const duplicate = existingLogs.find(
-      (l) =>
-        l.user === currentUser &&
-        l.type === "予定" &&
-        l.date.split("T")[0] === date &&
-        l.gym_name === gymName &&
-        l.time_slot === selectedSlot
-    );
-    if (duplicate) {
+    // 二重登録チェック：同日・同時間帯で自分の予定がすでにある
+    // （同じ時間帯に複数のジムへは行けないため、ジム名は条件に含めない）
+    setSubmitting(true);
+    if (await checkDuplicateLog(currentUser, date, selectedSlot, "予定")) {
       toast({
-        title: "🙈 もうすでに登録してるよ！",
+        title: `🙈 その日の「${selectedSlot}」はもう予定が入ってるよ！`,
         variant: "destructive",
       });
+      setSubmitting(false);
       onCancel();
       return;
     }
 
-    setSubmitting(true);
     try {
       await addClimbingLog({
         date,
@@ -476,7 +468,6 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = []
                             date={dateStr}
                             gymName={gymName}
                             currentUser={currentUser}
-                            existingLogs={logs}
                             onCancel={() => setOpenJoinKey(null)}
                             onJoined={() => {
                               setOpenJoinKey(null);
@@ -567,7 +558,6 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = []
                             date={dateStr}
                             gymName={shift.gym_name}
                             currentUser={currentUser}
-                            existingLogs={logs}
                             onCancel={() => setOpenJoinKey(null)}
                             onJoined={() => { setOpenJoinKey(null); handleJoined(); }}
                           />
