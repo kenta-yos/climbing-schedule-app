@@ -1,5 +1,0 @@
-streamlit
-st-gsheets-connection
-plotly
-st-supabase-connection
-streamlit-option-menu
