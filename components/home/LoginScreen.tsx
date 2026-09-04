@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useUserStore } from "@/lib/store/useUserStore";
 import { addAccessLog } from "@/lib/supabase/queries";
@@ -13,7 +12,6 @@ type Props = {
 };
 
 export function LoginScreen({ users }: Props) {
-  const router = useRouter();
   const setUser = useUserStore((s) => s.setUser);
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -32,7 +30,10 @@ export function LoginScreen({ users }: Props) {
       document.cookie = `user_color=${encodeURIComponent(user.color)}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
       document.cookie = `user_icon=${encodeURIComponent(user.icon)}; path=/; max-age=${60 * 60 * 24 * 30}; SameSite=Lax`;
 
-      router.push("/home");
+      // ここは認証の境界なので、router.push ではなく通常のページ遷移を使う。
+      // Next.js のクライアントルーターキャッシュは動的ページを30秒保持するため、
+      // router.push だと直前のユーザーの画面がそのまま再利用されてしまう。
+      window.location.assign("/home");
     } catch (err) {
       console.error(err);
       toast({ title: "エラー", description: "ログインに失敗しました", variant: "destructive" });

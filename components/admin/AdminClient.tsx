@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ProfileTab } from "@/components/admin/tabs/ProfileTab";
@@ -31,7 +30,6 @@ export function AdminClient({
   announcements: initialAnnouncements = [],
   users: initialUsers = [],
 }: Props) {
-  const router = useRouter();
   const clearUser = useUserStore((s) => s.clearUser);
 
   // タブ管理（お知らせ・ユーザーは管理者のみ）
@@ -51,7 +49,9 @@ export function AdminClient({
     document.cookie = "user_name=; path=/; max-age=0";
     document.cookie = "user_color=; path=/; max-age=0";
     document.cookie = "user_icon=; path=/; max-age=0";
-    router.push("/");
+    // ログインと同じ理由で通常のページ遷移を使い、
+    // 前のユーザーのキャッシュを完全に捨てる。
+    window.location.assign("/");
   };
 
   return (
