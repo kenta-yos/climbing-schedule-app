@@ -433,6 +433,36 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = []
                             })}
                         </div>
 
+                        {/* メモ */}
+                        {(() => {
+                          const withMemo = gymLogs.filter((l) => l.memo?.trim());
+                          if (withMemo.length === 0) return null;
+                          return (
+                            <div className="mt-2 space-y-1">
+                              {withMemo.map((log) => {
+                                const user = userMap[log.user];
+                                return (
+                                  <div
+                                    key={log.id}
+                                    className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200"
+                                  >
+                                    <span className="text-[11px] leading-relaxed flex-shrink-0">📝</span>
+                                    <span
+                                      className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] flex-shrink-0 mt-px"
+                                      style={{ backgroundColor: user?.color || "#999" }}
+                                    >
+                                      {user?.icon || "?"}
+                                    </span>
+                                    <span className="text-[11px] text-slate-700 leading-relaxed flex-1 break-words">
+                                      {log.memo}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+
                         {/* ご飯の参加状況 */}
                         {(() => {
                           const dinnerGoing = gymLogs.filter((l) => l.join_dinner);

@@ -25,6 +25,9 @@ import { ChevronLeft, Search, X, Trash2, Loader2 } from "lucide-react";
 export const GYM_UNDECIDED = "__undecided__";
 export const GYM_UNDECIDED_LABEL = "ジム未定";
 
+// メモの最大文字数。トップのフィードに収まる長さに抑える。
+const MEMO_MAX_LENGTH = 50;
+
 type Props = {
   userName: string;
   gyms: GymMaster[];
@@ -75,6 +78,8 @@ export function PlanPageClient({
   const [isComp, setIsComp] = useState<boolean>(
     editLog?.is_comp ?? false
   );
+  // メモ（任意）
+  const [memo, setMemo] = useState<string>(editLog?.memo ?? "");
 
   // 編集モードで元々グループにいたメンバーはロック（外せない）
   const lockedCompanions = isEdit ? new Set(groupMembers.map((m) => m.user)) : new Set<string>();
@@ -187,6 +192,7 @@ export function PlanPageClient({
           with_friends: withFriends,
           join_dinner: joinDinner,
           is_comp: isComp,
+          memo: memo.trim() || null,
         });
 
         // 一緒に移動するメンバーのログも更新
@@ -257,6 +263,7 @@ export function PlanPageClient({
             with_friends: withFriends,
             join_dinner: joinDinner,
             is_comp: isComp,
+            memo: memo.trim() || null,
           }),
           ...selectedCompanions.map((companion) =>
             addClimbingLog({
@@ -621,6 +628,29 @@ export function PlanPageClient({
               {isComp && <span className="text-white text-xs leading-none">✓</span>}
             </span>
           </button>
+        </section>
+
+        {/* メモ（任意） */}
+        <section>
+          <label className="text-sm font-semibold text-gray-700 block mb-2">
+            📝 メモ{" "}
+            <span className="text-xs font-normal text-gray-400">（任意）</span>
+          </label>
+          <Input
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="例：19時に現地集合、はじめて行くジムです"
+            maxLength={MEMO_MAX_LENGTH}
+            className="text-base bg-white"
+          />
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-[11px] text-gray-400">
+              トップのみんなの予定に表示されます
+            </p>
+            <span className="text-[11px] text-gray-400 tabular-nums">
+              {memo.length}/{MEMO_MAX_LENGTH}
+            </span>
+          </div>
         </section>
       </div>
 
