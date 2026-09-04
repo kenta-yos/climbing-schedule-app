@@ -64,18 +64,11 @@ export function ProfileTab({ currentUser, users }: Props) {
       const body = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        // 改名に失敗した場合、サーバー側で変更は取り消されている
         toast({
           title: body?.error ?? "更新に失敗しました",
           variant: "destructive",
         });
-        // 名前だけ変わって履歴の追従に失敗した場合も、ログイン情報は合わせておく
-        if (body?.partial && body?.user_name) {
-          setUser(body.user_name, color, trimmedIcon);
-          setCookie("user_name", body.user_name);
-          setCookie("user_color", color);
-          setCookie("user_icon", trimmedIcon);
-          router.refresh();
-        }
         return;
       }
 

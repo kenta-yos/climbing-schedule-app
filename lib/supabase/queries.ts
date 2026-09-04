@@ -1,6 +1,7 @@
 import { createClient } from "./client";
 
 export type User = {
+  id: string;
   user_name: string;
   color: string;
   icon: string;

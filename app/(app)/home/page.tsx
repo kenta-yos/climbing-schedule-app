@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth";
 import { getTodayJST, getNowJST, toJSTDateString } from "@/lib/utils";
 import { trackAction } from "@/lib/analytics";
+import { SHIFT_USER_ID } from "@/lib/constants";
 import type { ClimbingLog, User, Announcement, WorkShift } from "@/lib/supabase/queries";
 
 export const dynamic = "force-dynamic";
@@ -25,16 +26,22 @@ export default async function HomePage() {
   ]);
 
   const initialLogs = [...(futurePlansRes.data || []), ...(monthlyLogsRes.data || [])];
+  const allUsers = (usersRes.data || []) as User[];
+
+  // シフト登録の可否は users.id で判定する。名前で判定すると改名で機能が消えるため。
+  const canRegisterShift =
+    allUsers.find((u) => u.user_name === decodedUser)?.id === SHIFT_USER_ID;
 
   trackAction(decodedUser, "home");
 
   return (
     <HomeClient
       initialLogs={initialLogs as ClimbingLog[]}
-      users={(usersRes.data || []) as User[]}
+      users={allUsers}
       currentUser={decodedUser}
       announcements={(announcementsRes.data || []) as Announcement[]}
       initialShifts={(shiftsRes.data || []) as WorkShift[]}
+      canRegisterShift={canRegisterShift}
     />
   );
 }

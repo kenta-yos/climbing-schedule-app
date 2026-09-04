@@ -10,14 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Loader2 } from "lucide-react";
 import { getTodayJST } from "@/lib/utils";
+import { SHIFT_GYM } from "@/lib/constants";
 import type { ClimbingLog, User, Announcement, WorkShift } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { trackAction } from "@/lib/analytics";
 
 const POLL_INTERVAL = 30_000;
 const PTR_THRESHOLD = 72;
-const SHIFT_GYM = "THE STONE SESSION TOKYO";
-const SHIFT_USER = "Dai";
 
 type Props = {
   initialLogs: ClimbingLog[];
@@ -25,9 +24,11 @@ type Props = {
   currentUser: string;
   announcements: Announcement[];
   initialShifts?: WorkShift[];
+  /** バイトシフトを登録できるユーザーか（users.id で判定済み） */
+  canRegisterShift?: boolean;
 };
 
-export function HomeClient({ initialLogs, users, currentUser, announcements, initialShifts = [] }: Props) {
+export function HomeClient({ initialLogs, users, currentUser, announcements, initialShifts = [], canRegisterShift = false }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
@@ -49,7 +50,7 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, ini
       const res = await fetch("/api/shifts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_name: SHIFT_USER, gym_name: SHIFT_GYM, date: shiftDate, start_time: shiftStart, end_time: shiftEnd }),
+        body: JSON.stringify({ user_name: currentUser, gym_name: SHIFT_GYM, date: shiftDate, start_time: shiftStart, end_time: shiftEnd }),
       });
       if (res.ok) {
         const updated = await fetch("/api/shifts").then((r) => r.json());
@@ -64,7 +65,7 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, ini
     } finally {
       setSubmittingShift(false);
     }
-  }, [shiftDate, shiftStart, shiftEnd]);
+  }, [shiftDate, shiftStart, shiftEnd, currentUser]);
 
   // pull-to-refresh state
   const [pullY, setPullY] = useState(0);         // 引っ張り量(px)
@@ -207,8 +208,8 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, ini
           )}
         </Button>
 
-        {/* Daiのシフト登録（Daiのみ） */}
-        {currentUser === SHIFT_USER && (
+        {/* バイトシフト登録（対象ユーザーのみ） */}
+        {canRegisterShift && (
           <div className="bg-emerald-50 rounded-2xl border border-emerald-200 overflow-hidden">
             <button
               onClick={() => setShiftFormOpen((v) => !v)}
