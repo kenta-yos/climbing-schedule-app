@@ -101,41 +101,48 @@ export async function addPageView(userName: string, page: string, action?: strin
 // 同じ時間帯に複数のジムへは行けないため、ジム名は条件に含めない。
 
 // 自分自身の重複チェック
+// excludeId: 編集中のログ自身は衝突判定から除く
 export async function checkDuplicateLog(
   user: string,
   date: string,
   timeSlot: string,
-  type: "予定" | "実績"
+  type: "予定" | "実績",
+  excludeId?: string
 ): Promise<boolean> {
   const supabase = createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("climbing_logs")
     .select("id")
     .eq("user", user)
     .eq("date", date)
     .eq("time_slot", timeSlot)
-    .eq("type", type)
-    .limit(1);
+    .eq("type", type);
+  if (excludeId) query = query.neq("id", excludeId);
+  const { data } = await query.limit(1);
   return (data?.length ?? 0) > 0;
 }
 
 // 仲間の重複チェック → 既にログを持っているユーザー名の配列を返す
+// excludeIds: 一緒に移動させる予定のログ自身は衝突判定から除く
 export async function getCompanionConflicts(
   companions: string[],
   date: string,
   type: "予定" | "実績",
-  timeSlot: string
+  timeSlot: string,
+  excludeIds: string[] = []
 ): Promise<string[]> {
   if (companions.length === 0) return [];
   const supabase = createClient();
   const { data } = await supabase
     .from("climbing_logs")
-    .select("user")
+    .select("id, user")
     .in("user", companions)
     .eq("date", date)
     .eq("type", type)
     .eq("time_slot", timeSlot);
-  return (data || []).map((l: { user: string }) => l.user);
+  return (data || [])
+    .filter((l: { id: string }) => !excludeIds.includes(l.id))
+    .map((l: { user: string }) => l.user);
 }
 
 // 複数のログを一括更新

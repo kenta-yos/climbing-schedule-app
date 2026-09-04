@@ -126,6 +126,59 @@ export function PlanPageClient({
     if (isEdit && editLog) {
       setSubmitting(true);
       try {
+        // 重複チェック：自分の別のログと衝突しないか（編集中のログ自身は除く）
+        if (await checkDuplicateLog(userName, date, timeSlot, editLog.type, editLog.id)) {
+          toast({
+            title: `🙈 その日の「${timeSlot}」の${editLog.type}はもう登録してるよ！`,
+            variant: "destructive",
+          });
+          setSubmitting(false);
+          return;
+        }
+
+        // 一緒に移動するメンバーの重複チェック（移動対象のログ自身は除く）
+        const movingMembers = groupMembers.filter((m) =>
+          selectedCompanions.includes(m.user)
+        );
+        if (movingMembers.length > 0) {
+          const movingConflicts = await getCompanionConflicts(
+            movingMembers.map((m) => m.user),
+            date,
+            editLog.type,
+            timeSlot,
+            movingMembers.map((m) => m.id)
+          );
+          if (movingConflicts.length > 0) {
+            toast({
+              title: `${movingConflicts.join("・")}さんはこの日の「${timeSlot}」にすでに${editLog.type}があります`,
+              variant: "destructive",
+            });
+            setSubmitting(false);
+            return;
+          }
+        }
+
+        // 新たに追加された仲間（元グループにいなかった人）の重複チェック
+        const originalUserNames = groupMembers.map((m) => m.user);
+        const newCompanions = selectedCompanions.filter(
+          (name) => !originalUserNames.includes(name)
+        );
+        if (newCompanions.length > 0) {
+          const conflicting = await getCompanionConflicts(
+            newCompanions, date, editLog.type, timeSlot
+          );
+          if (conflicting.length > 0) {
+            toast({
+              title: `${conflicting.join("・")}さんはこの日の「${timeSlot}」にすでに${editLog.type}があります`,
+              variant: "destructive",
+            });
+            setSubmitting(false);
+            return;
+          }
+        }
+
+        // ここから書き込み（すべての重複チェックを通過した後）
+
         // 自分のログを更新
         await updateClimbingLog(editLog.id, {
           date,
@@ -136,46 +189,23 @@ export function PlanPageClient({
           is_comp: isComp,
         });
 
-        // 元々のグループメンバーのうち、まだ選択されているメンバーのログも更新
-        const originalGroupByUser: Record<string, ClimbingLog> = {};
-        for (const m of groupMembers) {
-          originalGroupByUser[m.user] = m;
-        }
-        const originalUserNames = groupMembers.map((m) => m.user);
-
-        const stillSelectedFromGroup = groupMembers.filter((m) =>
-          selectedCompanions.includes(m.user)
-        );
-        if (stillSelectedFromGroup.length > 0) {
+        // 一緒に移動するメンバーのログも更新
+        if (movingMembers.length > 0) {
           await updateClimbingLogsBulk(
-            stillSelectedFromGroup.map((m) => m.id),
+            movingMembers.map((m) => m.id),
             { date, gym_name: gymNameForDB, time_slot: timeSlot as "昼" | "夕方" | "夜" }
           );
         }
 
-        // 新たに追加された仲間（元グループにいなかった人）のログを作成
-        const newCompanions = selectedCompanions.filter(
-          (name) => !originalUserNames.includes(name)
-        );
+        // 新たに追加された仲間のログを作成
         if (newCompanions.length > 0) {
-          const conflicting = await getCompanionConflicts(
-            newCompanions, date, "予定", timeSlot
-          );
-          if (conflicting.length > 0) {
-            toast({
-              title: `${conflicting.join("・")}さんはこの日の「${timeSlot}」にすでに予定があります`,
-              variant: "destructive",
-            });
-            setSubmitting(false);
-            return;
-          }
           await Promise.all(
             newCompanions.map((companion) =>
               addClimbingLog({
                 date,
                 gym_name: gymNameForDB,
                 user: companion,
-                type: "予定",
+                type: editLog.type,
                 time_slot: timeSlot as "昼" | "夕方" | "夜",
                 with_friends: false,
               })
