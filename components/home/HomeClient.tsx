@@ -190,9 +190,9 @@ export function HomeClient({ initialLogs, users, currentUser, announcements, ini
 
       <PageHeader title="Go Bouldering" icon="/icon-192.png" heroImage="/hero.jpg" />
 
-      <AnnouncementBanner announcements={announcements} />
-
       <div className="px-4 py-4 space-y-6 page-enter">
+        <AnnouncementBanner announcements={announcements} />
+
         {/* 記録ボタン → /home/plan へ遷移 */}
         <Button
           onClick={() => { trackAction(currentUser, "home", "record_tapped"); setNavigatingRecord(true); router.push("/home/plan"); }}
