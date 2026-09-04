@@ -636,13 +636,25 @@ export function PlanPageClient({
             📝 メモ{" "}
             <span className="text-xs font-normal text-gray-400">（任意）</span>
           </label>
-          <Input
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            placeholder="例：19時に現地集合、はじめて行くジムです"
-            maxLength={MEMO_MAX_LENGTH}
-            className="text-base bg-white"
-          />
+          <div className="relative">
+            <Input
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+              placeholder="例：19時に現地集合、はじめて行くジムです"
+              maxLength={MEMO_MAX_LENGTH}
+              className="text-base bg-white pr-10"
+            />
+            {memo && (
+              <button
+                type="button"
+                onClick={() => setMemo("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                aria-label="メモを消す"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
           <div className="flex items-center justify-between mt-1">
             <p className="text-[11px] text-gray-400">
               トップのみんなの予定に表示されます
