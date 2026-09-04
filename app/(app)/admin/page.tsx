@@ -2,7 +2,7 @@ import { AdminClient } from "@/components/admin/AdminClient";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { GymMaster, AreaMaster, SetSchedule, Announcement, User } from "@/lib/supabase/queries";
+import type { GymMaster, AreaMaster, Announcement, User } from "@/lib/supabase/queries";
 import { addPageView } from "@/lib/supabase/queries";
 
 const ADMIN_USER_ID = "8779bd4c-be62-49af-9a74-2fa035079ca9";
@@ -16,18 +16,11 @@ export default async function AdminPage() {
 
   const supabase = createClient();
 
-  // 1年以上前のセットスケジュールを自動削除（サイレント）
-  const oneYearAgo = new Date();
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-  const cutoff = oneYearAgo.toISOString().slice(0, 10);
-  await supabase.from("set_schedules").delete().lt("start_date", cutoff);
-
   const decodedUser = decodeURIComponent(userName);
 
-  const [gymsRes, areasRes, schedulesRes, adminRes, announcementsRes, usersRes] = await Promise.all([
+  const [gymsRes, areasRes, adminRes, announcementsRes, usersRes] = await Promise.all([
     supabase.from("gym_master").select("*").order("gym_name"),
     supabase.from("area_master").select("*").order("major_area"),
-    supabase.from("set_schedules").select("*").order("start_date", { ascending: false }),
     supabase.from("users").select("user_name").eq("id", ADMIN_USER_ID).single(),
     supabase.from("release_announcements").select("*").order("created_at", { ascending: false }),
     supabase.from("users").select("*").order("user_name"),
@@ -42,7 +35,6 @@ export default async function AdminPage() {
     <AdminClient
       gyms={(gymsRes.data || []) as GymMaster[]}
       areas={(areasRes.data || []) as AreaMaster[]}
-      setSchedules={(schedulesRes.data || []) as SetSchedule[]}
       currentUser={decodedUser}
       isAdmin={isAdmin}
       announcements={(announcementsRes.data || []) as Announcement[]}

@@ -35,15 +35,6 @@ export type AreaMaster = {
   major_area: "都内・神奈川" | "関東" | "関西" | "全国";
 };
 
-export type SetSchedule = {
-  id: string;
-  gym_name: string;
-  start_date: string;
-  end_date: string;
-  created_by: string | null;
-  created_at: string;
-};
-
 export type WorkShift = {
   id: string;
   user_name: string;
@@ -90,13 +81,6 @@ export async function updateClimbingLog(
 export async function addGym(gym: Omit<GymMaster, "created_at">): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("gym_master").insert(gym);
-  if (error) throw error;
-}
-
-// セットスケジュール追加（バッチ）
-export async function addSetSchedules(schedules: Omit<SetSchedule, "id" | "created_at">[]): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.from("set_schedules").insert(schedules);
   if (error) throw error;
 }
 

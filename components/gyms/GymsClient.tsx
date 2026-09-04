@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AddressInput } from "@/components/ui/AddressInput";
 import { getTodayJST, haversineKm } from "@/lib/utils";
 import { GymCard } from "@/components/gyms/GymCard";
-import type { GymMaster, AreaMaster, ClimbingLog, SetSchedule, User } from "@/lib/supabase/queries";
+import type { GymMaster, AreaMaster, ClimbingLog, User } from "@/lib/supabase/queries";
 import { trackAction } from "@/lib/analytics";
 
 type Props = {
@@ -15,13 +15,12 @@ type Props = {
   allLogs: ClimbingLog[];
   myLogs: ClimbingLog[];
   friendLogs: ClimbingLog[];
-  setSchedules: SetSchedule[];
   users: User[];
   currentUser: string;
   initialSort?: SortTab;
 };
 
-type SortTab = "distance" | "freshset" | "overdue";
+type SortTab = "distance" | "overdue";
 type Origin = { lat: number; lng: number } | null;
 
 const PAGE_SIZE = 8;
@@ -30,7 +29,7 @@ const PAGE_SIZE = 8;
 const DEFAULT_AREA = "都内・神奈川";
 
 export function GymsClient({
-  gyms, areas, myLogs, friendLogs, setSchedules, users, currentUser, initialSort,
+  gyms, areas, myLogs, friendLogs, users, currentUser, initialSort,
 }: Props) {
   const [targetDate, setTargetDate] = useState(getTodayJST());
   const [origin, setOrigin] = useState<Origin>(null);
@@ -137,22 +136,6 @@ export function GymsClient({
     return isFinite(d) ? d : null;
   };
 
-  // 最新セット取得（targetDate以前のものに限定。未来のスケジュールは無視）
-  const getLatestSchedule = (gymName: string): SetSchedule | null => {
-    const schedules = setSchedules
-      .filter((s) => s.gym_name === gymName && s.start_date <= targetDate)
-      .sort((a, b) => b.start_date.localeCompare(a.start_date));
-    return schedules[0] ?? null;
-  };
-
-  // 次のセットスケジュール取得（targetDateより後のもの）
-  const getNextSchedule = (gymName: string): SetSchedule | null => {
-    const schedules = setSchedules
-      .filter((s) => s.gym_name === gymName && s.start_date > targetDate)
-      .sort((a, b) => a.start_date.localeCompare(b.start_date));
-    return schedules[0] ?? null;
-  };
-
   // 最終訪問日取得（自分）
   const getLastVisit = (gymName: string): string | null => {
     const visits = myLogs
@@ -172,24 +155,16 @@ export function GymsClient({
   type GymWithMeta = {
     gym: GymMaster;
     distanceKm: number | null;
-    latestSchedule: SetSchedule | null;
-    nextSchedule: SetSchedule | null;
     lastVisit: string | null;
-    setAge: number | null;      // targetDateからセット完了日まで何日経過
     lastVisitDays: number | null; // targetDateから最終訪問まで何日経過
   };
 
   const gymsWithMeta: GymWithMeta[] = filteredGyms.map((gym) => {
-    const latestSchedule = getLatestSchedule(gym.gym_name);
-    const nextSchedule = getNextSchedule(gym.gym_name);
     const lastVisit = getLastVisit(gym.gym_name);
     return {
       gym,
       distanceKm: getDistance(gym),
-      latestSchedule,
-      nextSchedule,
       lastVisit,
-      setAge: latestSchedule ? daysDiffFromTarget(latestSchedule.end_date) : null,
       lastVisitDays: lastVisit ? daysDiffFromTarget(lastVisit.slice(0, 10)) : null,
     };
   });
@@ -201,16 +176,6 @@ export function GymsClient({
       if (a.distanceKm == null) return 1;
       if (b.distanceKm == null) return -1;
       return a.distanceKm - b.distanceKm;
-    });
-  };
-
-  // 新セット順（セットが新しい順、スケジュールなしは末尾）
-  const sortByFreshSet = (): GymWithMeta[] => {
-    return [...gymsWithMeta].sort((a, b) => {
-      if (a.setAge == null && b.setAge == null) return 0;
-      if (a.setAge == null) return 1;
-      if (b.setAge == null) return -1;
-      return a.setAge - b.setAge;
     });
   };
 
@@ -229,14 +194,10 @@ export function GymsClient({
 
   // 表示用データ
   const distanceSorted = sortByDistance();
-  const freshSetSorted = sortByFreshSet();
   const { main: overdueMain, unvisited } = sortByOverdue();
 
   // 現在のタブの主リスト
-  const currentMain =
-    sortTab === "distance" ? distanceSorted
-    : sortTab === "freshset" ? freshSetSorted
-    : overdueMain;
+  const currentMain = sortTab === "distance" ? distanceSorted : overdueMain;
 
   const currentSub =
     sortTab === "overdue" ? unvisited
@@ -313,11 +274,8 @@ export function GymsClient({
 
         {/* ソートタブ */}
         <div className="flex rounded-xl border border-gray-200 overflow-hidden bg-white">
-          {(["distance", "freshset", "overdue"] as SortTab[]).map((tab) => {
-            const label =
-              tab === "distance" ? "📍 近い順"
-              : tab === "freshset" ? "🔥 新セット順"
-              : "⌛ ご無沙汰順";
+          {(["distance", "overdue"] as SortTab[]).map((tab) => {
+            const label = tab === "distance" ? "📍 近い順" : "⌛ ご無沙汰順";
             return (
               <button
                 key={tab}
@@ -341,16 +299,13 @@ export function GymsClient({
 
         {/* ジムカードリスト（メイン） */}
         <div className="space-y-3">
-          {visibleMain.map(({ gym, distanceKm, latestSchedule, nextSchedule, lastVisit, setAge, lastVisitDays }) => (
+          {visibleMain.map(({ gym, distanceKm, lastVisit, lastVisitDays }) => (
             <GymCard
               key={gym.gym_name}
               gym={gym}
               targetDate={targetDate}
               distanceKm={distanceKm}
-              latestSchedule={latestSchedule ?? undefined}
-              nextSchedule={nextSchedule ?? undefined}
               lastVisit={lastVisit ?? undefined}
-              setAge={setAge ?? undefined}
               lastVisitDays={lastVisitDays ?? undefined}
               friendLogsOnDate={friendLogsOnDate.filter((l) => l.gym_name === gym.gym_name)}
               users={users}
@@ -369,16 +324,13 @@ export function GymsClient({
               <span className="text-xs text-gray-400 font-medium flex-shrink-0">{subLabel}（{currentSub.length}件）</span>
               <div className="flex-1 h-px bg-gray-200" />
             </div>
-            {currentSub.map(({ gym, distanceKm, latestSchedule, nextSchedule, lastVisit, setAge, lastVisitDays }) => (
+            {currentSub.map(({ gym, distanceKm, lastVisit, lastVisitDays }) => (
               <GymCard
                 key={gym.gym_name}
                 gym={gym}
                 targetDate={targetDate}
                 distanceKm={distanceKm}
-                latestSchedule={latestSchedule ?? undefined}
-                nextSchedule={nextSchedule ?? undefined}
                 lastVisit={lastVisit ?? undefined}
-                setAge={setAge ?? undefined}
                 lastVisitDays={lastVisitDays ?? undefined}
                 friendLogsOnDate={friendLogsOnDate.filter((l) => l.gym_name === gym.gym_name)}
                 users={users}

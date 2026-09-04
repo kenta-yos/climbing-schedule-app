@@ -121,7 +121,6 @@ const ACTION_LABELS: Record<string, string> = {
   gym_selected_undecided: "ジム：未定で登録",
   // ジムページ
   sort_distance: "ソート：近い順",
-  sort_freshset: "ソート：新セット順",
   sort_overdue: "ソート：ご無沙汰順",
   gps_auto: "GPS自動取得",
   gps_button: "GPSボタン使用",
@@ -141,7 +140,7 @@ function categorizeActions(actionCounts: { action: string; count: number }[]) {
      "gym_selected_search", "gym_selected_recent", "gym_selected_undecided"].includes(a.action)
   );
   const gyms = actionCounts.filter((a) =>
-    ["sort_distance", "sort_freshset", "sort_overdue",
+    ["sort_distance", "sort_overdue",
      "gps_auto", "gps_button", "address_set",
      "nationwide_on", "nationwide_off", "load_more"].includes(a.action)
   );

@@ -3,16 +3,13 @@
 import Image from "next/image";
 import { SnsIcon } from "@/components/ui/SnsIcon";
 import { TIME_SLOTS } from "@/lib/constants";
-import type { GymMaster, ClimbingLog, SetSchedule, User } from "@/lib/supabase/queries";
+import type { GymMaster, ClimbingLog, User } from "@/lib/supabase/queries";
 
 type Props = {
   gym: GymMaster;
   targetDate: string;
   distanceKm?: number | null;
-  latestSchedule?: SetSchedule;
-  nextSchedule?: SetSchedule;
   lastVisit?: string;
-  setAge?: number;
   lastVisitDays?: number;
   friendLogsOnDate: ClimbingLog[];
   users: User[];
@@ -24,10 +21,7 @@ type Badge = { label: string; cls: string };
 export function GymCard({
   gym,
   distanceKm,
-  latestSchedule,
-  nextSchedule,
   lastVisit,
-  setAge,
   lastVisitDays,
   friendLogsOnDate,
   users,
@@ -36,11 +30,6 @@ export function GymCard({
 
   // バッジ計算
   const badges: Badge[] = [];
-
-  if (setAge != null) {
-    if (setAge <= 7)       badges.push({ label: "🔥 新セット",  cls: "bg-orange-100 text-orange-600" });
-    else if (setAge <= 14) badges.push({ label: "✨ 準新セット", cls: "bg-yellow-100 text-yellow-700" });
-  }
 
   if (lastVisit == null) {
     badges.push({ label: "🆕 未訪問", cls: "bg-blue-50 text-blue-500" });
@@ -135,58 +124,19 @@ export function GymCard({
         )}
       </div>
 
-      {/* フッター */}
-      <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 space-y-1">
-        <div className="flex items-center gap-3">
-          {/* セット情報（完了日のみ） */}
-          <div className="flex items-center gap-1 text-[11px] text-gray-500 flex-1 min-w-0">
-            <span className="flex-shrink-0">📅</span>
-            {latestSchedule ? (
-              <span>
-                {latestSchedule.end_date
-                  ? latestSchedule.end_date.slice(0, 10).replace(/-/g, "/")
-                  : latestSchedule.start_date.slice(0, 10).replace(/-/g, "/")}
-                {setAge != null && (
-                  <span className={`ml-1 font-medium ${
-                    setAge <= 7 ? "text-orange-500" : setAge <= 14 ? "text-yellow-600" : "text-gray-400"
-                  }`}>
-                    ({setAge}日目)
-                  </span>
-                )}
-              </span>
-            ) : (
-              <span className="text-gray-300">スケジュール未登録</span>
-            )}
-          </div>
-
-          {/* 最終登攀日 */}
-          <div className="flex items-center gap-1 text-[11px] flex-shrink-0">
-            <span>🕐</span>
-            {lastVisitFull ? (
-              <span className={lastVisitDays != null && lastVisitDays >= 30 ? "text-red-400 font-medium" : "text-gray-500"}>
-                {lastVisitFull}
-              </span>
-            ) : (
-              <span className="text-gray-300">未登攀</span>
-            )}
-          </div>
-        </div>
-
-        {/* 次のセット日 */}
-        {nextSchedule ? (
-          <div className="flex items-center gap-1 text-[11px] text-blue-500">
-            <span className="flex-shrink-0">🔜</span>
-            <span className="font-medium">
-              次のセット {nextSchedule.start_date.slice(5, 10).replace("-", "/")}
-              〜{nextSchedule.end_date.slice(5, 10).replace("-", "/")}
+      {/* フッター：最終登攀日 */}
+      <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+        <div className="flex items-center gap-1 text-[11px]">
+          <span className="flex-shrink-0">🕐</span>
+          <span className="text-gray-400">最終登攀</span>
+          {lastVisitFull ? (
+            <span className={lastVisitDays != null && lastVisitDays >= 30 ? "text-red-400 font-medium" : "text-gray-500"}>
+              {lastVisitFull}
             </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1 text-[11px]">
-            <span className="flex-shrink-0">⚠️</span>
-            <span className="font-semibold text-amber-600">次のセット未登録</span>
-          </div>
-        )}
+          ) : (
+            <span className="text-gray-300">未登攀</span>
+          )}
+        </div>
       </div>
     </div>
   );

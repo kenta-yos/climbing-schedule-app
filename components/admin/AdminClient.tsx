@@ -6,48 +6,27 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AddressInput } from "@/components/ui/AddressInput";
-import { addGym, addSetSchedules } from "@/lib/supabase/queries";
+import { addGym } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { useUserStore } from "@/lib/store/useUserStore";
-import { getTodayJST } from "@/lib/utils";
-import { Plus, Trash2, LogOut, CheckCircle2, ChevronDown, ChevronUp, Search, X, Megaphone, Loader2, Pencil } from "lucide-react";
-import type { GymMaster, AreaMaster, SetSchedule, Announcement, User } from "@/lib/supabase/queries";
+import { Trash2, LogOut, CheckCircle2, ChevronDown, ChevronUp, X, Megaphone, Loader2, Pencil } from "lucide-react";
+import type { GymMaster, AreaMaster, Announcement, User } from "@/lib/supabase/queries";
 
 type Props = {
   gyms: GymMaster[];
   areas: AreaMaster[];
-  setSchedules: SetSchedule[];
   currentUser: string;
   isAdmin?: boolean;
   announcements?: Announcement[];
   users?: User[];
 };
 
-type DateRange = { start: string; end: string };
-
-// 月ラベル生成（先月・今月・来月）
-function getMonthRange() {
-  const now = new Date();
-  const months = [-1, 0, 1].map((offset) => {
-    const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    return {
-      key: `${yyyy}-${mm}`,
-      label: offset === -1 ? "先月" : offset === 0 ? "今月" : "来月",
-      yyyy,
-      mm,
-    };
-  });
-  return months;
-}
-
-export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, announcements: initialAnnouncements = [], users: initialUsers = [] }: Props) {
+export function AdminClient({ gyms, areas, currentUser, isAdmin, announcements: initialAnnouncements = [], users: initialUsers = [] }: Props) {
   const router = useRouter();
   const clearUser = useUserStore((s) => s.clearUser);
 
   // タブ管理（adminは"notice","users"タブも利用可能）
-  const [tab, setTab] = useState<"schedule" | "gym" | "notice" | "users">("schedule");
+  const [tab, setTab] = useState<"gym" | "notice" | "users">("gym");
   const [navigatingAnalytics, setNavigatingAnalytics] = useState(false);
 
   // ---- お知らせ登録 ----
@@ -72,16 +51,6 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
   const [newUserColor, setNewUserColor] = useState("#f97316");
   const [newUserIcon, setNewUserIcon] = useState("");
   const [submittingUser, setSubmittingUser] = useState(false);
-
-  // ---- セットスケジュール登録 ----
-  const [selectedGym, setSelectedGym] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [dateRanges, setDateRanges] = useState<DateRange[]>([
-    { start: getTodayJST(), end: getTodayJST() },
-  ]);
-  const [submittingSchedule, setSubmittingSchedule] = useState(false);
-  // スケジュール一覧アコーディオン
-  const [scheduleListOpen, setScheduleListOpen] = useState(false);
 
   // ---- ジム編集 ----
   const [editingGym, setEditingGym] = useState<string | null>(null);
@@ -145,39 +114,6 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
       { timeout: 10000 }
     );
   }, [tab]);
-
-  // ジム検索フィルター
-  const filteredGyms = searchQuery.trim()
-    ? gyms.filter((g) =>
-        g.gym_name.toLowerCase().includes(searchQuery.trim().toLowerCase())
-      )
-    : [];
-
-  // ---- セット登録処理 ----
-  const handleAddSchedule = async () => {
-    if (!selectedGym) {
-      toast({ title: "ジムを選択してください", variant: "destructive" });
-      return;
-    }
-    setSubmittingSchedule(true);
-    try {
-      const schedules = dateRanges.map((r) => ({
-        gym_name: selectedGym,
-        start_date: r.start,
-        end_date: r.end,
-        created_by: currentUser,
-      }));
-      await addSetSchedules(schedules);
-      toast({ title: `${dateRanges.length}件登録しました！`, variant: "success" as any });
-      setSelectedGym("");
-      setSearchQuery("");
-      setDateRanges([{ start: getTodayJST(), end: getTodayJST() }]);
-    } catch {
-      toast({ title: "登録に失敗しました", variant: "destructive" });
-    } finally {
-      setSubmittingSchedule(false);
-    }
-  };
 
   // ---- ジム登録処理 ----
   const handleAddGym = async () => {
@@ -333,15 +269,6 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
   };
 
   // ---- スケジュール一覧（先月・今月・来月） ----
-  const months = getMonthRange();
-  const scheduleByMonth = months.map(({ key, label, yyyy, mm }) => {
-    const items = setSchedules.filter((s) => {
-      const d = s.start_date.slice(0, 7); // "YYYY-MM"
-      return d === `${yyyy}-${mm}`;
-    });
-    return { key, label, items };
-  });
-
   return (
     <>
       <PageHeader title="管理" />
@@ -366,16 +293,8 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
         {/* タブ切り替え */}
         <div className="flex rounded-xl border border-gray-200 overflow-hidden bg-white">
           <button
-            onClick={() => setTab("schedule")}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${
-              tab === "schedule" ? "climbing-gradient text-white" : "text-gray-500"
-            }`}
-          >
-            📅 セット登録
-          </button>
-          <button
             onClick={() => setTab("gym")}
-            className={`flex-1 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
+            className={`flex-1 py-2 text-sm font-medium transition-colors ${
               tab === "gym" ? "climbing-gradient text-white" : "text-gray-500"
             }`}
           >
@@ -404,175 +323,6 @@ export function AdminClient({ gyms, areas, setSchedules, currentUser, isAdmin, a
         </div>
 
         {/* ===== セット登録 ===== */}
-        {tab === "schedule" && (
-          <>
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-4">
-              <h3 className="text-sm font-bold text-gray-800">セットスケジュール登録</h3>
-
-              {/* ジム選択（検索式） */}
-              <div>
-                <label className="text-xs font-medium text-gray-600 mb-1.5 block">ジム選択</label>
-
-                {/* 選択済み表示 */}
-                {selectedGym ? (
-                  <div className="flex items-center gap-2 px-3 py-2.5 bg-orange-50 border border-orange-300 rounded-xl">
-                    <span className="text-sm font-semibold text-orange-700 flex-1">✅ {selectedGym}</span>
-                    <button
-                      onClick={() => { setSelectedGym(""); setSearchQuery(""); }}
-                      className="p-0.5 rounded-full hover:bg-orange-100 transition-colors"
-                    >
-                      <X size={16} className="text-orange-400" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    {/* 検索ボックス */}
-                    <div className="relative mb-2">
-                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <Input
-                        type="text"
-                        placeholder="ジム名を検索..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 text-sm"
-                      />
-                      {searchQuery && (
-                        <button
-                          onClick={() => setSearchQuery("")}
-                          className="absolute right-3 top-1/2 -translate-y-1/2"
-                        >
-                          <X size={14} className="text-gray-400" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* 検索結果 */}
-                    {searchQuery.trim() ? (
-                      <div className="grid grid-cols-2 gap-1.5 max-h-44 overflow-y-auto">
-                        {filteredGyms.length > 0 ? (
-                          filteredGyms.map((gym) => (
-                            <button
-                              key={gym.gym_name}
-                              onClick={() => { setSelectedGym(gym.gym_name); setSearchQuery(""); }}
-                              className="text-left px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:border-orange-300 hover:bg-orange-50 transition-all active:scale-95"
-                            >
-                              {gym.gym_name}
-                            </button>
-                          ))
-                        ) : (
-                          <p className="col-span-2 text-xs text-gray-400 text-center py-4">
-                            該当するジムが見つかりません
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-400 text-center py-2">ジム名を入力して検索してください</p>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* 日程 */}
-              <div>
-                <label className="text-xs font-medium text-gray-600 mb-1.5 block">日程</label>
-                <div className="space-y-2">
-                  {dateRanges.map((range, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Input
-                        type="date"
-                        value={range.start}
-                        onChange={(e) => {
-                          const next = dateRanges.map((r, j) =>
-                            j === i ? { ...r, start: e.target.value } : r
-                          );
-                          setDateRanges(next);
-                        }}
-                        className="text-sm"
-                      />
-                      <span className="text-gray-400 text-sm flex-shrink-0">〜</span>
-                      <Input
-                        type="date"
-                        value={range.end}
-                        onChange={(e) => {
-                          const next = dateRanges.map((r, j) =>
-                            j === i ? { ...r, end: e.target.value } : r
-                          );
-                          setDateRanges(next);
-                        }}
-                        className="text-sm"
-                      />
-                      {dateRanges.length > 1 && (
-                        <button
-                          onClick={() => setDateRanges(dateRanges.filter((_, j) => j !== i))}
-                          className="p-1.5 text-gray-300 hover:text-red-400 transition-colors flex-shrink-0"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={() =>
-                    setDateRanges([...dateRanges, { start: getTodayJST(), end: getTodayJST() }])
-                  }
-                  className="mt-2 flex items-center gap-1 text-xs text-orange-500 font-medium"
-                >
-                  <Plus size={14} />
-                  日程を追加
-                </button>
-              </div>
-
-              <Button
-                onClick={handleAddSchedule}
-                disabled={submittingSchedule}
-                variant="climbing"
-                className="w-full"
-              >
-                {submittingSchedule ? "登録中..." : "スケジュールを登録"}
-              </Button>
-            </div>
-
-            {/* ---- スケジュール一覧（アコーディオン） ---- */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <button
-                onClick={() => setScheduleListOpen((v) => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700"
-              >
-                <span>📋 登録済みスケジュール確認</span>
-                {scheduleListOpen ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-              </button>
-
-              {scheduleListOpen && (
-                <div className="border-t border-gray-100 px-4 pb-4 space-y-4 pt-3">
-                  {scheduleByMonth.map(({ key, label, items }) => (
-                    <div key={key}>
-                      <p className="text-xs font-semibold text-gray-500 mb-1.5">{label}</p>
-                      {items.length === 0 ? (
-                        <p className="text-xs text-gray-300 pl-1">データなし</p>
-                      ) : (
-                        <div className="space-y-1">
-                          {items.map((s) => (
-                            <div key={s.id} className="flex items-center gap-2 text-xs text-gray-700 py-1 border-b border-gray-50 last:border-0">
-                              <span className="font-medium flex-1 truncate">{s.gym_name}</span>
-                              <span className="text-gray-400 flex-shrink-0">
-                                {s.start_date.slice(5).replace("-", "/")}
-                                {s.end_date !== s.start_date && (
-                                  <>〜{s.end_date.slice(5).replace("-", "/")}</>
-                                )}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
         {/* ===== ジム登録 ===== */}
         {tab === "gym" && (
           <>
