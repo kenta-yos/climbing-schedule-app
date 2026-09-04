@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
+import { ProfileTab } from "@/components/admin/tabs/ProfileTab";
 import { GymTab } from "@/components/admin/tabs/GymTab";
 import { NoticeTab } from "@/components/admin/tabs/NoticeTab";
 import { UsersTab } from "@/components/admin/tabs/UsersTab";
@@ -11,7 +12,7 @@ import { useUserStore } from "@/lib/store/useUserStore";
 import { LogOut, Loader2 } from "lucide-react";
 import type { GymMaster, AreaMaster, Announcement, User } from "@/lib/supabase/queries";
 
-type Tab = "gym" | "notice" | "users";
+type Tab = "profile" | "gym" | "notice" | "users";
 
 type Props = {
   gyms: GymMaster[];
@@ -34,10 +35,11 @@ export function AdminClient({
   const clearUser = useUserStore((s) => s.clearUser);
 
   // タブ管理（お知らせ・ユーザーは管理者のみ）
-  const [tab, setTab] = useState<Tab>("gym");
+  const [tab, setTab] = useState<Tab>("profile");
   const [navigatingAnalytics, setNavigatingAnalytics] = useState(false);
 
   const tabs: { key: Tab; label: string; adminOnly: boolean }[] = [
+    { key: "profile", label: "🙋 マイ設定", adminOnly: false },
     { key: "gym", label: "🧗 ジム登録", adminOnly: false },
     { key: "notice", label: "📣 お知らせ", adminOnly: true },
     { key: "users", label: "👤 ユーザー", adminOnly: true },
@@ -79,7 +81,7 @@ export function AdminClient({
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex-1 py-2 text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 text-xs font-medium transition-colors ${
                 i > 0 ? "border-l border-gray-200" : ""
               } ${tab === key ? "climbing-gradient text-white" : "text-gray-500"}`}
             >
@@ -87,6 +89,10 @@ export function AdminClient({
             </button>
           ))}
         </div>
+
+        {tab === "profile" && (
+          <ProfileTab currentUser={currentUser} users={initialUsers} />
+        )}
 
         {tab === "gym" && (
           <GymTab gyms={gyms} areas={areas} currentUser={currentUser} />
