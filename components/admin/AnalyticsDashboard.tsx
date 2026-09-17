@@ -209,6 +209,28 @@ function PeriodTabs({
   );
 }
 
+function BigStat({
+  value,
+  unit,
+  caption,
+  color,
+}: {
+  value: string;
+  unit?: string;
+  caption: string;
+  color: string;
+}) {
+  return (
+    <div className="flex-1">
+      <div className="flex items-baseline gap-1">
+        <span className={`text-4xl font-bold ${color} tracking-tight`}>{value}</span>
+        {unit && <span className={`text-base font-bold ${color}`}>{unit}</span>}
+      </div>
+      <p className="text-[10px] text-gray-400 mt-1">{caption}</p>
+    </div>
+  );
+}
+
 function ImpactTab({
   impacts,
   joinFunnel,
@@ -231,28 +253,20 @@ function ImpactTab({
   return (
     <>
       <PeriodTabs impacts={impacts} index={index} onChange={setIndex} />
+      <p className="text-[10px] text-gray-400 -mt-1 px-1">{r.since} 〜</p>
 
-      {/* 参加率 */}
+      {/* 参加がついた募集 */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-xs font-semibold text-gray-700">参加がついた募集の割合</p>
-        <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
-          予定が出された時点と、他の人が参加ボタンで乗った時点を、起きたその場で記録したもの
-        </p>
-        {r.clampedToRollout && (
-          <p className="text-[10px] text-gray-400 mb-3 px-2 py-1.5 bg-gray-50 rounded-lg leading-relaxed">
-            集計は {r.since} 以降。それより前は 1 人でしか使っておらず、比較にならないので含めない
-          </p>
-        )}
-        <div className="flex items-end gap-2">
-          <span className="text-4xl font-bold text-orange-500">{pct(r.joinRate)}</span>
-          <span className="text-xs text-gray-400 mb-1.5">
-            {r.postsWithJoin} / {r.posts} 件
-          </span>
+        <p className="text-xs font-semibold text-gray-700 mb-3">参加がついた募集</p>
+        <div className="flex gap-3 mb-4">
+          <BigStat value={pct(r.joinRate)} caption="募集のうち参加がついた割合" color="text-orange-500" />
+          <BigStat
+            value={`${r.postsWithJoin}`}
+            unit="件"
+            caption={`出された募集 ${r.posts} 件のうち`}
+            color="text-orange-500"
+          />
         </div>
-        <p className="text-[10px] text-gray-400 mt-1 mb-3">
-          出された募集 {r.posts} 件のうち、誰かが乗ったものが {r.postsWithJoin} 件。
-          その {r.postsWithJoin} 件が集めた参加は延べ {r.joinsOnPosts} 人
-        </p>
         <div className="divide-y divide-gray-50">
           <StatRow
             label="参加がついた募集 1 件あたり"
@@ -280,57 +294,29 @@ function ImpactTab({
           />
           {r.shiftJoins > 0 && <StatRow label="🍺 バイト中カードから乗った参加" value={`${r.shiftJoins} 件`} />}
         </div>
-        <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
-          上の率は「この期間に出された募集」が主語で、あとから付いた参加は期間外でもその募集に数える。
-          {r.joinsInPeriod !== r.joinsOnPosts &&
-            `別の数え方として、この期間に参加が起きた件数は ${r.joinsInPeriod} 件（募集がいつ出されたかは問わない）。`}
-          {r.orphanJoins > 0 && `対応する募集が見つからなかった参加が ${r.orphanJoins} 件あり、上のどの数にも入っていない。`}
-        </p>
-        <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
-          「一緒に登る人」で代理登録された {r.proxyPosts} 件は、本人の操作なので参加に数えていない
-          {r.deletedPosts > 0 && ` ／ この期間に削除された予定 ${r.deletedPosts} 件`}
-        </p>
       </div>
 
       {/* アプリ経由で生まれた来訪 */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-xs font-semibold text-gray-700">アプリ経由で生まれたジム来訪</p>
-        <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
-          他人の予定に参加ボタンで乗り、その日に実際に登った記録が残っているもの
-        </p>
-        <div className="flex items-end gap-2">
-          <span className="text-4xl font-bold text-emerald-500">{r.joinsWithVisit}</span>
-          <span className="text-lg font-bold text-emerald-500 mb-0.5">回</span>
-          <span className="text-xs text-gray-400 mb-1.5 ml-1">{r.visitingJoiners} 人</span>
-        </div>
-        <p className="text-[10px] text-gray-400 mt-1 mb-3">
-          この期間の全来訪 {r.totalVisits} 回のうち {pct(r.joinVisitShare)}。
-          実効ユーザー 1 人あたり月 {round1(r.joinVisitsPerUserPerMonth)} 回
-        </p>
-        <div className="divide-y divide-gray-50">
-          <StatRow label="参加を記録した人" value={`${r.joiners} 人`} note={`${r.joinsInPeriod + r.orphanJoins} 回`} />
-          <StatRow
-            label="そのうち実際に登った"
-            value={`${r.joinsWithVisit} 回`}
-            note={`${pct(r.visitRate)}`}
+        <p className="text-xs font-semibold text-gray-700 mb-3">アプリ経由で生まれたジム来訪</p>
+        <div className="flex gap-3 mb-4">
+          <BigStat
+            value={`${r.joinsWithVisit}`}
+            unit="回"
+            caption={`${r.visitingJoiners} 人が、参加して実際に登った`}
+            color="text-emerald-500"
           />
-          <StatRow label="すっぽかし" value={`${r.pastJoins - r.joinsWithVisit} 回`} />
-          <StatRow label="まだ日付が来ていない参加" value={`${r.joinsInPeriod + r.orphanJoins - r.pastJoins} 回`} />
+          <BigStat
+            value={pct(r.joinVisitShare)}
+            caption={`この期間の全来訪 ${r.totalVisits} 回のうち`}
+            color="text-emerald-500"
+          />
         </div>
-        <div className="divide-y divide-gray-50 mt-2 pt-2 border-t border-gray-100">
-          <StatRow label="実効ユーザー数" value={`${r.activeUsers} 人`} note={`${round1(r.months)}ヶ月`} />
-          <StatRow label="期間内の全来訪" value={`${r.totalVisits} 回`} />
+        <div className="divide-y divide-gray-50">
+          <StatRow label="参加してから実際に登った割合" value={pct(r.visitRate)} />
           <StatRow label="1人あたり月の来訪" value={`${round1(r.visitsPerUserPerMonth)} 回`} />
+          <StatRow label="うち参加きっかけ" value={`${round1(r.joinVisitsPerUserPerMonth)} 回`} />
         </div>
-        <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
-          募集を出した本人が自分の募集に乗った記録 {r.selfJoins} 回は、本人の来訪なので除いている。
-          募集が特定できなかった参加 {r.orphanJoins} 回は、他人の予定に乗った点は変わらないので含めている
-        </p>
-        <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
-          <span className="font-semibold text-gray-500">この {r.joinsWithVisit} 回は増分の上限であって、増分そのものではない。</span>
-          アプリ上の参加という経路を通った来訪の実数で、この経路はアプリが無ければ存在しない。
-          ただし同じ人が同じ日に別の手段で誘い合って行っていた可能性は、このデータからは排除できない
-        </p>
       </div>
 
       {/* 参加ボタンのファネル */}
@@ -346,19 +332,6 @@ function ImpactTab({
           <StatRow label="予定入力画面からの新規作成" value={`${joinFunnel.planCreated} 回`} />
         </div>
       </div>
-
-      <p className="text-[10px] text-gray-400 leading-relaxed px-1">
-        この数字は開いた時点のスナップショットで、あとから動く。参加した人が後日に実績を登録すれば増え、
-        古い実績が削除されれば減る。まだ日付が来ていない参加は判定の母数に入れていないので、
-        期日を過ぎて実績が付かなければ来訪の割合は下がる。30日・90日・6ヶ月の窓も毎日ずれる
-      </p>
-
-      {r.usesRestoredEvents && (
-        <p className="text-[10px] text-gray-400 leading-relaxed px-1">
-          ※ この期間には、plan_events を入れる前の分を page_views のイベントから復元したものが含まれる。
-          復元分は参加元（予定かバイト中か）を持たないものがある
-        </p>
-      )}
     </>
   );
 }
