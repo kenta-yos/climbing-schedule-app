@@ -316,6 +316,10 @@ function ImpactTab({
           <StatRow label="1人あたり月の来訪" value={`${round1(r.visitsPerUserPerMonth)} 回`} />
         </div>
         <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
+          募集を出した本人が自分の募集に乗った記録 {r.selfJoins} 回は、本人の来訪なので除いている。
+          募集が特定できなかった参加 {r.orphanJoins} 回は、他人の予定に乗った点は変わらないので含めている
+        </p>
+        <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
           <span className="font-semibold text-gray-500">この {r.joinsWithVisit} 回は増分の上限であって、増分そのものではない。</span>
           アプリ上の参加という経路を通った来訪の実数で、この経路はアプリが無ければ存在しない。
           ただし同じ人が同じ日に別の手段で誘い合って行っていた可能性は、このデータからは排除できない

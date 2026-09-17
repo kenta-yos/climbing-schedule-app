@@ -103,6 +103,8 @@ export type ImpactResult = {
   joinsInPeriod: number;
   /** そのうち、対応する募集が見つからないもの。計測より前に出た予定への参加など */
   orphanJoins: number;
+  /** 募集主が自分の募集に乗った記録。本人の来訪なので、どの参加の数にも入れない */
+  selfJoins: number;
   /** バイト中カードから乗った参加 */
   shiftJoins: number;
   /** 代理登録された同行者の件数。参加とは別勘定 */
@@ -294,10 +296,17 @@ export function analyzeImpact(
   // 募集を出した本人が出し直した行は参加ではない。
   const joinsByKey = new Map<string, Event[]>();
   const matchedJoins = new Set<Event>();
+  // 募集主が自分の募集に乗った記録。本人の来訪であって参加ではないので、
+  // どの数にも入れずに件数だけ持っておく
+  const selfJoinSet = new Set<Event>();
   for (const join of allJoins) {
     const key = keyForJoin(join);
     const seed = key === null ? undefined : seedByKey.get(key);
-    if (!key || !seed || join.user === seed.user) continue;
+    if (!key || !seed) continue;
+    if (join.user === seed.user) {
+      selfJoinSet.add(join);
+      continue;
+    }
     matchedJoins.add(join);
     const list = joinsByKey.get(key);
     if (list) list.push(join);
@@ -328,8 +337,11 @@ export function analyzeImpact(
   // 来訪の判定は「この期間に起きた参加」が主語。募集が特定できなかった参加も、
   // 参加ボタンを押して実際に行っている点は変わらないので母数に含める。
   // 上の参加率（募集が主語）とはここで数え方が分かれる
-  const periodJoins = allJoins.filter((j) => inPeriod(j.at));
+  // 募集主本人の分はここで落とす。残りは、募集が特定できた参加と、
+  // 募集が見つからなかった参加（計測より前に出た予定への参加など）
+  const periodJoins = allJoins.filter((j) => inPeriod(j.at) && !selfJoinSet.has(j));
   const orphanJoins = periodJoins.filter((j) => !matchedJoins.has(j)).length;
+  const selfJoins = allJoins.filter((j) => inPeriod(j.at) && selfJoinSet.has(j)).length;
 
   // --- 参加が来訪まで届いたか ---
   // 実績行は削除されずに残るので、参加者・登った日の一致で引ける。
@@ -371,6 +383,7 @@ export function analyzeImpact(
     joinsOnPosts,
     joinsInPeriod: periodJoins.length - orphanJoins,
     orphanJoins,
+    selfJoins,
     shiftJoins: periodJoins.filter((j) => j.source === "shift").length,
     proxyPosts: proxies.filter((e) => inPeriod(e.at)).length,
     deletedPosts: events.filter((e) => e.kind === "deleted" && inPeriod(e.at)).length,
