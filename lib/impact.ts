@@ -121,6 +121,10 @@ export type ImpactResult = {
   pastJoins: number;
   /** そのうち climbing_logs に実績が残っていたもの */
   joinsWithVisit: number;
+  /** 期間内に 1 回以上参加した実人数 */
+  joiners: number;
+  /** そのうち、実際に登った記録まで残した実人数 */
+  visitingJoiners: number;
   /** joinsWithVisit / pastJoins */
   visitRate: number;
   /** 期間内の実績の総数 */
@@ -321,9 +325,11 @@ export function analyzeImpact(
     hoursToFirstJoin.push(Math.min(...group.map((j) => (j.at - seed.at) / MS_PER_HOUR)));
   }
 
-  // 来訪の判定とシフト経由の件数は「この期間に起きた参加」を主語にする
-  const periodJoins = allJoins.filter((j) => inPeriod(j.at) && matchedJoins.has(j));
-  const orphanJoins = allJoins.filter((j) => inPeriod(j.at) && !matchedJoins.has(j)).length;
+  // 来訪の判定は「この期間に起きた参加」が主語。募集が特定できなかった参加も、
+  // 参加ボタンを押して実際に行っている点は変わらないので母数に含める。
+  // 上の参加率（募集が主語）とはここで数え方が分かれる
+  const periodJoins = allJoins.filter((j) => inPeriod(j.at));
+  const orphanJoins = periodJoins.filter((j) => !matchedJoins.has(j)).length;
 
   // --- 参加が来訪まで届いたか ---
   // 実績行は削除されずに残るので、参加者・登った日の一致で引ける。
@@ -332,7 +338,8 @@ export function analyzeImpact(
     visitLogs.filter((l) => l.type === "実績").map((l) => `${l.user}|${toDate(l.date)}`)
   );
   const pastJoinList = periodJoins.filter((j) => j.date < today);
-  const joinsWithVisit = pastJoinList.filter((j) => visitKeys.has(`${j.user}|${j.date}`)).length;
+  const visitedJoins = pastJoinList.filter((j) => visitKeys.has(`${j.user}|${j.date}`));
+  const joinsWithVisit = visitedJoins.length;
 
   // --- 来訪の総量 ---
   const visitsInPeriod = visitLogs.filter(
@@ -362,7 +369,7 @@ export function analyzeImpact(
     postsWithJoin,
     joinRate: rate(postsWithJoin, seeds.length),
     joinsOnPosts,
-    joinsInPeriod: periodJoins.length,
+    joinsInPeriod: periodJoins.length - orphanJoins,
     orphanJoins,
     shiftJoins: periodJoins.filter((j) => j.source === "shift").length,
     proxyPosts: proxies.filter((e) => inPeriod(e.at)).length,
@@ -372,6 +379,8 @@ export function analyzeImpact(
     fixedGym: { ...fixedGym, joinRate: rate(fixedGym.postsWithJoin, fixedGym.posts) },
     pastJoins: pastJoinList.length,
     joinsWithVisit,
+    joiners: new Set(periodJoins.map((j) => j.user)).size,
+    visitingJoiners: new Set(visitedJoins.map((j) => j.user)).size,
     visitRate: rate(joinsWithVisit, pastJoinList.length),
     totalVisits: visitsInPeriod.length,
     activeUsers,

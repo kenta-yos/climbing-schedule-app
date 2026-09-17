@@ -285,35 +285,40 @@ function ImpactTab({
         </p>
       </div>
 
-      {/* 参加 → 来訪 */}
+      {/* アプリ経由で生まれた来訪 */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-xs font-semibold text-gray-700">参加した人が実際に登ったか</p>
+        <p className="text-xs font-semibold text-gray-700">アプリ経由で生まれたジム来訪</p>
         <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
-          参加を記録した人・日付に、実績が残っているかで見る。まだ来ていない日付は母数から外す
+          他人の予定に参加ボタンで乗り、その日に実際に登った記録が残っているもの
         </p>
-        <div className="flex items-end gap-2 mb-3">
-          <span className="text-4xl font-bold text-emerald-500">{pct(r.visitRate)}</span>
-          <span className="text-xs text-gray-400 mb-1.5">
-            {r.joinsWithVisit} / {r.pastJoins} 件
-          </span>
+        <div className="flex items-end gap-2">
+          <span className="text-4xl font-bold text-emerald-500">{r.joinsWithVisit}</span>
+          <span className="text-lg font-bold text-emerald-500 mb-0.5">回</span>
+          <span className="text-xs text-gray-400 mb-1.5 ml-1">{r.visitingJoiners} 人</span>
         </div>
+        <p className="text-[10px] text-gray-400 mt-1 mb-3">
+          この期間の全来訪 {r.totalVisits} 回のうち {pct(r.joinVisitShare)}。
+          実効ユーザー 1 人あたり月 {round1(r.joinVisitsPerUserPerMonth)} 回
+        </p>
         <div className="divide-y divide-gray-50">
-          <StatRow label="実効ユーザー数" value={`${r.activeUsers} 人`} note={`${round1(r.months)}ヶ月`} />
-          <StatRow label="期間内の来訪（実績）" value={`${r.totalVisits} 回`} />
+          <StatRow label="参加を記録した人" value={`${r.joiners} 人`} note={`${r.joinsInPeriod + r.orphanJoins} 回`} />
           <StatRow
-            label="参加をきっかけに生まれた来訪"
+            label="そのうち実際に登った"
             value={`${r.joinsWithVisit} 回`}
-            note={pct(r.joinVisitShare)}
+            note={`${pct(r.visitRate)}`}
           />
+          <StatRow label="すっぽかし" value={`${r.pastJoins - r.joinsWithVisit} 回`} />
+          <StatRow label="まだ日付が来ていない参加" value={`${r.joinsInPeriod + r.orphanJoins - r.pastJoins} 回`} />
+        </div>
+        <div className="divide-y divide-gray-50 mt-2 pt-2 border-t border-gray-100">
+          <StatRow label="実効ユーザー数" value={`${r.activeUsers} 人`} note={`${round1(r.months)}ヶ月`} />
+          <StatRow label="期間内の全来訪" value={`${r.totalVisits} 回`} />
           <StatRow label="1人あたり月の来訪" value={`${round1(r.visitsPerUserPerMonth)} 回`} />
-          <StatRow
-            label="うち参加きっかけ"
-            value={`${round1(r.joinVisitsPerUserPerMonth)} 回`}
-          />
         </div>
         <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
-          これは「参加を記録した人が、その日に実際に登った割合」であって、アプリが無かった場合との差ではない。
-          誘い合って結局行っていた分がどれだけ含まれるかは、このデータでは分けられない
+          <span className="font-semibold text-gray-500">この {r.joinsWithVisit} 回は増分の上限であって、増分そのものではない。</span>
+          アプリ上の参加という経路を通った来訪の実数で、この経路はアプリが無ければ存在しない。
+          ただし同じ人が同じ日に別の手段で誘い合って行っていた可能性は、このデータからは排除できない
         </p>
       </div>
 
