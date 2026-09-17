@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import { toJSTDateString, getDateOffsetJST, getTodayJST, formatJST } from "@/lib/utils";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import type { AnalyticsProps } from "@/components/admin/AnalyticsDashboard";
 import {
   analyzeImpact,
@@ -19,25 +20,6 @@ const toJSTDate = (iso: string) => toJSTDateString(new Date(iso));
 // 直近 n 日分の日付文字列（古い順）
 function lastNDays(n: number): string[] {
   return Array.from({ length: n }, (_, i) => getDateOffsetJST(-(n - 1 - i)));
-}
-
-/**
- * 全件を取り切る。Supabase は 1 リクエストあたり 1000 行で打ち切るため、
- * `.limit(5000)` のような指定は黙って 1000 行に丸められる。直近 30 日の
- * page_views だけでも 1300 行あり、実際に取りこぼしていた。
- */
-async function fetchAll<T>(
-  page: (from: number, to: number) => PromiseLike<{ data: T[] | null }>
-): Promise<T[]> {
-  const PAGE_SIZE = 1000;
-  const rows: T[] = [];
-  for (let from = 0; ; from += PAGE_SIZE) {
-    const { data } = await page(from, from + PAGE_SIZE - 1);
-    if (!data || data.length === 0) break;
-    rows.push(...data);
-    if (data.length < PAGE_SIZE) break;
-  }
-  return rows;
 }
 
 export default async function AnalyticsPage() {
@@ -58,7 +40,7 @@ export default async function AnalyticsPage() {
   const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
   const [pageViews, recentLogs, climbingLogs, planEvents, actionRows] = await Promise.all([
-    fetchAll<{ user_name: string; page: string; action: string | null; created_at: string }>((from, to) =>
+    fetchAllRows<{ user_name: string; page: string; action: string | null; created_at: string }>((from, to) =>
       supabase
         .from("page_views")
         .select("user_name, page, action, created_at")
@@ -68,7 +50,7 @@ export default async function AnalyticsPage() {
         .range(from, to)
     ),
     // 直近48時間のイベントログ
-    fetchAll<{ user_name: string; page: string; action: string | null; created_at: string }>((from, to) =>
+    fetchAllRows<{ user_name: string; page: string; action: string | null; created_at: string }>((from, to) =>
       supabase
         .from("page_views")
         .select("user_name, page, action, created_at")
@@ -78,7 +60,7 @@ export default async function AnalyticsPage() {
         .range(from, to)
     ),
     // 効果測定用: 実績の突き合わせに使う。予定行は削除されるので当てにしない
-    fetchAll<ImpactLog>((from, to) =>
+    fetchAllRows<ImpactLog>((from, to) =>
       supabase
         .from("climbing_logs")
         .select("date, gym_name, user, type, created_at")
@@ -87,7 +69,7 @@ export default async function AnalyticsPage() {
         .range(from, to)
     ),
     // 効果測定用: 募集と参加の証跡（追記専用）
-    fetchAll<PlanEventRow>((from, to) =>
+    fetchAllRows<PlanEventRow>((from, to) =>
       supabase
         .from("plan_events")
         .select("kind, date, gym_name, user, actor, source, prev_date, prev_gym_name, created_at")
@@ -96,7 +78,7 @@ export default async function AnalyticsPage() {
     ),
     // 効果測定用: plan_events を入れる前の分を page_views から復元する。
     // ここは管理者も 1 メンバーとして数えるので user_name で絞らない
-    fetchAll<ActionRow>((from, to) =>
+    fetchAllRows<ActionRow>((from, to) =>
       supabase
         .from("page_views")
         .select("user_name, action, created_at")

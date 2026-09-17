@@ -20,14 +20,16 @@ type Props = {
 export function MyPageClient({ initialLogs, rankingLogs, users, gyms, currentUser }: Props) {
   const [logs, setLogs] = useState<ClimbingLog[]>(initialLogs);
 
+  // user を付けないと全員分のログが返り、ジム訪問履歴や月別推移が他人の記録まで
+  // 数え始める。削除の直後だけ数字が跳ねる形になるので取り違えやすい
   const handleDeleted = useCallback(async () => {
     try {
-      const res = await fetch("/api/logs");
+      const res = await fetch(`/api/logs?user=${encodeURIComponent(currentUser)}`);
       if (res.ok) setLogs(await res.json());
     } catch (e) {
       console.error(e);
     }
-  }, []);
+  }, [currentUser]);
 
   return (
     <>

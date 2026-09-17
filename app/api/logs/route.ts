@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getTodayJST, getNowJST, toJSTDateString } from "@/lib/utils";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,21 +17,24 @@ export async function GET(request: NextRequest) {
       const now = getNowJST();
       const monthStart = toJSTDateString(new Date(now.getFullYear(), now.getMonth() - 1, 1));
 
-      const [plansRes, logsRes] = await Promise.all([
-        supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", today).order("date", { ascending: true }),
-        supabase.from("climbing_logs").select("*").eq("type", "実績").gte("date", monthStart).order("date", { ascending: false }),
+      const [plans, logs] = await Promise.all([
+        fetchAllRows((from, to) =>
+          supabase.from("climbing_logs").select("*").eq("type", "予定").gte("date", today).order("date", { ascending: true }).range(from, to)
+        ),
+        fetchAllRows((from, to) =>
+          supabase.from("climbing_logs").select("*").eq("type", "実績").gte("date", monthStart).order("date", { ascending: false }).range(from, to)
+        ),
       ]);
-      if (plansRes.error) return NextResponse.json({ error: plansRes.error.message }, { status: 500 });
-      if (logsRes.error) return NextResponse.json({ error: logsRes.error.message }, { status: 500 });
-      return NextResponse.json([...(plansRes.data || []), ...(logsRes.data || [])]);
+      return NextResponse.json([...plans, ...logs]);
     }
 
-    let query = supabase.from("climbing_logs").select("*").order("date", { ascending: false });
-    if (user) query = query.eq("user", user);
-
-    const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json(data);
+    // 1000 行で打ち切られると古い記録から落ちる。ジム訪問履歴は全期間を数えるので取り切る
+    const rows = await fetchAllRows((from, to) => {
+      let query = supabase.from("climbing_logs").select("*").order("date", { ascending: false });
+      if (user) query = query.eq("user", user);
+      return query.range(from, to);
+    });
+    return NextResponse.json(rows);
   } catch {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
