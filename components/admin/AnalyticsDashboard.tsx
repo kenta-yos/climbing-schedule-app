@@ -317,6 +317,26 @@ function ImpactTab({
           <StatRow label="1人あたり月の来訪" value={`${round1(r.visitsPerUserPerMonth)} 回`} />
           <StatRow label="うち参加きっかけ" value={`${round1(r.joinVisitsPerUserPerMonth)} 回`} />
         </div>
+        {r.visitGyms.length > 0 && (
+          <details className="mt-3 group">
+            <summary className="text-[11px] text-emerald-600 cursor-pointer list-none select-none">
+              ジム別の内訳（{r.visitGyms.length} ジム）
+              <span className="group-open:hidden"> ▾</span>
+              <span className="hidden group-open:inline"> ▴</span>
+            </summary>
+            <div className="divide-y divide-gray-50 mt-1">
+              {r.visitGyms.map((g) => (
+                <div key={g.gym} className="flex items-center gap-2 py-1.5">
+                  <span className="text-[11px] text-gray-600 flex-1 truncate">{g.gym}</span>
+                  <span className="text-xs font-semibold text-emerald-600 tabular-nums">{g.joinVisits} 回</span>
+                  <span className="text-[10px] text-gray-400 tabular-nums w-20 text-right">
+                    全 {g.totalVisits} 回中 {pct(g.joinVisits / Math.max(g.totalVisits, 1))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
 
       {/* 参加ボタンのファネル */}

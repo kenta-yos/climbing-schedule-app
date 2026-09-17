@@ -143,6 +143,8 @@ export type ImpactResult = {
   joinVisitsPerUserPerMonth: number;
   /** 参加由来の来訪が全来訪に占める割合 */
   joinVisitShare: number;
+  /** 参加由来の来訪のジム別内訳。多い順。totalVisits は同じジムの全来訪 */
+  visitGyms: { gym: string; joinVisits: number; totalVisits: number }[];
 };
 
 const toDate = (value: string) => value.slice(0, 10);
@@ -355,17 +357,36 @@ export function analyzeImpact(
   // --- 参加が来訪まで届いたか ---
   // 実績行は削除されずに残るので、参加者・登った日の一致で引ける。
   // まだ来ていない日付は判定できないので母数から外す。
-  const visitKeys = new Set(
-    visitLogs.filter((l) => l.type === "実績").map((l) => `${l.user}|${toDate(l.date)}`)
-  );
+  // 内訳でジム名を出すので、キーの有無だけでなく実績のジム名まで持っておく
+  const visitGymByKey = new Map<string, string>();
+  for (const log of visitLogs) {
+    if (log.type !== "実績") continue;
+    const key = `${log.user}|${toDate(log.date)}`;
+    if (!visitGymByKey.has(key)) visitGymByKey.set(key, log.gym_name);
+  }
   const pastJoinList = periodJoins.filter((j) => j.date < today);
-  const visitedJoins = pastJoinList.filter((j) => visitKeys.has(`${j.user}|${j.date}`));
+  const visitedJoins = pastJoinList.filter((j) => visitGymByKey.has(`${j.user}|${j.date}`));
   const joinsWithVisit = visitedJoins.length;
 
   // --- 来訪の総量 ---
   const visitsInPeriod = visitLogs.filter((l) => l.type === "実績" && toDate(l.date) >= startDate);
   const periodDays = Math.max((Date.now() - since) / MS_PER_DAY, 1);
   const months = periodDays / DAYS_PER_MONTH;
+
+  // 内訳のジム名は参加した時点ではなく実績から取る。参加した時点では
+  // 「ジム未定」のことがあり、そのままだと内訳の最大勢力が「ジム未定」になる
+  const joinVisitsByGym = new Map<string, number>();
+  for (const join of visitedJoins) {
+    const gym = visitGymByKey.get(`${join.user}|${join.date}`);
+    if (gym) joinVisitsByGym.set(gym, (joinVisitsByGym.get(gym) ?? 0) + 1);
+  }
+  const totalVisitsByGym = new Map<string, number>();
+  for (const log of visitsInPeriod) {
+    totalVisitsByGym.set(log.gym_name, (totalVisitsByGym.get(log.gym_name) ?? 0) + 1);
+  }
+  const visitGyms = Array.from(joinVisitsByGym.entries())
+    .map(([gym, joinVisits]) => ({ gym, joinVisits, totalVisits: totalVisitsByGym.get(gym) ?? 0 }))
+    .sort((a, b) => b.joinVisits - a.joinVisits || b.totalVisits - a.totalVisits);
 
   const activeUsers = new Set(visitsInPeriod.map((l) => l.user)).size;
   const perUserMonth = (value: number) =>
@@ -400,5 +421,6 @@ export function analyzeImpact(
     visitsPerUserPerMonth: perUserMonth(visitsInPeriod.length),
     joinVisitsPerUserPerMonth: perUserMonth(joinsWithVisit),
     joinVisitShare: rate(joinsWithVisit, visitsInPeriod.length),
+    visitGyms,
   };
 }
