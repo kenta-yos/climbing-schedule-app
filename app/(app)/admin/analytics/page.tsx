@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
-import { toJSTDateString, getDateOffsetJST, getTodayJST } from "@/lib/utils";
+import { toJSTDateString, getDateOffsetJST, getTodayJST, formatJST } from "@/lib/utils";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import type { AnalyticsProps } from "@/components/admin/AnalyticsDashboard";
 import {
@@ -229,6 +229,8 @@ export default async function AnalyticsPage() {
     climbingActions,
     impacts,
     joinFunnel,
+    // 数字は固定値ではなくこの時点のスナップショット。force-dynamic なので毎回引き直す
+    renderedAt: formatJST(new Date(), "M/d HH:mm"),
   };
 
   return <AnalyticsDashboard {...props} />;

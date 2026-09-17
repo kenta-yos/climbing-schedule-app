@@ -29,6 +29,8 @@ export type AnalyticsProps = {
   impacts: ImpactResult[];
   /** 参加パネルのファネル（page_views ベース・過去30日） */
   joinFunnel: { joinTapped: number; planJoined: number; planCreated: number };
+  /** サーバーがこの画面を組み立てた時刻（JST）。数字はこの時点のスナップショット */
+  renderedAt: string;
 };
 
 type Tab = "impact" | "events" | "logs" | "actions" | "users";
@@ -345,6 +347,12 @@ function ImpactTab({
         </div>
       </div>
 
+      <p className="text-[10px] text-gray-400 leading-relaxed px-1">
+        この数字は開いた時点のスナップショットで、あとから動く。参加した人が後日に実績を登録すれば増え、
+        古い実績が削除されれば減る。まだ日付が来ていない参加は判定の母数に入れていないので、
+        期日を過ぎて実績が付かなければ来訪の割合は下がる。30日・90日・6ヶ月の窓も毎日ずれる
+      </p>
+
       {r.usesRestoredEvents && (
         <p className="text-[10px] text-gray-400 leading-relaxed px-1">
           ※ この期間には、plan_events を入れる前の分を page_views のイベントから復元したものが含まれる。
@@ -367,6 +375,7 @@ export function AnalyticsDashboard({
   climbingActions,
   impacts,
   joinFunnel,
+  renderedAt,
 }: AnalyticsProps) {
   const [tab, setTab] = useState<Tab>("impact");
   const { home, plan, gyms } = categorizeActions(actionCounts);
@@ -387,9 +396,12 @@ export function AnalyticsDashboard({
         style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
       >
         <span className="text-sm font-bold flex-1 text-gray-900">Analytics</span>
-        <span className="text-[10px] text-gray-400">
-          {tab === "impact" ? "予定・実績ベース / 全員" : "過去30日 / admin除外"}
-        </span>
+        <div className="text-right leading-tight">
+          <span className="text-[10px] text-gray-400 block">
+            {tab === "impact" ? "予定・実績ベース / 全員" : "過去30日 / admin除外"}
+          </span>
+          <span className="text-[10px] text-gray-300 block">{renderedAt} 時点</span>
+        </div>
       </div>
 
       {/* サマリーカード（常時表示） */}
