@@ -16,14 +16,13 @@ import { toast } from "@/lib/hooks/use-toast";
 import { trackAction, recordPlanEvents } from "@/lib/analytics";
 import { revalidateSchedulePages } from "@/lib/actions";
 import { getTodayJST, formatMMDD } from "@/lib/utils";
-import { TIME_SLOTS } from "@/lib/constants";
+import { TIME_SLOTS, GYM_UNDECIDED_LABEL } from "@/lib/constants";
 import type { GymMaster, ClimbingLog, User } from "@/lib/supabase/queries";
 import Image from "next/image";
 import { ChevronLeft, Search, X, Trash2, Loader2 } from "lucide-react";
 
 // ジム未定のときの内部値・DB保存値
 export const GYM_UNDECIDED = "__undecided__";
-export const GYM_UNDECIDED_LABEL = "ジム未定";
 
 // メモの最大文字数。トップのフィードに収まる長さに抑える。
 const MEMO_MAX_LENGTH = 50;

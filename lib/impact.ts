@@ -30,8 +30,7 @@
  * 参加として数え、2 件の参加のうち 1 件が偽陽性になっていた。
  */
 
-/** ジム未定で登録したときに gym_name に入る文字列 */
-export const GYM_UNDECIDED_LABEL = "ジム未定";
+import { GYM_UNDECIDED_LABEL } from "./constants";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_HOUR = 60 * 60 * 1000;

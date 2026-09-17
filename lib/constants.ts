@@ -4,6 +4,10 @@ export const TIME_SLOTS = [
   { value: "夜", label: "夜", icon: "/images/yoru.png" },
 ] as const;
 
+// ジム未定で登録したときに climbing_logs.gym_name に入る文字列。
+// 「登る仲間を募集中」の予定を、ジムを決めた予定と区別するのに使う
+export const GYM_UNDECIDED_LABEL = "ジム未定";
+
 // ランキングメダル
 export const RANK_MEDALS: Record<number, string> = {
   1: "🥇",

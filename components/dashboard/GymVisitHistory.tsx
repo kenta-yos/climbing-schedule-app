@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Building2 } from "lucide-react";
-import { SnsIcon } from "@/components/ui/SnsIcon";
+import { SnsIcon } from "@/components/common/SnsIcon";
 import { getTodayJST, daysDiff } from "@/lib/utils";
 import type { ClimbingLog, GymMaster } from "@/lib/supabase/queries";
 

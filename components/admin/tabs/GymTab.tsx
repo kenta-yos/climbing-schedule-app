@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AddressInput } from "@/components/ui/AddressInput";
+import { AddressInput } from "@/components/common/AddressInput";
 import { addGym } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
 import { CheckCircle2, ChevronDown, ChevronUp, Pencil } from "lucide-react";

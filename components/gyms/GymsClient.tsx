@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { AddressInput } from "@/components/ui/AddressInput";
+import { AddressInput } from "@/components/common/AddressInput";
 import { getTodayJST, haversineKm } from "@/lib/utils";
 import { GymCard } from "@/components/gyms/GymCard";
 import type { GymMaster, AreaMaster, ClimbingLog } from "@/lib/supabase/queries";

@@ -1,6 +1,6 @@
 "use client";
 
-import { SnsIcon } from "@/components/ui/SnsIcon";
+import { SnsIcon } from "@/components/common/SnsIcon";
 import type { GymMaster } from "@/lib/supabase/queries";
 
 type Props = {
