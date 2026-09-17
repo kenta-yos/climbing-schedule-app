@@ -70,3 +70,22 @@ export function haversineKm(
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   return R * 2 * Math.asin(Math.sqrt(a));
 }
+
+/**
+ * 検索の突き合わせ用に文字列をならす。表記の揺れで引けなくなるのを防ぐ。
+ *
+ * - ダイアクリティカルマークを外す。`Climbing GYM Hütte` を `hutte` で引ける
+ * - 全角英数と半角カナをそろえる。`Ｒｏｃｋｙ` や `ﾋｭｯﾃ` で打っても当たる
+ * - ひらがなをカタカナに寄せる。`ひゅって` で `ヒュッテ` に当たる
+ *
+ * 濁点・半濁点は NFKD で分解されたまま残すが、クエリと候補の両方に同じ関数を
+ * 通すので揃う。必ず両側に掛けること。
+ */
+export function normalizeForSearch(value: string): string {
+  return value
+    .normalize("NFKD")
+    // 分解で出てきたアクセント記号を落とす。濁点(U+3099)はこの範囲外なので残る
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u3041-\u3096]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60))
+    .toLowerCase();
+}

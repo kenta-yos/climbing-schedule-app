@@ -15,7 +15,7 @@ import {
 import { toast } from "@/lib/hooks/use-toast";
 import { trackAction, recordPlanEvents } from "@/lib/analytics";
 import { revalidateSchedulePages } from "@/lib/actions";
-import { getTodayJST, formatMMDD } from "@/lib/utils";
+import { getTodayJST, formatMMDD, normalizeForSearch } from "@/lib/utils";
 import { TIME_SLOTS, GYM_UNDECIDED_LABEL } from "@/lib/constants";
 import type { GymMaster, ClimbingLog, User } from "@/lib/supabase/queries";
 import Image from "next/image";
@@ -90,11 +90,13 @@ export function PlanPageClient({
     );
   };
 
-  // 検索フィルター
+  // 検索フィルター。ジム名は Hütte のような綴りがあるので、クエリと候補の
+  // 両方をならしてから突き合わせる
   const filteredGyms = searchQuery.trim()
-    ? gyms.filter((g) =>
-        g.gym_name.toLowerCase().includes(searchQuery.trim().toLowerCase())
-      )
+    ? (() => {
+        const q = normalizeForSearch(searchQuery.trim());
+        return gyms.filter((g) => normalizeForSearch(g.gym_name).includes(q));
+      })()
     : [];
 
   // よく行くジム（最大6件）
