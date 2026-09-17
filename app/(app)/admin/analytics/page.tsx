@@ -4,6 +4,7 @@ import { getCurrentUser, isAdminUser } from "@/lib/auth";
 import { toJSTDateString, getDateOffsetJST } from "@/lib/utils";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import type { AnalyticsProps } from "@/components/admin/AnalyticsDashboard";
+import { analyzeImpact, type ImpactLog } from "@/lib/impact";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export default async function AnalyticsPage() {
   // ログタブ用: 48時間
   const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
-  const [pageViewsRes, recentLogsRes] = await Promise.all([
+  const [pageViewsRes, recentLogsRes, climbingLogsRes] = await Promise.all([
     supabase
       .from("page_views")
       .select("user_name, page, action, created_at")
@@ -45,10 +46,18 @@ export default async function AnalyticsPage() {
       .gte("created_at", cutoff48h)
       .neq("user_name", adminName)
       .order("created_at", { ascending: false }),
+    // 効果測定用: 予定と実績の全件。合流の判定に created_at が要る
+    supabase
+      .from("climbing_logs")
+      .select("date, gym_name, user, type, created_at")
+      // 上限に当たったときに落ちるのが古い分になるよう新しい順で取る
+      .order("date", { ascending: false })
+      .limit(20000),
   ]);
 
   const pageViews = pageViewsRes.data || [];
   const recentLogs = recentLogsRes.data || [];
+  const climbingLogs = (climbingLogsRes.data || []) as ImpactLog[];
 
   const actionRecords = pageViews.filter((pv) => !!pv.action);
 
@@ -128,6 +137,29 @@ export default async function AnalyticsPage() {
       created_at: pv.created_at,
     }));
 
+  // --- 効果測定 ---
+  // page_views と違い、こちらは管理者も 1 メンバーとして数える
+  const impacts = [
+    { label: "30日", days: 30 },
+    { label: "90日", days: 90 },
+    { label: "1年", days: 365 },
+    { label: "全期間", days: null },
+  ].map(({ label, days }) =>
+    analyzeImpact(climbingLogs, {
+      label,
+      sinceDate: days === null ? undefined : getDateOffsetJST(-days),
+    })
+  );
+
+  // 参加パネルのファネル（page_views ベース・30日・admin除外）
+  const countAction = (name: string) =>
+    actionRecords.filter((pv) => pv.action.split("|")[0] === name).length;
+  const joinFunnel = {
+    joinTapped: countAction("join_tapped"),
+    planJoined: countAction("plan_joined"),
+    planCreated: countAction("plan_created"),
+  };
+
   const props: AnalyticsProps = {
     summary: {
       totalPageViews: pageViews.length,
@@ -140,6 +172,8 @@ export default async function AnalyticsPage() {
     userStats,
     recentLogs,
     climbingActions,
+    impacts,
+    joinFunnel,
   };
 
   return <AnalyticsDashboard {...props} />;
