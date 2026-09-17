@@ -5,6 +5,7 @@ import Image from "next/image";
 import { ChevronDown, Trash2, Database } from "lucide-react";
 import { deleteClimbingLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
+import { trackAction } from "@/lib/analytics";
 import { formatMMDD } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
 import type { ClimbingLog } from "@/lib/supabase/queries";
@@ -26,8 +27,12 @@ export function MyRecordsAccordion({ logs, currentUser, onDeleted }: Props) {
   const handleDelete = async (id: string) => {
     if (deletingId) return;
     setDeletingId(id);
+    const record = actuals.find((l) => l.id === id);
     try {
       await deleteClimbingLog(id);
+      if (record) {
+        trackAction(currentUser, "dashboard", `log_deleted|${record.date.split("T")[0]}|${record.gym_name}`);
+      }
       toast({ title: "削除しました", variant: "success" });
       onDeleted();
     } catch {

@@ -13,7 +13,7 @@ import {
   checkDuplicateLog,
 } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
-import { trackAction } from "@/lib/analytics";
+import { trackAction, recordPlanEvents } from "@/lib/analytics";
 import { revalidateSchedulePages } from "@/lib/actions";
 import { getTodayJST, formatMMDD } from "@/lib/utils";
 import { TIME_SLOTS } from "@/lib/constants";
@@ -220,6 +220,37 @@ export function PlanPageClient({
         }
 
         trackAction(userName, "plan", `plan_updated|${date}|${gymNameForDB}|${selectedCompanions.join(",")}`);
+        if (editLog.type === "予定") {
+          const prevDate = editLog.date.split("T")[0];
+          // 日付かジムが変わると、参加は新しいジム名で記録される。移動の事実を
+          // 残しておかないと、あとから募集と参加を突き合わせられなくなる
+          if (prevDate !== date || editLog.gym_name !== gymNameForDB) {
+            recordPlanEvents([
+              {
+                kind: "moved",
+                date,
+                gymName: gymNameForDB,
+                user: editLog.user,
+                actor: userName,
+                timeSlot,
+                prevDate,
+                prevGymName: editLog.gym_name,
+              },
+            ]);
+          }
+        }
+        if (editLog.type === "予定" && newCompanions.length > 0) {
+          recordPlanEvents(
+            newCompanions.map((companion) => ({
+              kind: "posted" as const,
+              date,
+              gymName: gymNameForDB,
+              user: companion,
+              actor: userName,
+              timeSlot,
+            }))
+          );
+        }
         toast({ title: "📅 予定を更新しました！", variant: "success" });
         await revalidateSchedulePages();
         router.push("/home");
@@ -281,6 +312,21 @@ export function PlanPageClient({
         if (withFriends) companionNames.push("友人");
         const base = type === "予定" ? "plan_created" : "log_created";
         trackAction(userName, "plan", `${base}|${date}|${gymNameForDB}|${companionNames.join(",")}`);
+        if (type === "予定") {
+          // 本人の分と、代理登録した同行者の分。actor で区別できるので、
+          // 効果測定では同行者を「参加」として数えずに済む
+          recordPlanEvents([
+            { kind: "posted", date, gymName: gymNameForDB, user: userName, actor: userName, timeSlot },
+            ...selectedCompanions.map((companion) => ({
+              kind: "posted" as const,
+              date,
+              gymName: gymNameForDB,
+              user: companion,
+              actor: userName,
+              timeSlot,
+            })),
+          ]);
+        }
         const companionMsg = companionNames.length > 0
           ? `（${companionNames.join("・")}と）`
           : "";
@@ -306,6 +352,18 @@ export function PlanPageClient({
     try {
       await deleteClimbingLog(editLog.id);
       trackAction(userName, "plan", `plan_deleted|${editLog.date.split("T")[0]}|${editLog.gym_name}`);
+      if (editLog.type === "予定") {
+        recordPlanEvents([
+          {
+            kind: "deleted",
+            date: editLog.date.split("T")[0],
+            gymName: editLog.gym_name,
+            user: editLog.user,
+            actor: userName,
+            timeSlot: editLog.time_slot,
+          },
+        ]);
+      }
       toast({ title: "🗑️ 予定を削除しました", variant: "success" });
       await revalidateSchedulePages();
       router.push("/home");

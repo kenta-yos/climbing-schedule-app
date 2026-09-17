@@ -7,17 +7,19 @@ import { CalendarDays, Pencil, Trash2 } from "lucide-react";
 import { getTodayJST, formatMMDD } from "@/lib/utils";
 import { deleteClimbingLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
+import { trackAction, recordPlanEvents } from "@/lib/analytics";
 import { TIME_SLOTS } from "@/lib/constants";
 import type { ClimbingLog } from "@/lib/supabase/queries";
 
 type Props = {
   logs: ClimbingLog[];
+  currentUser: string;
   onDeleted: () => void;
 };
 
 const DEFAULT_SHOW = 3;
 
-export function UpcomingPlans({ logs, onDeleted }: Props) {
+export function UpcomingPlans({ logs, currentUser, onDeleted }: Props) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -34,8 +36,25 @@ export function UpcomingPlans({ logs, onDeleted }: Props) {
   const handleDelete = async (id: string) => {
     if (deletingId) return;
     setDeletingId(id);
+    const plan = plans.find((p) => p.id === id);
     try {
       await deleteClimbingLog(id);
+      // ここの削除は長らく計測されていなかった。予定が消えると climbing_logs から
+      // 募集の履歴を追えなくなるので、消えたこと自体を残す
+      if (plan) {
+        const planDate = plan.date.split("T")[0];
+        trackAction(currentUser, "dashboard", `plan_deleted|${planDate}|${plan.gym_name}`);
+        recordPlanEvents([
+          {
+            kind: "deleted",
+            date: planDate,
+            gymName: plan.gym_name,
+            user: plan.user,
+            actor: currentUser,
+            timeSlot: plan.time_slot,
+          },
+        ]);
+      }
       toast({ title: "予定を削除しました", variant: "success" });
       onDeleted();
     } catch {

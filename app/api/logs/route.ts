@@ -64,6 +64,20 @@ export async function POST(request: NextRequest) {
       const base = body.type === "予定" ? "plan_created" : "log_created";
       const detail = body.date && body.gym_name ? `${base}|${body.date}|${body.gym_name}` : base;
       supabase.from("page_views").insert({ user_name: body.user, page: "plan", action: detail }).then(() => {});
+      // 効果測定の母数。予定行は消されるので、出された事実をここにも残す
+      if (body.type === "予定" && body.date && body.gym_name) {
+        supabase
+          .from("plan_events")
+          .insert({
+            kind: "posted",
+            date: body.date,
+            gym_name: body.gym_name,
+            user: body.user,
+            actor: body.user,
+            time_slot: body.time_slot ?? null,
+          })
+          .then(() => {});
+      }
     }
 
     return NextResponse.json({ success: true }, { status: 201 });

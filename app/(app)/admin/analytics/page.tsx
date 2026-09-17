@@ -1,10 +1,16 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdminUser } from "@/lib/auth";
-import { toJSTDateString, getDateOffsetJST } from "@/lib/utils";
+import { toJSTDateString, getDateOffsetJST, getTodayJST } from "@/lib/utils";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import type { AnalyticsProps } from "@/components/admin/AnalyticsDashboard";
-import { analyzeImpact, type ImpactLog } from "@/lib/impact";
+import {
+  analyzeImpact,
+  mergeEventSources,
+  type ImpactLog,
+  type PlanEventRow,
+  type ActionRow,
+} from "@/lib/impact";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +21,25 @@ function lastNDays(n: number): string[] {
   return Array.from({ length: n }, (_, i) => getDateOffsetJST(-(n - 1 - i)));
 }
 
+/**
+ * 全件を取り切る。Supabase は 1 リクエストあたり 1000 行で打ち切るため、
+ * `.limit(5000)` のような指定は黙って 1000 行に丸められる。直近 30 日の
+ * page_views だけでも 1300 行あり、実際に取りこぼしていた。
+ */
+async function fetchAll<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: T[] | null }>
+): Promise<T[]> {
+  const PAGE_SIZE = 1000;
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data } = await page(from, from + PAGE_SIZE - 1);
+    if (!data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
+
 export default async function AnalyticsPage() {
   const decodedUser = getCurrentUser();
   if (!decodedUser) notFound();
@@ -23,6 +48,7 @@ export default async function AnalyticsPage() {
 
   const supabase = createClient();
   const adminName = decodedUser;
+  const today = getTodayJST();
 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - 30);
@@ -31,35 +57,56 @@ export default async function AnalyticsPage() {
   // ログタブ用: 48時間
   const cutoff48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
-  const [pageViewsRes, recentLogsRes, climbingLogsRes] = await Promise.all([
-    supabase
-      .from("page_views")
-      .select("user_name, page, action, created_at")
-      .gte("created_at", cutoff)
-      .neq("user_name", adminName)
-      .order("created_at", { ascending: false })
-      .limit(5000),
+  const [pageViews, recentLogs, climbingLogs, planEvents, actionRows] = await Promise.all([
+    fetchAll<{ user_name: string; page: string; action: string | null; created_at: string }>((from, to) =>
+      supabase
+        .from("page_views")
+        .select("user_name, page, action, created_at")
+        .gte("created_at", cutoff)
+        .neq("user_name", adminName)
+        .order("created_at", { ascending: false })
+        .range(from, to)
+    ),
     // 直近48時間のイベントログ
-    supabase
-      .from("page_views")
-      .select("user_name, page, action, created_at")
-      .gte("created_at", cutoff48h)
-      .neq("user_name", adminName)
-      .order("created_at", { ascending: false }),
-    // 効果測定用: 予定と実績の全件。合流の判定に created_at が要る
-    supabase
-      .from("climbing_logs")
-      .select("date, gym_name, user, type, created_at")
-      // 上限に当たったときに落ちるのが古い分になるよう新しい順で取る
-      .order("date", { ascending: false })
-      .limit(20000),
+    fetchAll<{ user_name: string; page: string; action: string | null; created_at: string }>((from, to) =>
+      supabase
+        .from("page_views")
+        .select("user_name, page, action, created_at")
+        .gte("created_at", cutoff48h)
+        .neq("user_name", adminName)
+        .order("created_at", { ascending: false })
+        .range(from, to)
+    ),
+    // 効果測定用: 実績の突き合わせに使う。予定行は削除されるので当てにしない
+    fetchAll<ImpactLog>((from, to) =>
+      supabase
+        .from("climbing_logs")
+        .select("date, gym_name, user, type, created_at")
+        .eq("type", "実績")
+        .order("date", { ascending: false })
+        .range(from, to)
+    ),
+    // 効果測定用: 募集と参加の証跡（追記専用）
+    fetchAll<PlanEventRow>((from, to) =>
+      supabase
+        .from("plan_events")
+        .select("kind, date, gym_name, user, actor, source, prev_date, prev_gym_name, created_at")
+        .order("created_at", { ascending: true })
+        .range(from, to)
+    ),
+    // 効果測定用: plan_events を入れる前の分を page_views から復元する。
+    // ここは管理者も 1 メンバーとして数えるので user_name で絞らない
+    fetchAll<ActionRow>((from, to) =>
+      supabase
+        .from("page_views")
+        .select("user_name, action, created_at")
+        .not("action", "is", null)
+        .order("created_at", { ascending: true })
+        .range(from, to)
+    ),
   ]);
 
-  const pageViews = pageViewsRes.data || [];
-  const recentLogs = recentLogsRes.data || [];
-  const climbingLogs = (climbingLogsRes.data || []) as ImpactLog[];
-
-  const actionRecords = pageViews.filter((pv) => !!pv.action);
+  const actionRecords = pageViews.filter((pv): pv is typeof pv & { action: string } => !!pv.action);
 
   const days14 = lastNDays(14);
 
@@ -138,24 +185,31 @@ export default async function AnalyticsPage() {
     }));
 
   // --- 効果測定 ---
+  // plan_events を入れる前の期間は page_views の action から復元する。
   // page_views と違い、こちらは管理者も 1 メンバーとして数える
+  const { events, cutover } = mergeEventSources(planEvents, actionRows);
+
   const impacts = [
     { label: "30日", days: 30 },
     { label: "90日", days: 90 },
     { label: "1年", days: 365 },
     { label: "全期間", days: null },
   ].map(({ label, days }) =>
-    analyzeImpact(climbingLogs, {
+    analyzeImpact(events, climbingLogs, {
       label,
       sinceDate: days === null ? undefined : getDateOffsetJST(-days),
+      cutover,
+      today,
     })
   );
 
-  // 参加パネルのファネル（page_views ベース・30日・admin除外）
+  // 参加パネルのファネル（過去30日・管理者も含む）
+  const since30 = Date.parse(cutoff);
+  const recentActions = actionRows.filter((a) => Date.parse(a.created_at) >= since30);
   const countAction = (name: string) =>
-    actionRecords.filter((pv) => pv.action.split("|")[0] === name).length;
+    recentActions.filter((a) => a.action.split("|")[0] === name).length;
   const joinFunnel = {
-    joinTapped: countAction("join_tapped"),
+    joinTapped: countAction("join_tapped") + countAction("shift_join_tapped"),
     planJoined: countAction("plan_joined"),
     planCreated: countAction("plan_created"),
   };

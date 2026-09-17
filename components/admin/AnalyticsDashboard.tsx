@@ -168,9 +168,6 @@ function parseActionDetail(action: string): ActionDetail {
 
 // ─── 効果タブ ────────────────────────────────────────────────────────────────
 
-/** 「合流しなくてもどうせ行っていた」と仮定する割合。増分の感度を見るために振る */
-const COUNTERFACTUAL_RATES = [0, 0.25, 0.5, 0.75];
-
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 const round1 = (v: number) => Math.round(v * 10) / 10;
 
@@ -180,6 +177,32 @@ function StatRow({ label, value, note }: { label: string; value: string; note?: 
       <span className="text-[11px] text-gray-500 flex-1">{label}</span>
       <span className="text-xs font-semibold text-gray-800 whitespace-nowrap">{value}</span>
       {note && <span className="text-[10px] text-gray-400 whitespace-nowrap w-16 text-right">{note}</span>}
+    </div>
+  );
+}
+
+function PeriodTabs({
+  impacts,
+  index,
+  onChange,
+}: {
+  impacts: ImpactResult[];
+  index: number;
+  onChange: (i: number) => void;
+}) {
+  return (
+    <div className="flex gap-1.5">
+      {impacts.map((im, i) => (
+        <button
+          key={im.label}
+          onClick={() => onChange(i)}
+          className={`flex-1 py-1.5 rounded-xl text-[11px] font-medium border transition-colors ${
+            i === index ? "bg-orange-500 text-white border-orange-500" : "bg-white text-gray-500 border-gray-200"
+          }`}
+        >
+          {im.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -194,92 +217,97 @@ function ImpactTab({
   const [index, setIndex] = useState(impacts.length - 1);
   const r = impacts[index];
 
-  if (!r || r.seedPlans === 0) {
+  if (!r || r.posts === 0) {
     return (
       <>
-        <div className="flex gap-1.5">
-          {impacts.map((im, i) => (
-            <button
-              key={im.label}
-              onClick={() => setIndex(i)}
-              className={`flex-1 py-1.5 rounded-xl text-[11px] font-medium border transition-colors ${
-                i === index ? "bg-orange-500 text-white border-orange-500" : "bg-white text-gray-500 border-gray-200"
-              }`}
-            >
-              {im.label}
-            </button>
-          ))}
-        </div>
-        <div className="text-center py-12 text-gray-400 text-sm">この期間の予定がありません</div>
+        <PeriodTabs impacts={impacts} index={index} onChange={setIndex} />
+        <div className="text-center py-12 text-gray-400 text-sm">この期間の募集がありません</div>
       </>
     );
   }
 
-  const appDriven = r.joinVisits + r.shadowVisits;
-
   return (
     <>
-      {/* 期間切り替え */}
-      <div className="flex gap-1.5">
-        {impacts.map((im, i) => (
-          <button
-            key={im.label}
-            onClick={() => setIndex(i)}
-            className={`flex-1 py-1.5 rounded-xl text-[11px] font-medium border transition-colors ${
-              i === index ? "bg-orange-500 text-white border-orange-500" : "bg-white text-gray-500 border-gray-200"
-            }`}
-          >
-            {im.label}
-          </button>
-        ))}
-      </div>
+      <PeriodTabs impacts={impacts} index={index} onChange={setIndex} />
 
       {/* 参加率 */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-xs font-semibold text-gray-700">予定に参加が発生した割合</p>
+        <p className="text-xs font-semibold text-gray-700">参加がついた募集の割合</p>
         <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
-          最初に出た予定を「募集」とみなし、あとから別の人が同じ日・同じジムに乗ったものを合流と数える
+          予定が出された時点と、他の人が参加ボタンで乗った時点を、起きたその場で記録したもの
         </p>
         <div className="flex items-end gap-2 mb-3">
           <span className="text-4xl font-bold text-orange-500">{pct(r.joinRate)}</span>
           <span className="text-xs text-gray-400 mb-1.5">
-            {r.joinedPlans} / {r.seedPlans} 件
+            {r.postsWithJoin} / {r.posts} 件
           </span>
         </div>
         <div className="divide-y divide-gray-50">
-          <StatRow label="合流の延べ件数" value={`${r.joins} 件`} />
+          <StatRow label="その募集についた参加" value={`${r.joinsOnPosts} 件`} />
+          <StatRow label="1募集あたりの参加人数" value={`${round1(r.joinsOnPosts / r.posts)} 人`} />
           <StatRow
-            label="1募集あたりの合流人数"
-            value={`${round1(r.joins / r.seedPlans)} 人`}
-          />
-          <StatRow
-            label="最初の合流までの時間（中央値）"
-            value={r.medianHoursToJoin === null ? "—" : `${round1(r.medianHoursToJoin)} 時間`}
+            label="最初の参加までの時間（中央値）"
+            value={r.medianHoursToFirstJoin === null ? "—" : `${round1(r.medianHoursToFirstJoin)} 時間`}
           />
           <StatRow
             label="🧗 ジムを決めて出した予定"
             value={pct(r.fixedGym.joinRate)}
-            note={`${r.fixedGym.joinedPlans}/${r.fixedGym.seedPlans}`}
+            note={`${r.fixedGym.postsWithJoin}/${r.fixedGym.posts}`}
           />
           <StatRow
             label="📢 ジム未定（仲間募集）"
             value={pct(r.undecided.joinRate)}
-            note={`${r.undecided.joinedPlans}/${r.undecided.seedPlans}`}
+            note={`${r.undecided.postsWithJoin}/${r.undecided.posts}`}
+          />
+          {r.shiftJoins > 0 && <StatRow label="🍺 バイト中カードから乗った参加" value={`${r.shiftJoins} 件`} />}
+        </div>
+        <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
+          上の率は「この期間に出された募集」が主語。あとから付いた参加は期間外でもその募集に数える。
+          期間内に起きた参加そのものは {r.joinsInPeriod} 件
+          {r.orphanJoins > 0 && `（ほかに募集が特定できなかった参加が ${r.orphanJoins} 件）`}
+        </p>
+        <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
+          「一緒に登る人」で代理登録された {r.proxyPosts} 件は、本人の操作なので参加に数えていない
+          {r.deletedPosts > 0 && ` ／ この期間に削除された予定 ${r.deletedPosts} 件`}
+        </p>
+      </div>
+
+      {/* 参加 → 来訪 */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+        <p className="text-xs font-semibold text-gray-700">参加した人が実際に登ったか</p>
+        <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
+          参加を記録した人・日付に、実績が残っているかで見る。まだ来ていない日付は母数から外す
+        </p>
+        <div className="flex items-end gap-2 mb-3">
+          <span className="text-4xl font-bold text-emerald-500">{pct(r.visitRate)}</span>
+          <span className="text-xs text-gray-400 mb-1.5">
+            {r.joinsWithVisit} / {r.pastJoins} 件
+          </span>
+        </div>
+        <div className="divide-y divide-gray-50">
+          <StatRow label="実効ユーザー数" value={`${r.activeUsers} 人`} note={`${round1(r.months)}ヶ月`} />
+          <StatRow label="期間内の来訪（実績）" value={`${r.totalVisits} 回`} />
+          <StatRow
+            label="参加をきっかけに生まれた来訪"
+            value={`${r.joinsWithVisit} 回`}
+            note={pct(r.joinVisitShare)}
+          />
+          <StatRow label="1人あたり月の来訪" value={`${round1(r.visitsPerUserPerMonth)} 回`} />
+          <StatRow
+            label="うち参加きっかけ"
+            value={`${round1(r.joinVisitsPerUserPerMonth)} 回`}
           />
         </div>
         <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
-          同行者として一括登録された {r.companionLogs} 件は、本人の代理登録なので合流から除いている
-          {r.undated > 0 && ` ／ 登録時刻が無く判定できなかった予定 ${r.undated} 件`}
+          これは「参加を記録した人が、その日に実際に登った割合」であって、アプリが無かった場合との差ではない。
+          誘い合って結局行っていた分がどれだけ含まれるかは、このデータでは分けられない
         </p>
       </div>
 
       {/* 参加ボタンのファネル */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-xs font-semibold text-gray-700">参加ボタンの通過率（過去30日・admin除外）</p>
-        <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
-          page_views のイベントベース。上の集計とは母数が違う
-        </p>
-        <div className="divide-y divide-gray-50">
+        <p className="text-xs font-semibold text-gray-700">参加ボタンの通過率（過去30日）</p>
+        <div className="divide-y divide-gray-50 mt-2">
           <StatRow label="参加ボタン押下" value={`${joinFunnel.joinTapped} 回`} />
           <StatRow label="参加確定" value={`${joinFunnel.planJoined} 回`} />
           <StatRow
@@ -290,71 +318,15 @@ function ImpactTab({
         </div>
       </div>
 
-      {/* 来訪への効果 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-xs font-semibold text-gray-700">アプリ由来と見られるジム来訪</p>
-        <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
-          他人の予定を見てから登録された実績。実効ユーザー＝この期間に 1 件以上ログを残した人
+      {r.usesRestoredEvents && (
+        <p className="text-[10px] text-gray-400 leading-relaxed px-1">
+          ※ この期間には、plan_events を入れる前の分を page_views のイベントから復元したものが含まれる。
+          復元分は参加元（予定かバイト中か）を持たないものがある
         </p>
-        <div className="divide-y divide-gray-50">
-          <StatRow label="実効ユーザー数" value={`${r.activeUsers} 人`} note={`${round1(r.months)}ヶ月`} />
-          <StatRow label="期間内の来訪（実績）" value={`${r.totalVisits} 回`} />
-          <StatRow label="合流 → 実績が残った来訪" value={`${r.joinVisits} 回`} note={pct(r.visitConversion)} />
-          <StatRow label="予定なしで相乗りした来訪" value={`${r.shadowVisits} 回`} />
-          <StatRow label="アプリ由来の来訪（合計）" value={`${appDriven} 回`} note={pct(r.appDrivenShare)} />
-          <StatRow
-            label="1人あたり月の来訪"
-            value={`${round1(r.visitsPerUserPerMonth)} 回`}
-          />
-        </div>
-      </div>
-
-      {/* 反実仮想 */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <p className="text-xs font-semibold text-gray-700">アプリが無かった場合との差</p>
-        <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
-          アプリ由来の来訪 {appDriven} 回のうち、何割かは声を掛け合って結局行っていたはず。
-          その割合を振って増分の幅を見る
-        </p>
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="text-left text-[10px] font-semibold text-gray-400 py-1.5">どうせ行っていた割合</th>
-              <th className="text-right text-[10px] font-semibold text-gray-400 py-1.5">増えた来訪</th>
-              <th className="text-right text-[10px] font-semibold text-gray-400 py-1.5">1人あたり月</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {COUNTERFACTUAL_RATES.map((alpha) => {
-              const incremental = appDriven * (1 - alpha);
-              const perUserMonth =
-                r.activeUsers === 0 || r.months === 0 ? 0 : incremental / r.activeUsers / r.months;
-              return (
-                <tr key={alpha}>
-                  <td className="py-2 text-gray-600">
-                    {pct(alpha)}
-                    {alpha === 0.5 && <span className="text-[10px] text-gray-400 ml-1">中央的な仮定</span>}
-                  </td>
-                  <td className="py-2 text-right font-semibold text-gray-800">
-                    +{round1(incremental)} 回
-                  </td>
-                  <td className="py-2 text-right font-semibold text-orange-500">
-                    +{round1(perUserMonth)} 回
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
-          アプリ導入前の来訪頻度と比べているわけではないので、これは因果効果ではなく
-          「アプリ上の合流をきっかけに登録された来訪」の量。上限として読むのが安全
-        </p>
-      </div>
+      )}
     </>
   );
 }
-
 // ─── メイン ──────────────────────────────────────────────────────────────────
 
 export function AnalyticsDashboard({

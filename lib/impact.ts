@@ -1,35 +1,43 @@
 /**
  * アプリの効果測定。
  *
- * 「作成された予定にどれくらい参加が発生したか」と、
- * 「アプリが無ければ起きなかったと思われるジム来訪がどれくらいか」を
- * climbing_logs だけから推定する。page_views のイベントは 1 テーブルに
- * 貯まり続ける都合で古いものから失われる可能性があり、また
- * 計測コードが入る前の期間を遡れないため、ここでは使わない。
+ * ## なぜ climbing_logs から数えないのか
  *
- * ## 参加の判定
+ * 以前はここで climbing_logs の「予定」行を並べ、日付×ジムの組で最初の行を募集、
+ * あとから来た別人の行を参加、とみなしていた。これは成立しない。予定は登り終わると
+ * ユーザーに削除されるからで、実データでは 7 ヶ月で 332 件作られた予定のうち、
+ * 残っていたのは未来日の 20 件だけだった。生きている予定が全部未来日である以上、
+ * 「参加した人が実際に登ったか」は構造的に必ず 0 件になる。
  *
- * 予定は「日付 × ジム名」で 1 つの募集とみなす。同じ組の中で最初に作られた
- * ログを起点（seed）、それより後に別の人が作ったログを合流（join）とする。
- * ただし予定入力画面で「一緒に登るメンバー」を選ぶと、本人と仲間のログが
- * ほぼ同時刻に一括で作られる。これは本人が代理登録しただけで合流ではないため、
- * 直前のログとの間隔が SIMULTANEOUS_WINDOW_MS 以内なら同時登録として除外する。
+ * ## どこから数えるか
  *
- * ## 来訪の判定
+ * 起きたその場で記録したイベントだけを使う。出どころは 2 つ。
  *
- * 予定と実績は独立したテーブル行で、予定から実績への昇格は無い。そのため
- * 「合流した人が実際に登ったか」は、同じユーザー・同じ日付の実績があるかで見る。
+ * - `plan_events`（追記専用・削除しない）… 今後の本命
+ * - `page_views` の action（`plan_created` / `plan_joined`）… 過去分の復元用
+ *
+ * plan_events に行が入り始めた時刻を境に切り替える。それより前は page_views、
+ * 以後は plan_events。同じ操作を二重に数えないための境目。
+ *
+ * 実績（来訪）だけは climbing_logs を見る。実績行は削除されずに残っているため。
+ *
+ * ## 代理登録の扱い
+ *
+ * 予定入力画面で「一緒に登る人」を選ぶと、仲間の分の行も本人が作る。これは参加では
+ * ないので分けて数える。plan_events は `user`（その行の主語）と `actor`（操作した人）を
+ * 別に持つので判別できる。以前の「2 分以内に連続作成されたものは代理登録」という
+ * 推定は不要になった。実データではこの推定が、編集で後から追加された同行者を
+ * 参加として数え、2 件の参加のうち 1 件が偽陽性になっていた。
  */
 
 /** ジム未定で登録したときに gym_name に入る文字列 */
 export const GYM_UNDECIDED_LABEL = "ジム未定";
 
-/** これ以内に連続して作られたログは、同行者の一括登録とみなす */
-export const SIMULTANEOUS_WINDOW_MS = 2 * 60 * 1000;
-
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MS_PER_HOUR = 60 * 60 * 1000;
 const DAYS_PER_MONTH = 30.4375;
 
+/** climbing_logs の行。実績（来訪）の突き合わせにだけ使う */
 export type ImpactLog = {
   date: string;
   gym_name: string;
@@ -38,60 +46,97 @@ export type ImpactLog = {
   created_at: string | null;
 };
 
-export type Join = {
+/** plan_events の行 */
+export type PlanEventRow = {
+  kind: string;
+  date: string;
+  gym_name: string;
+  user: string;
+  actor: string;
+  source: string | null;
+  prev_date: string | null;
+  prev_gym_name: string | null;
+  created_at: string;
+};
+
+/** page_views の action 行 */
+export type ActionRow = {
+  user_name: string;
+  action: string;
+  created_at: string;
+};
+
+/** 2 つの出どころを揃えた、参加まわりの出来事 */
+type Event = {
+  kind: "posted" | "joined" | "moved" | "deleted";
+  /** 登る日 YYYY-MM-DD */
   date: string;
   gym: string;
-  seedUser: string;
-  joiner: string;
-  /** 起点の予定が作られてから合流するまでの時間 */
-  hoursAfterSeed: number;
-  /** 同じユーザー・同じ日付の実績が残っているか */
-  visited: boolean;
+  /** この出来事の主語 */
+  user: string;
+  /** 実際に操作した人。user と違えば代理登録 */
+  actor: string;
+  /** 参加のとき、何を見て乗ったか */
+  source: "plan" | "shift" | null;
+  /** 記録された時刻（ミリ秒） */
+  at: number;
+  /** moved のとき、移動前の日付×ジムのキー */
+  from: string | null;
 };
 
 export type ImpactResult = {
   label: string;
-  /** 集計対象の月数。1人あたり月次の指標を出すのに使う */
+  /** 集計対象の月数。1 人あたり月次の指標を出すのに使う */
   months: number;
+  /** この期間の集計が page_views 復元分を含むか */
+  usesRestoredEvents: boolean;
 
-  // --- 参加率 ---
-  /** 起点となった予定の数（＝募集の数） */
-  seedPlans: number;
-  /** そのうち 1 件以上の合流がついたもの */
-  joinedPlans: number;
-  /** joinedPlans / seedPlans */
+  // --- 募集と参加。すべて実測 ---
+  /** 募集の数。日付×ジムごとに、自分で出した最初の予定を 1 件と数える */
+  posts: number;
+  /** そのうち 1 件以上の参加がついたもの */
+  postsWithJoin: number;
+  /** postsWithJoin / posts */
   joinRate: number;
-  /** 合流の延べ件数 */
-  joins: number;
-  /** 同時登録（同行者の一括登録）として除外した件数 */
-  companionLogs: number;
-  /** created_at が無く判定できなかった予定の件数 */
-  undated: number;
-  /** ジム未定（登る仲間を募集中）の予定だけを見た場合 */
-  undecided: { seedPlans: number; joinedPlans: number; joinRate: number };
+  /** 上の募集に付いた参加の延べ件数。期間外に起きた参加も、その募集の実績として数える */
+  joinsOnPosts: number;
+  /** 期間内に起きた参加の件数。募集がいつ出されたかは問わない */
+  joinsInPeriod: number;
+  /** そのうち、対応する募集が見つからないもの。計測より前に出た予定への参加など */
+  orphanJoins: number;
+  /** バイト中カードから乗った参加 */
+  shiftJoins: number;
+  /** 代理登録された同行者の件数。参加とは別勘定 */
+  proxyPosts: number;
+  /** 削除された予定の件数 */
+  deletedPosts: number;
+  /** 最初の参加までの時間の中央値 */
+  medianHoursToFirstJoin: number | null;
+  /** ジム未定（仲間募集）の予定だけを見た場合 */
+  undecided: { posts: number; postsWithJoin: number; joinRate: number };
   /** ジムを決めて出した予定だけを見た場合 */
-  fixedGym: { seedPlans: number; joinedPlans: number; joinRate: number };
-  /** 起点から最初の合流までの時間の中央値 */
-  medianHoursToJoin: number | null;
+  fixedGym: { posts: number; postsWithJoin: number; joinRate: number };
 
-  // --- 来訪 ---
+  // --- 参加が来訪に届いたか ---
+  /** 期間内に起きた参加のうち、日付が過ぎていて実績の有無を判定できるもの */
+  pastJoins: number;
+  /** そのうち climbing_logs に実績が残っていたもの */
+  joinsWithVisit: number;
+  /** joinsWithVisit / pastJoins */
+  visitRate: number;
   /** 期間内の実績の総数 */
   totalVisits: number;
-  /** 合流した予定のうち、実績まで残った来訪 */
-  joinVisits: number;
-  /** 予定を出さずに他人の予定へ相乗りしたと見られる実績 */
-  shadowVisits: number;
-  /** joinVisits / joins */
-  visitConversion: number;
   /** 期間内に 1 件以上ログがあるユーザー数（＝実効ユーザー数） */
   activeUsers: number;
   /** 実効ユーザー 1 人あたり月あたりの来訪数 */
   visitsPerUserPerMonth: number;
-  /** 同じく、アプリ由来と見られる来訪数（反実仮想の割引前） */
-  appDrivenPerUserPerMonth: number;
-  /** アプリ由来と見られる来訪が全来訪に占める割合 */
-  appDrivenShare: number;
+  /** 同じく、参加をきっかけに生まれた来訪数 */
+  joinVisitsPerUserPerMonth: number;
+  /** 参加由来の来訪が全来訪に占める割合 */
+  joinVisitShare: number;
 };
+
+const toDate = (value: string) => value.slice(0, 10);
 
 function median(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -104,152 +149,235 @@ function rate(numerator: number, denominator: number): number {
   return denominator === 0 ? 0 : numerator / denominator;
 }
 
+function normalizePlanEvents(rows: PlanEventRow[]): Event[] {
+  const events: Event[] = [];
+  for (const row of rows) {
+    if (row.kind !== "posted" && row.kind !== "joined" && row.kind !== "moved" && row.kind !== "deleted")
+      continue;
+    events.push({
+      kind: row.kind,
+      date: toDate(row.date),
+      gym: row.gym_name,
+      user: row.user,
+      actor: row.actor,
+      source: row.source === "plan" || row.source === "shift" ? row.source : null,
+      at: new Date(row.created_at).getTime(),
+      from:
+        row.kind === "moved" && row.prev_date && row.prev_gym_name
+          ? `${toDate(row.prev_date)}|${row.prev_gym_name}`
+          : null,
+    });
+  }
+  return events;
+}
+
 /**
- * 期間内のログから効果指標を組み立てる。
- * sinceDate を省略すると全期間を対象にする。日付はいずれも YYYY-MM-DD。
+ * page_views の action から、plan_events と同じ形の出来事を復元する。
+ *
+ * `plan_created|日付|ジム|同行者,同行者` … 予定の作成。同行者は代理登録
+ * `plan_joined|日付|ジム|参加元`         … 参加。参加元は途中から付いた項目
+ *
+ * 「友人」はアプリ外の知人を指す予約語で、ユーザーではないので同行者から外す。
+ */
+function normalizeActions(rows: ActionRow[]): Event[] {
+  const events: Event[] = [];
+  for (const row of rows) {
+    const [base, rawDate, gym, extra] = row.action.split("|");
+    if (!rawDate || !gym) continue;
+    const date = toDate(rawDate);
+    const at = new Date(row.created_at).getTime();
+
+    if (base === "plan_created") {
+      events.push({ kind: "posted", date, gym, user: row.user_name, actor: row.user_name, source: null, at, from: null });
+      for (const companion of (extra || "").split(",")) {
+        const name = companion.trim();
+        if (!name || name === "友人") continue;
+        events.push({ kind: "posted", date, gym, user: name, actor: row.user_name, source: null, at, from: null });
+      }
+    } else if (base === "plan_joined") {
+      events.push({
+        kind: "joined",
+        date,
+        gym,
+        user: row.user_name,
+        actor: row.user_name,
+        source: extra === "plan" || extra === "shift" ? extra : null,
+        at,
+        from: null,
+      });
+    } else if (base === "plan_deleted") {
+      events.push({ kind: "deleted", date, gym, user: row.user_name, actor: row.user_name, source: null, at, from: null });
+    }
+  }
+  return events;
+}
+
+/**
+ * 2 つの出どころを、重複なく 1 本の列につなぐ。
+ * plan_events が始まった時刻より前だけ page_views の復元分を使う。
+ */
+export function mergeEventSources(
+  planEvents: PlanEventRow[],
+  actions: ActionRow[]
+): { events: Event[]; cutover: number | null } {
+  const fromTable = normalizePlanEvents(planEvents);
+  const cutover = fromTable.length > 0 ? Math.min(...fromTable.map((e) => e.at)) : null;
+  const restored = normalizeActions(actions).filter((e) => cutover === null || e.at < cutover);
+  return { events: [...fromTable, ...restored], cutover };
+}
+
+/**
+ * 期間内の出来事から効果指標を組み立てる。
+ *
+ * 募集と参加は「記録された時刻」で期間を切る。募集に付いた参加は、期間外に
+ * 起きたものも当該募集の実績として数える（募集を主語にした率にするため）。
+ * 来訪は climbing_logs の実績を「登った日」で切る。
+ *
+ * sinceDate を省略すると全期間を対象にする。日付は YYYY-MM-DD。
  */
 export function analyzeImpact(
-  logs: ImpactLog[],
-  { label, sinceDate }: { label: string; sinceDate?: string }
+  events: Event[],
+  visitLogs: ImpactLog[],
+  { label, sinceDate, cutover, today }: { label: string; sinceDate?: string; cutover?: number | null; today: string }
 ): ImpactResult {
-  const inPeriod = sinceDate ? logs.filter((l) => l.date >= sinceDate) : logs;
+  const since = sinceDate ? new Date(`${sinceDate}T00:00:00+09:00`).getTime() : null;
+  const inPeriod = (at: number) => since === null || at >= since;
 
-  const plans = inPeriod.filter((l) => l.type === "予定");
-  const results = inPeriod.filter((l) => l.type === "実績");
+  const posts = events.filter((e) => e.kind === "posted" && e.user === e.actor);
+  const proxies = events.filter((e) => e.kind === "posted" && e.user !== e.actor);
+  const allJoins = events.filter((e) => e.kind === "joined");
 
-  // 実績の有無を引くための索引
-  const visitKeys = new Set(results.map((l) => `${l.user}|${l.date}`));
-
-  // --- 予定を「日付 × ジム」でまとめ、起点と合流に分ける ---
-  const groups = new Map<string, ImpactLog[]>();
-  let undated = 0;
-  for (const plan of plans) {
-    if (!plan.created_at) {
-      undated++;
-      continue;
+  // 「ジム未定」で出した募集が後からジムを決めると、参加は新しいジム名で記録される。
+  // 移動の記録をたどって、募集も参加も最終的なキーに揃える
+  const movedTo = new Map<string, string>();
+  for (const move of events) {
+    if (move.kind === "moved" && move.from) movedTo.set(move.from, `${move.date}|${move.gym}`);
+  }
+  const resolve = (key: string): string => {
+    let current = key;
+    for (let hop = 0; hop < 8; hop++) {
+      const next = movedTo.get(current);
+      if (!next || next === current) break;
+      current = next;
     }
-    const key = `${plan.date}|${plan.gym_name}`;
-    const group = groups.get(key);
-    if (group) group.push(plan);
-    else groups.set(key, [plan]);
+    return current;
+  };
+
+  // 募集＝日付×ジムごとに最初の 1 件。同じ人が出し直しても 1 件に畳む
+  const seedByKey = new Map<string, Event>();
+  for (const post of posts) {
+    const key = resolve(`${post.date}|${post.gym}`);
+    const current = seedByKey.get(key);
+    if (!current || post.at < current.at) seedByKey.set(key, post);
   }
 
-  const joins: Join[] = [];
-  let companionLogs = 0;
-  let seedPlans = 0;
-  let joinedPlans = 0;
-  const undecided = { seedPlans: 0, joinedPlans: 0 };
-  const fixedGym = { seedPlans: 0, joinedPlans: 0 };
+  // 移動の記録が無い過去分（page_views からの復元）向けの救済。
+  // その日に募集がただ 1 つしか無ければ、ジム名が違っても同じ募集とみなす。
+  // 複数あると取り違えるので、その場合は諦めて募集不明のまま残す
+  const soleKeyByDate = new Map<string, string | null>();
+  for (const key of Array.from(seedByKey.keys())) {
+    const date = key.slice(0, key.indexOf("|"));
+    soleKeyByDate.set(date, soleKeyByDate.has(date) ? null : key);
+  }
+  const keyForJoin = (join: Event): string | null => {
+    const exact = resolve(`${join.date}|${join.gym}`);
+    if (seedByKey.has(exact)) return exact;
+    return soleKeyByDate.get(join.date) ?? null;
+  };
+
+  // 参加を募集に紐づける。募集がいつ出されたかで切らないのは、期間の頭で
+  // 切り落とすと「参加はしているのに募集が期間外」という行き場のない件数が
+  // 大量に出て、短い窓ほど率が不当に低く見えるため。
+  // 募集を出した本人が出し直した行は参加ではない。
+  const joinsByKey = new Map<string, Event[]>();
+  const matchedJoins = new Set<Event>();
+  for (const join of allJoins) {
+    const key = keyForJoin(join);
+    const seed = key === null ? undefined : seedByKey.get(key);
+    if (!key || !seed || join.user === seed.user) continue;
+    matchedJoins.add(join);
+    const list = joinsByKey.get(key);
+    if (list) list.push(join);
+    else joinsByKey.set(key, [join]);
+  }
+
+  // 参加率は「この期間に出された募集」を主語にする。その募集に後から付いた参加は
+  // 期間外に起きたものも数える（募集を出した側から見た率にするため）
+  const seeds = Array.from(seedByKey.entries()).filter(([, seed]) => inPeriod(seed.at));
+
+  const undecided = { posts: 0, postsWithJoin: 0 };
+  const fixedGym = { posts: 0, postsWithJoin: 0 };
   const hoursToFirstJoin: number[] = [];
+  let postsWithJoin = 0;
+  let joinsOnPosts = 0;
 
-  for (const group of Array.from(groups.values())) {
-    const sorted = [...group].sort(
-      (a, b) => new Date(a.created_at!).getTime() - new Date(b.created_at!).getTime()
-    );
-    const seed = sorted[0];
-    const seedAt = new Date(seed.created_at!).getTime();
-    const isUndecided = seed.gym_name === GYM_UNDECIDED_LABEL;
-
-    seedPlans++;
-    if (isUndecided) undecided.seedPlans++;
-    else fixedGym.seedPlans++;
-
-    const groupJoins: Join[] = [];
-    let previousAt = seedAt;
-    for (const log of sorted.slice(1)) {
-      const at = new Date(log.created_at!).getTime();
-      // 直前のログと同時刻に近ければ、同行者として一括登録された分
-      if (at - previousAt <= SIMULTANEOUS_WINDOW_MS) {
-        companionLogs++;
-        previousAt = at;
-        continue;
-      }
-      previousAt = at;
-      // 同じ人が予定を出し直した場合は合流として数えない
-      if (log.user === seed.user) continue;
-      groupJoins.push({
-        date: log.date,
-        gym: log.gym_name,
-        seedUser: seed.user,
-        joiner: log.user,
-        hoursAfterSeed: (at - seedAt) / (60 * 60 * 1000),
-        visited: visitKeys.has(`${log.user}|${log.date}`),
-      });
-    }
-
-    if (groupJoins.length > 0) {
-      joinedPlans++;
-      if (isUndecided) undecided.joinedPlans++;
-      else fixedGym.joinedPlans++;
-      hoursToFirstJoin.push(Math.min(...groupJoins.map((j) => j.hoursAfterSeed)));
-      joins.push(...groupJoins);
-    }
+  for (const [key, seed] of seeds) {
+    const bucket = seed.gym === GYM_UNDECIDED_LABEL ? undecided : fixedGym;
+    bucket.posts++;
+    const group = joinsByKey.get(key);
+    if (!group || group.length === 0) continue;
+    postsWithJoin++;
+    bucket.postsWithJoin++;
+    joinsOnPosts += group.length;
+    hoursToFirstJoin.push(Math.min(...group.map((j) => (j.at - seed.at) / MS_PER_HOUR)));
   }
 
-  // --- 予定を出さずに相乗りした実績 ---
-  // 他人の予定が先に存在する日・ジムに、自分の予定は無いまま実績だけ残した場合。
-  // 予定の作成時刻が実績の作成時刻より前であることを条件にして、
-  // 「後から他人が同じ日を登録しただけ」を除く。
-  const planKeys = new Set(plans.map((l) => `${l.user}|${l.date}`));
-  const earliestPlanAt = new Map<string, number>();
-  for (const plan of plans) {
-    if (!plan.created_at) continue;
-    const key = `${plan.date}|${plan.gym_name}`;
-    const at = new Date(plan.created_at).getTime();
-    const current = earliestPlanAt.get(key);
-    if (current === undefined || at < current) earliestPlanAt.set(key, at);
-  }
+  // 来訪の判定とシフト経由の件数は「この期間に起きた参加」を主語にする
+  const periodJoins = allJoins.filter((j) => inPeriod(j.at) && matchedJoins.has(j));
+  const orphanJoins = allJoins.filter((j) => inPeriod(j.at) && !matchedJoins.has(j)).length;
 
-  let shadowVisits = 0;
-  for (const visit of results) {
-    if (!visit.created_at) continue;
-    if (planKeys.has(`${visit.user}|${visit.date}`)) continue;
-    const seedAt = earliestPlanAt.get(`${visit.date}|${visit.gym_name}`);
-    if (seedAt === undefined) continue;
-    if (seedAt >= new Date(visit.created_at).getTime()) continue;
-    // その予定が自分以外の誰かのものであること
-    const others = plans.some(
-      (p) => p.date === visit.date && p.gym_name === visit.gym_name && p.user !== visit.user
-    );
-    if (others) shadowVisits++;
-  }
+  // --- 参加が来訪まで届いたか ---
+  // 実績行は削除されずに残るので、参加者・登った日の一致で引ける。
+  // まだ来ていない日付は判定できないので母数から外す。
+  const visitKeys = new Set(
+    visitLogs.filter((l) => l.type === "実績").map((l) => `${l.user}|${toDate(l.date)}`)
+  );
+  const pastJoinList = periodJoins.filter((j) => j.date < today);
+  const joinsWithVisit = pastJoinList.filter((j) => visitKeys.has(`${j.user}|${j.date}`)).length;
 
-  // --- 期間と実効ユーザー ---
-  const dates = inPeriod.map((l) => l.date).sort();
+  // --- 来訪の総量 ---
+  const visitsInPeriod = visitLogs.filter(
+    (l) => l.type === "実績" && (!sinceDate || toDate(l.date) >= sinceDate)
+  );
+  const visitDates = visitsInPeriod.map((l) => toDate(l.date)).sort();
   const spanDays =
-    dates.length > 0
-      ? (new Date(dates[dates.length - 1]).getTime() - new Date(dates[0]).getTime()) / MS_PER_DAY + 1
+    visitDates.length > 0
+      ? (new Date(visitDates[visitDates.length - 1]).getTime() - new Date(visitDates[0]).getTime()) /
+          MS_PER_DAY +
+        1
       : 0;
   const periodDays = sinceDate
-    ? Math.max((Date.now() - new Date(sinceDate).getTime()) / MS_PER_DAY, 1)
+    ? Math.max((Date.now() - new Date(`${sinceDate}T00:00:00+09:00`).getTime()) / MS_PER_DAY, 1)
     : Math.max(spanDays, 1);
   const months = periodDays / DAYS_PER_MONTH;
 
-  const activeUsers = new Set(inPeriod.map((l) => l.user)).size;
-  const joinVisits = joins.filter((j) => j.visited).length;
-  const appDriven = joinVisits + shadowVisits;
+  const activeUsers = new Set(visitsInPeriod.map((l) => l.user)).size;
   const perUserMonth = (value: number) =>
     activeUsers === 0 || months === 0 ? 0 : value / activeUsers / months;
 
   return {
     label,
     months,
-    seedPlans,
-    joinedPlans,
-    joinRate: rate(joinedPlans, seedPlans),
-    joins: joins.length,
-    companionLogs,
-    undated,
-    undecided: { ...undecided, joinRate: rate(undecided.joinedPlans, undecided.seedPlans) },
-    fixedGym: { ...fixedGym, joinRate: rate(fixedGym.joinedPlans, fixedGym.seedPlans) },
-    medianHoursToJoin: median(hoursToFirstJoin),
-    totalVisits: results.length,
-    joinVisits,
-    shadowVisits,
-    visitConversion: rate(joinVisits, joins.length),
+    usesRestoredEvents: cutover === null || cutover === undefined || (since ?? 0) < cutover,
+    posts: seeds.length,
+    postsWithJoin,
+    joinRate: rate(postsWithJoin, seeds.length),
+    joinsOnPosts,
+    joinsInPeriod: periodJoins.length,
+    orphanJoins,
+    shiftJoins: periodJoins.filter((j) => j.source === "shift").length,
+    proxyPosts: proxies.filter((e) => inPeriod(e.at)).length,
+    deletedPosts: events.filter((e) => e.kind === "deleted" && inPeriod(e.at)).length,
+    medianHoursToFirstJoin: median(hoursToFirstJoin),
+    undecided: { ...undecided, joinRate: rate(undecided.postsWithJoin, undecided.posts) },
+    fixedGym: { ...fixedGym, joinRate: rate(fixedGym.postsWithJoin, fixedGym.posts) },
+    pastJoins: pastJoinList.length,
+    joinsWithVisit,
+    visitRate: rate(joinsWithVisit, pastJoinList.length),
+    totalVisits: visitsInPeriod.length,
     activeUsers,
-    visitsPerUserPerMonth: perUserMonth(results.length),
-    appDrivenPerUserPerMonth: perUserMonth(appDriven),
-    appDrivenShare: rate(appDriven, results.length),
+    visitsPerUserPerMonth: perUserMonth(visitsInPeriod.length),
+    joinVisitsPerUserPerMonth: perUserMonth(joinsWithVisit),
+    joinVisitShare: rate(joinsWithVisit, visitsInPeriod.length),
   };
 }

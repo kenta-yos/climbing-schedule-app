@@ -38,7 +38,7 @@ export function MyPageClient({ initialLogs, rankingLogs, users, gyms, currentUse
           users={users}
           rankingLogs={rankingLogs}
         />
-        <UpcomingPlans logs={logs} onDeleted={handleDeleted} />
+        <UpcomingPlans logs={logs} currentUser={currentUser} onDeleted={handleDeleted} />
         <MonthlyTrendChart logs={logs} />
         <GymVisitHistory logs={logs} gyms={gyms} />
         <MyRecordsAccordion

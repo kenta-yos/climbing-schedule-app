@@ -8,7 +8,7 @@ import { TIME_SLOTS } from "@/lib/constants";
 import { GYM_UNDECIDED_LABEL } from "@/components/home/PlanPageClient";
 import { addClimbingLog, checkDuplicateLog } from "@/lib/supabase/queries";
 import { toast } from "@/lib/hooks/use-toast";
-import { trackAction } from "@/lib/analytics";
+import { trackAction, recordPlanEvents, type PlanEventSource } from "@/lib/analytics";
 import { Input } from "@/components/ui/input";
 import { Pencil, Trash2 } from "lucide-react";
 import type { ClimbingLog, User, WorkShift } from "@/lib/supabase/queries";
@@ -52,12 +52,15 @@ function JoinPanel({
   date,
   gymName,
   currentUser,
+  source,
   onCancel,
   onJoined,
 }: {
   date: string;
   gymName: string;
   currentUser: string;
+  /** 予定カードから乗ったのか、バイト中カードから乗ったのか */
+  source: PlanEventSource;
   onCancel: () => void;
   onJoined: () => void;
 }) {
@@ -89,7 +92,18 @@ function JoinPanel({
         join_dinner: joinDinner,
       });
       toast({ title: "📅 参加登録しました！", variant: "success" });
-      trackAction(currentUser, "home", `plan_joined|${date}|${gymName}`);
+      trackAction(currentUser, "home", `plan_joined|${date}|${gymName}|${source}`);
+      recordPlanEvents([
+        {
+          kind: "joined",
+          date,
+          gymName,
+          user: currentUser,
+          actor: currentUser,
+          timeSlot: selectedSlot,
+          source,
+        },
+      ]);
       onJoined();
     } catch {
       toast({ title: "登録に失敗しました", variant: "destructive" });
@@ -498,6 +512,7 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = []
                             date={dateStr}
                             gymName={gymName}
                             currentUser={currentUser}
+                            source="plan"
                             onCancel={() => setOpenJoinKey(null)}
                             onJoined={() => {
                               setOpenJoinKey(null);
@@ -588,6 +603,7 @@ export function FuturePlanFeed({ logs, users, currentUser, onJoined, shifts = []
                             date={dateStr}
                             gymName={shift.gym_name}
                             currentUser={currentUser}
+                            source="shift"
                             onCancel={() => setOpenJoinKey(null)}
                             onJoined={() => { setOpenJoinKey(null); handleJoined(); }}
                           />
