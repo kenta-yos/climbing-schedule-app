@@ -236,6 +236,11 @@ function ImpactTab({
         <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
           予定が出された時点と、他の人が参加ボタンで乗った時点を、起きたその場で記録したもの
         </p>
+        {r.clampedToRollout && (
+          <p className="text-[10px] text-gray-400 mb-3 px-2 py-1.5 bg-gray-50 rounded-lg leading-relaxed">
+            集計は {r.since} 以降。それより前は 1 人でしか使っておらず、比較にならないので含めない
+          </p>
+        )}
         <div className="flex items-end gap-2">
           <span className="text-4xl font-bold text-orange-500">{pct(r.joinRate)}</span>
           <span className="text-xs text-gray-400 mb-1.5">

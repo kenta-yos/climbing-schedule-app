@@ -30,7 +30,7 @@
  * 参加として数え、2 件の参加のうち 1 件が偽陽性になっていた。
  */
 
-import { GYM_UNDECIDED_LABEL } from "./constants";
+import { GYM_UNDECIDED_LABEL, GROUP_ROLLOUT_DATE } from "./constants";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_HOUR = 60 * 60 * 1000;
@@ -87,6 +87,10 @@ export type ImpactResult = {
   label: string;
   /** 集計対象の月数。1 人あたり月次の指標を出すのに使う */
   months: number;
+  /** 実際の集計開始日。GROUP_ROLLOUT_DATE より前は遡らない */
+  since: string;
+  /** 指定された期間が展開日より前まで遡っていて、開始日を丸めたか */
+  clampedToRollout: boolean;
   /** この期間の集計が page_views 復元分を含むか */
   usesRestoredEvents: boolean;
 
@@ -245,8 +249,13 @@ export function analyzeImpact(
   visitLogs: ImpactLog[],
   { label, sinceDate, cutover, today }: { label: string; sinceDate?: string; cutover?: number | null; today: string }
 ): ImpactResult {
-  const since = sinceDate ? new Date(`${sinceDate}T00:00:00+09:00`).getTime() : null;
-  const inPeriod = (at: number) => since === null || at >= since;
+  // Kenta 1 人で使っていた期間は、比較対象にならないうえ 1 人あたりの指標を
+  // 歪めるので、どの期間指定でも展開日より前には遡らない
+  const requested = sinceDate ?? GROUP_ROLLOUT_DATE;
+  const clampedToRollout = requested < GROUP_ROLLOUT_DATE;
+  const startDate = clampedToRollout ? GROUP_ROLLOUT_DATE : requested;
+  const since = new Date(`${startDate}T00:00:00+09:00`).getTime();
+  const inPeriod = (at: number) => at >= since;
 
   const posts = events.filter((e) => e.kind === "posted" && e.user === e.actor);
   const proxies = events.filter((e) => e.kind === "posted" && e.user !== e.actor);
@@ -354,19 +363,8 @@ export function analyzeImpact(
   const joinsWithVisit = visitedJoins.length;
 
   // --- 来訪の総量 ---
-  const visitsInPeriod = visitLogs.filter(
-    (l) => l.type === "実績" && (!sinceDate || toDate(l.date) >= sinceDate)
-  );
-  const visitDates = visitsInPeriod.map((l) => toDate(l.date)).sort();
-  const spanDays =
-    visitDates.length > 0
-      ? (new Date(visitDates[visitDates.length - 1]).getTime() - new Date(visitDates[0]).getTime()) /
-          MS_PER_DAY +
-        1
-      : 0;
-  const periodDays = sinceDate
-    ? Math.max((Date.now() - new Date(`${sinceDate}T00:00:00+09:00`).getTime()) / MS_PER_DAY, 1)
-    : Math.max(spanDays, 1);
+  const visitsInPeriod = visitLogs.filter((l) => l.type === "実績" && toDate(l.date) >= startDate);
+  const periodDays = Math.max((Date.now() - since) / MS_PER_DAY, 1);
   const months = periodDays / DAYS_PER_MONTH;
 
   const activeUsers = new Set(visitsInPeriod.map((l) => l.user)).size;
@@ -376,7 +374,9 @@ export function analyzeImpact(
   return {
     label,
     months,
-    usesRestoredEvents: cutover === null || cutover === undefined || (since ?? 0) < cutover,
+    since: startDate,
+    clampedToRollout,
+    usesRestoredEvents: cutover === null || cutover === undefined || since < cutover,
     posts: seeds.length,
     postsWithJoin,
     joinRate: rate(postsWithJoin, seeds.length),

@@ -192,7 +192,8 @@ export default async function AnalyticsPage() {
   const impacts = [
     { label: "30日", days: 30 },
     { label: "90日", days: 90 },
-    { label: "1年", days: 365 },
+    { label: "6ヶ月", days: 180 },
+    // 全期間といっても GROUP_ROLLOUT_DATE より前には遡らない
     { label: "全期間", days: null },
   ].map(({ label, days }) =>
     analyzeImpact(events, climbingLogs, {

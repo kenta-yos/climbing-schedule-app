@@ -8,6 +8,11 @@ export const TIME_SLOTS = [
 // 「登る仲間を募集中」の予定を、ジムを決めた予定と区別するのに使う
 export const GYM_UNDECIDED_LABEL = "ジム未定";
 
+// グループで使い始めた日。これより前は Kenta 1 人しか記録しておらず、
+// 他のメンバーがアプリ無しで何回登っていたかのデータが存在しない。
+// 効果測定の期間はすべてこの日以降に丸める（2026-02-01 に 2 人目が記録を始めた）
+export const GROUP_ROLLOUT_DATE = "2026-02-01";
+
 // ランキングメダル
 export const RANK_MEDALS: Record<number, string> = {
   1: "🥇",
