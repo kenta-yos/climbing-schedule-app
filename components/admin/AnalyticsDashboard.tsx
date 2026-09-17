@@ -236,15 +236,27 @@ function ImpactTab({
         <p className="text-[10px] text-gray-400 mt-0.5 mb-3">
           予定が出された時点と、他の人が参加ボタンで乗った時点を、起きたその場で記録したもの
         </p>
-        <div className="flex items-end gap-2 mb-3">
+        <div className="flex items-end gap-2">
           <span className="text-4xl font-bold text-orange-500">{pct(r.joinRate)}</span>
           <span className="text-xs text-gray-400 mb-1.5">
             {r.postsWithJoin} / {r.posts} 件
           </span>
         </div>
+        <p className="text-[10px] text-gray-400 mt-1 mb-3">
+          出された募集 {r.posts} 件のうち、誰かが乗ったものが {r.postsWithJoin} 件。
+          その {r.postsWithJoin} 件が集めた参加は延べ {r.joinsOnPosts} 人
+        </p>
         <div className="divide-y divide-gray-50">
-          <StatRow label="その募集についた参加" value={`${r.joinsOnPosts} 件`} />
-          <StatRow label="1募集あたりの参加人数" value={`${round1(r.joinsOnPosts / r.posts)} 人`} />
+          <StatRow
+            label="参加がついた募集 1 件あたり"
+            value={`${round1(r.joinsOnPosts / Math.max(r.postsWithJoin, 1))} 人`}
+            note={`${r.joinsOnPosts}/${r.postsWithJoin}`}
+          />
+          <StatRow
+            label="募集 1 件あたり（参加ゼロも含む）"
+            value={`${round1(r.joinsOnPosts / r.posts)} 人`}
+            note={`${r.joinsOnPosts}/${r.posts}`}
+          />
           <StatRow
             label="最初の参加までの時間（中央値）"
             value={r.medianHoursToFirstJoin === null ? "—" : `${round1(r.medianHoursToFirstJoin)} 時間`}
@@ -262,9 +274,10 @@ function ImpactTab({
           {r.shiftJoins > 0 && <StatRow label="🍺 バイト中カードから乗った参加" value={`${r.shiftJoins} 件`} />}
         </div>
         <p className="text-[10px] text-gray-400 mt-3 leading-relaxed">
-          上の率は「この期間に出された募集」が主語。あとから付いた参加は期間外でもその募集に数える。
-          期間内に起きた参加そのものは {r.joinsInPeriod} 件
-          {r.orphanJoins > 0 && `（ほかに募集が特定できなかった参加が ${r.orphanJoins} 件）`}
+          上の率は「この期間に出された募集」が主語で、あとから付いた参加は期間外でもその募集に数える。
+          {r.joinsInPeriod !== r.joinsOnPosts &&
+            `別の数え方として、この期間に参加が起きた件数は ${r.joinsInPeriod} 件（募集がいつ出されたかは問わない）。`}
+          {r.orphanJoins > 0 && `対応する募集が見つからなかった参加が ${r.orphanJoins} 件あり、上のどの数にも入っていない。`}
         </p>
         <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
           「一緒に登る人」で代理登録された {r.proxyPosts} 件は、本人の操作なので参加に数えていない
