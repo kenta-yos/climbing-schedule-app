@@ -1,23 +1,21 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED_PATHS = ["/home", "/dashboard", "/gyms", "/admin"];
-
+// アプリは役目を終えたため、すべてのアクセスを終了案内ページに向ける
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isProtected = PROTECTED_PATHS.some((path) => pathname.startsWith(path));
-
-  if (isProtected) {
-    const userName = request.cookies.get("user_name")?.value;
-    if (!userName) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
+  if (pathname.startsWith("/api")) {
+    return NextResponse.json({ error: "This app has been closed." }, { status: 410 });
   }
 
-  return NextResponse.next();
+  if (pathname === "/closed") {
+    return NextResponse.next();
+  }
+
+  return NextResponse.rewrite(new URL("/closed", request.url));
 }
 
 export const config = {
-  matcher: ["/home/:path*", "/dashboard/:path*", "/gyms/:path*", "/admin/:path*"],
+  matcher: ["/((?!_next/|favicon.ico|manifest.json|sw.js|workbox-|icon-|hero.jpg|images/).*)"],
 };
