@@ -13,10 +13,10 @@ export default function ClosedPage() {
           今後は Go Bouldering をご愛用ください。
         </p>
         <a
-          href="https://gobouldering.app/"
+          href="https://claude.ai/artifact/B48ysBM36afiuaMEeUixfK"
           className="mt-6 inline-block rounded-full bg-[#FF512F] px-6 py-3 text-sm font-semibold text-white"
         >
-          Go Bouldering を開く
+          Go Bouldering のインストール手順を見る
         </a>
       </div>
     </main>
